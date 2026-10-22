@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 3000;
 const CACHE_MIN = Number(process.env.CACHE_MINUTOS || 15);
 
 // Command Code Provider API (compatível com Anthropic Messages)
-const AI_KEY = process.env.COMMANDCODE_API_KEY || process.env.CMD_API_KEY || process.env.ANTHROPIC_API_KEY;
+const AI_KEY = process.env.COMMAND_IA || process.env.COMMANDCODE_API_KEY || process.env.CMD_API_KEY || process.env.ANTHROPIC_API_KEY;
 const AI_BASE = (process.env.COMMANDCODE_BASE_URL || 'https://api.commandcode.ai/provider/v1').replace(/\/$/, '');
 const AI_MODEL = process.env.GURU_MODELO || 'claude-sonnet-5-5';
 
