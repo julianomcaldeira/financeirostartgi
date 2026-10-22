@@ -1077,6 +1077,13 @@ function clientesReceita(d, mes, ordem = 'pago_desc') {
   return { mes: ref, ordem, itens, totais, meses };
 }
 
+app.get('/api/debug/baixas', async (req, res) => {
+  try {
+    const j = await omie('financas/mf/', 'ListarMovimentos', { nPagina: 1, nRegPorPagina: 3, cTpLancamento: req.query.tipo || 'BXCR' });
+    res.json({ chaves: Object.keys(j || {}), paginas: j?.nTotPaginas, registros: j?.nTotRegistros, movimentos: (j?.movimentos || []).slice(0, 3) });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 app.get('/api/clientes-receita', async (req, res) => {
   if (!OMIE_APP_KEY || !OMIE_APP_SECRET) return res.status(500).json({ erro: 'Configure OMIE_APP_KEY e OMIE_APP_SECRET nas variáveis de ambiente.' });
   try {
