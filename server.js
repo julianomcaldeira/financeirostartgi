@@ -129,6 +129,32 @@ async function listarTudo(endpoint, call, chave, extra = {}) {
   return itens;
 }
 
+const baixasCache = { CR: { at: 0, data: {} }, CP: { at: 0, data: {} } };
+async function listarBaixas(tipo) {
+  const cache = baixasCache[tipo];
+  if (Date.now() - cache.at < CACHE_MIN * 60e3) return cache.data;
+  let pagina = 1, total = 1;
+  const mapa = {};
+  do {
+    const j = await omie('financas/mf/', 'ListarMovimentos', { nPagina: pagina, nRegPorPagina: 50, cTpLancamento: `BX${tipo}` });
+    if (!j) break;
+    for (const mov of j.movimentos || []) {
+      const d = mov.detalhes || {};
+      const id = String(d.nCodTitulo || '');
+      const data = dt(d.dDtPagamento) || dt(d.dDtCredito);
+      if (!id || !data) continue;
+      const valor = Number(mov.resumo?.nValPago ?? d.nValorMovCC ?? 0);
+      (mapa[id] ||= []).push({ data, valor });
+    }
+    total = j.nTotPaginas || 1;
+    pagina++;
+    await new Promise(r => setTimeout(r, 350));
+  } while (pagina <= total);
+  for (const lista of Object.values(mapa)) lista.sort((a, b) => a.data - b.data);
+  baixasCache[tipo] = { at: Date.now(), data: mapa };
+  return mapa;
+}
+
 const dt = s => { if (!s) return null; const [d, m, a] = s.split('/'); return new Date(+a, +m - 1, +d); };
 const mesKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 const soma = arr => arr.reduce((s, x) => s + x, 0);
@@ -415,13 +441,15 @@ function montarInsights(d) {
 
 // ---------- Cálculo dos indicadores ----------
 async function montarDados() {
-  const [receber, pagar, clientes, categorias, contas, contratosOmie] = await Promise.all([
+  const [receber, pagar, clientes, categorias, contas, contratosOmie, baixasCR, baixasCP] = await Promise.all([
     listarTudo('financas/contareceber/', 'ListarContasReceber', 'conta_receber_cadastro'),
     listarTudo('financas/contapagar/', 'ListarContasPagar', 'conta_pagar_cadastro'),
     listarTudo('geral/clientes/', 'ListarClientesResumido', 'clientes_cadastro_resumido'),
     listarTudo('geral/categorias/', 'ListarCategorias', 'categoria_cadastro'),
     listarTudo('geral/contacorrente/', 'ListarResumoContasCorrentes', 'conta_corrente_lista').catch(() => []),
     listarTudo('servicos/contrato/', 'ListarContratos', 'contratoCadastro').catch(() => []),
+    listarBaixas('CR').catch(() => ({})),
+    listarBaixas('CP').catch(() => ({})),
   ]);
 
   const nomeCli = Object.fromEntries(clientes.map(c => [c.codigo_cliente, c.nome_fantasia || c.razao_social]));
@@ -443,10 +471,10 @@ async function montarDados() {
       valor: Number(b.valor || b.valor_pago || b.valor_recebido || 0),
     })).filter(b => b.data);
   };
-  const norm = (t, tipo) => {
+  const norm = (t, tipo, baixasMap = {}) => {
     const valor = Number(t.valor_documento || 0);
     const status = (t.status_titulo || '').toUpperCase();
-    const baixas = baixasDe(t);
+    const baixas = baixasMap[String(t.codigo_lancamento_omie)] || baixasDe(t);
     const pagamento = baixas.length
       ? new Date(Math.max(...baixas.map(b => +b.data)))
       : dt(t.data_pagamento) || dt(t.data_baixa);
@@ -469,8 +497,8 @@ async function montarDados() {
       documento: String(t.numero_documento ?? ''),
     };
   };
-  const R = receber.map(t => norm(t, 'R')).filter(t => t.status !== 'CANCELADO' && t.venc);
-  const P = pagar.map(t => norm(t, 'P')).filter(t => t.status !== 'CANCELADO' && t.venc);
+  const R = receber.map(t => norm(t, 'R', baixasCR)).filter(t => t.status !== 'CANCELADO' && t.venc);
+  const P = pagar.map(t => norm(t, 'P', baixasCP)).filter(t => t.status !== 'CANCELADO' && t.venc);
   const quitado = t => t.status === 'RECEBIDO' || t.status === 'PAGO' || t.status === 'LIQUIDADO';
   const aberto = t => !quitado(t);
   const iso = d => d ? d.toISOString().slice(0, 10) : '';
