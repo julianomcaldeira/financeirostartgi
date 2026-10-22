@@ -1077,14 +1077,6 @@ function clientesReceita(d, mes, ordem = 'pago_desc') {
   return { mes: ref, ordem, itens, totais, meses };
 }
 
-app.get('/api/debug/baixas', async (req, res) => {
-  try {
-    const tipo = req.query.tipo === 'BXCP' ? 'CP' : 'CR';
-    const mapa = await listarBaixas(tipo, true);
-    res.json({ tipo, total: Object.keys(mapa).length, amostra: Object.keys(mapa).slice(0, 8), titulo: req.query.titulo, baixas: mapa[req.query.titulo] || null });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
-
 app.get('/api/clientes-receita', async (req, res) => {
   if (!OMIE_APP_KEY || !OMIE_APP_SECRET) return res.status(500).json({ erro: 'Configure OMIE_APP_KEY e OMIE_APP_SECRET nas variáveis de ambiente.' });
   try {
