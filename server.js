@@ -8,6 +8,7 @@ const PORT = process.env.PORT || 3000;
 const REFRESH_MIN = Number(process.env.ATUALIZACAO_MINUTOS || 120);
 const CACHE_MIN = Number(process.env.CACHE_MINUTOS || REFRESH_MIN);
 const INSIGHTS_MIN = Number(process.env.INSIGHTS_MINUTOS || 10080); // 7 dias
+const INSIGHTS_MODEL = process.env.INSIGHTS_MODELO || 'google/gemini-3.5-flash';
 
 // Command Code Provider API (compatível com Anthropic Messages)
 const AI_KEY = process.env.COMMAND_IA || process.env.COMMANDCODE_API_KEY || process.env.CMD_API_KEY || process.env.ANTHROPIC_API_KEY;
@@ -41,11 +42,11 @@ function caixaAplicadoContexto() {
   return v;
 }
 
-async function chamarIA(system, mensagens, maxTokens = 4096) {
+async function chamarIA(system, mensagens, maxTokens = 4096, modelo = AI_MODEL) {
   const r = await fetch(`${AI_BASE}/messages`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}`, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: AI_MODEL, max_tokens: maxTokens, system, messages: mensagens }),
+    body: JSON.stringify({ model: modelo, max_tokens: maxTokens, system, messages: mensagens }),
     signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(90000) : undefined,
   });
   const bruto = await r.text();
@@ -799,7 +800,8 @@ DADOS: ${JSON.stringify(dadosIA)}`;
     texto = await chamarIA(
       system + (tentativa > 1 ? '\n\nATENÇÃO: a tentativa anterior não veio em JSON. Responda agora SOMENTE com o objeto JSON, começando por { e terminando em }.' : ''),
       [{ role: 'user', content: 'Gere a leitura estratégica desta semana no JSON pedido. Responda somente com JSON.' }],
-      8192
+      4096,
+      INSIGHTS_MODEL
     );
     const m = String(texto || '').match(/\{[\s\S]*\}/);
     if (m) {
@@ -829,7 +831,7 @@ DADOS: ${JSON.stringify(dadosIA)}`;
     geradoEm: new Date().toISOString(),
     proximaEm: new Date(Date.now() + INSIGHTS_MIN * 60e3).toISOString(),
     fonte: 'ia',
-    modelo: AI_MODEL,
+    modelo: INSIGHTS_MODEL,
     resumo: limpa(j.resumo),
     focoSemana: {
       titulo: limpa(j.focoSemana?.titulo || insights[0].titulo),
