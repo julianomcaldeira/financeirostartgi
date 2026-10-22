@@ -191,32 +191,16 @@ app.post('/api/guru', async (req, res) => {
       headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}`, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model: AI_MODEL,
-        max_tokens: 1200,
-        system: `Você é o CFO as a Service da StartGi Tecnologia (GovTech/B2B, ~25 pessoas, investida pelo FIP GovTech). Seu cliente é o CEO, Juliano, que não é especialista em finanças. Aja como um CFO experiente e franco: dê o diagnóstico, diga o que importa, recomende decisões concretas com números, aponte riscos sem suavizar e explique qualquer termo técnico em uma frase. Responda em português, objetivo, em prosa curta (sem listas com hífen). Use apenas os dados abaixo, vindos do Omie; se faltar dado para decidir, diga qual e como obtê-lo. Feche com a recomendação: o que fazer esta semana.\n\nDADOS: ${contexto}`,
+        max_tokens: 8192,
+        system: `Você é o CFO as a Service da StartGi Tecnologia (GovTech/B2B, ~25 pessoas, investida pelo FIP GovTech). Seu cliente é o CEO, Juliano, que não é especialista em finanças. Aja como um CFO experiente e franco: dê o diagnóstico, diga o que importa, recomende decisões concretas com números, aponte riscos sem suavizar e explique qualquer termo técnico em uma frase. Responda em português, objetivo, em prosa curta (sem listas com hífen), em no máximo 5 parágrafos. Use apenas os dados abaixo, vindos do Omie; se faltar dado para decidir, diga qual e como obtê-lo. Feche com a recomendação: o que fazer esta semana.\n\nDADOS: ${contexto}`,
         messages: (req.body.historico || []).slice(-10),
       }),
     });
     const j = await r.json();
     if (!r.ok) return res.status(502).json({ resposta: `Erro do provedor de IA (${r.status}): ${j.error?.message || j.message || 'falha na chamada'}` });
     const texto = j.content?.map?.(b => b.text).filter(Boolean).join('\n') || j.choices?.[0]?.message?.content || j.output_text;
-    res.json({ resposta: texto || `Sem resposta: ${JSON.stringify(j).slice(0, 800)}` });
+    res.json({ resposta: texto || 'A IA não retornou texto desta vez. Tente novamente.' });
   } catch (e) { res.status(500).json({ resposta: 'Erro: ' + e.message }); }
-});
-
-// TEMPORÁRIO: diagnóstico da integração de IA
-app.post('/api/ai-test', async (req, res) => {
-  try {
-    const { model = AI_MODEL, max_tokens = 1200, thinking, prompt = 'Diga em uma frase se está funcionando.' } = req.body || {};
-    const body = { model, max_tokens, messages: [{ role: 'user', content: prompt }] };
-    if (thinking) body.thinking = thinking;
-    const r = await fetch(`${AI_BASE}/messages`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}`, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify(body),
-    });
-    const raw = await r.text();
-    res.json({ status: r.status, raw });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
 app.listen(PORT, () => console.log(`Painel financeiro StartGi na porta ${PORT}`));
