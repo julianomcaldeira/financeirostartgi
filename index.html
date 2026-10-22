@@ -501,7 +501,7 @@ async function carregar(force){
   const cad=d.intervaloAtualizacaoMin;
   const prox=d.proximaAtualizacao?new Date(d.proximaAtualizacao):null;
   document.getElementById('sideCadencia').textContent=cad>0?(prox?'Auto a cada '+cad+' min · próxima '+prox.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'Auto a cada '+cad+' min'):'Atualização manual';
-  document.getElementById('dataP').textContent=dt.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  document.getElementById('dataP').textContent=dt.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})+(cad>0?` · atualiza a cada ${cad} min`:' · atualização manual');
   renderVisao(d);renderReceita(d);renderCaixa(d);renderAtrasados(d);renderClientes(d);
   agendarAuto(d);
 }
