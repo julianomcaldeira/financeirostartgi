@@ -2,9 +2,14 @@
 const express = require('express');
 const path = require('path');
 
-const { OMIE_APP_KEY, OMIE_APP_SECRET, PAINEL_SENHA, ANTHROPIC_API_KEY } = process.env;
+const { OMIE_APP_KEY, OMIE_APP_SECRET, PAINEL_SENHA } = process.env;
 const PORT = process.env.PORT || 3000;
 const CACHE_MIN = Number(process.env.CACHE_MINUTOS || 15);
+
+// Command Code Provider API (compatível com Anthropic Messages)
+const AI_KEY = process.env.COMMANDCODE_API_KEY || process.env.CMD_API_KEY || process.env.ANTHROPIC_API_KEY;
+const AI_BASE = (process.env.COMMANDCODE_BASE_URL || 'https://api.commandcode.ai/provider/v1').replace(/\/$/, '');
+const AI_MODEL = process.env.GURU_MODELO || 'claude-sonnet-5-5';
 
 const app = express();
 app.use(express.json());
@@ -177,22 +182,23 @@ app.get('/api/dados', async (req, res) => {
 
 // ---------- Guru (chat) ----------
 app.post('/api/guru', async (req, res) => {
-  if (!ANTHROPIC_API_KEY) return res.json({ resposta: 'O chat do guru precisa da variável ANTHROPIC_API_KEY configurada no servidor.' });
+  if (!AI_KEY) return res.json({ resposta: 'O chat do guru precisa da variável COMMANDCODE_API_KEY configurada no servidor.' });
   try {
     const d = await dados();
     const contexto = JSON.stringify({ saldo: d.saldo, saldoDisponivel: d.saldoDisponivel, kpis: d.kpis, meses: d.meses, entradas: d.entradas, saidas: d.saidas, fluxo12semanas: d.semanas, clientes: d.clientes, despesas: d.despesas, atrasados: d.atrasados });
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
+    const r = await fetch(`${AI_BASE}/messages`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}`, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: process.env.GURU_MODELO || 'claude-sonnet-5-5',
+        model: AI_MODEL,
         max_tokens: 1200,
         system: `Você é o CFO as a Service da StartGi Tecnologia (GovTech/B2B, ~25 pessoas, investida pelo FIP GovTech). Seu cliente é o CEO, Juliano, que não é especialista em finanças. Aja como um CFO experiente e franco: dê o diagnóstico, diga o que importa, recomende decisões concretas com números, aponte riscos sem suavizar e explique qualquer termo técnico em uma frase. Responda em português, objetivo, em prosa curta (sem listas com hífen). Use apenas os dados abaixo, vindos do Omie; se faltar dado para decidir, diga qual e como obtê-lo. Feche com a recomendação: o que fazer esta semana.\n\nDADOS: ${contexto}`,
         messages: (req.body.historico || []).slice(-10),
       }),
     });
     const j = await r.json();
-    res.json({ resposta: j.content?.[0]?.text || j.error?.message || 'Sem resposta.' });
+    if (!r.ok) return res.status(502).json({ resposta: `Erro do provedor de IA (${r.status}): ${j.error?.message || j.message || 'falha na chamada'}` });
+    res.json({ resposta: j.content?.[0]?.text || 'Sem resposta.' });
   } catch (e) { res.status(500).json({ resposta: 'Erro: ' + e.message }); }
 });
 
