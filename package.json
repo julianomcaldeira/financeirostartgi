@@ -1,0 +1,9 @@
+{
+  "name": "painel-financeiro-startgi",
+  "version": "1.0.0",
+  "description": "Painel financeiro da StartGi conectado ao Omie, com guru financeiro",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "express": "^4.19.2" }
+}

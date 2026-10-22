@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painel Financeiro StartGi</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0f1419;--card:#182029;--line:#26313d;--tx:#e6edf3;--mut:#8b98a5;--verde:#3fb950;--verm:#f85149;--amar:#d29922;--azul:#58a6ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0}h2{font-size:14px;margin:0 0 12px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+main{padding:20px 24px;display:grid;gap:16px;max-width:1400px;margin:auto}
+.grid{display:grid;gap:16px}.k4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}.k2{grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.kpi .v{font-size:24px;font-weight:700;margin:4px 0}.kpi .l{color:var(--mut);font-size:12px}.kpi .e{color:var(--mut);font-size:12px;margin-top:6px}
+.pos{color:var(--verde)}.neg{color:var(--verm)}
+button{background:var(--azul);color:#0b1220;border:0;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer}
+.alerta{border-left:4px solid var(--mut);padding:10px 12px;margin-bottom:10px;background:#1c2530;border-radius:6px}
+.alerta.alto{border-color:var(--verm)}.alerta.medio{border-color:var(--amar)}.alerta.ok{border-color:var(--verde)}
+.alerta b{display:block;margin-bottom:2px}
+table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--mut);font-weight:500;font-size:12px}td.n{text-align:right}
+#chat{height:260px;overflow:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.msg{padding:8px 12px;border-radius:10px;max-width:85%;white-space:pre-wrap}.u{align-self:flex-end;background:#1f3a5f}.g{background:#1c2530}
+.row{display:flex;gap:8px}input{flex:1;background:#0f1419;border:1px solid var(--line);color:var(--tx);border-radius:8px;padding:9px}
+.sug{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.sug span{border:1px solid var(--line);border-radius:20px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--mut)}
+#erro{display:none;background:#3d1418;border:1px solid var(--verm);padding:12px;border-radius:8px}
+@media(max-width:600px){.k2{grid-template-columns:1fr}main,header{padding:14px 16px}}
+</style>
+</head>
+<body>
+<header><div><h1>Painel Financeiro StartGi</h1><div id="upd" style="color:var(--mut);font-size:12px">Carregando dados do Omie…</div></div><button onclick="carregar(1)">Atualizar</button></header>
+<main>
+<div id="erro"></div>
+
+<section class="grid k4" id="kpis"></section>
+
+<section class="grid k2">
+  <div class="card"><h2>O que o guru está vendo</h2><div id="alertas"></div></div>
+  <div class="card"><h2>Pergunte ao guru</h2>
+    <div class="sug" id="sug"></div>
+    <div id="chat"><div class="msg g">Olá, Juliano. Pergunte qualquer coisa sobre o financeiro da StartGi. Eu respondo com base nos números do Omie.</div></div>
+    <div class="row"><input id="pergunta" placeholder="Ex.: dá pra contratar mais um dev?" onkeydown="if(event.key==='Enter')perguntar()"><button onclick="perguntar()">Enviar</button></div>
+  </div>
+</section>
+
+<section class="grid k2">
+  <div class="card"><h2>Entradas x saídas (12 meses)</h2><canvas id="gMeses" height="200"></canvas></div>
+  <div class="card"><h2>Caixa projetado (próximas 12 semanas)</h2><canvas id="gFluxo" height="200"></canvas><div class="kpi"><div class="e">Considera só o que está lançado no Omie como a receber e a pagar.</div></div></div>
+</section>
+
+<section class="grid k2">
+  <div class="card"><h2>De onde vem o dinheiro (12 meses)</h2><table id="tCli"></table></div>
+  <div class="card"><h2>Para onde vai o dinheiro (12 meses)</h2><table id="tDesp"></table></div>
+</section>
+
+<div class="card"><h2>Recebimentos atrasados — cobrar primeiro</h2><table id="tAtr"></table></div>
+</main>
+
+<script>
+const brl=v=>(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+const pct=v=>((v||0)*100).toFixed(0)+'%';
+let g1,g2,hist=[];
+const nomeMes=m=>{const[a,b]=m.split('-');return['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][b-1]+'/'+a.slice(2)};
+
+function kpi(l,v,e,cls=''){return `<div class="card kpi"><div class="l">${l}</div><div class="v ${cls}">${v}</div><div class="e">${e}</div></div>`}
+
+async function carregar(force){
+  document.getElementById('upd').textContent='Consultando o Omie…';
+  const r=await fetch('/api/dados'+(force?'?atualizar=1':''));const d=await r.json();
+  const er=document.getElementById('erro');
+  if(d.erro){er.style.display='block';er.textContent=d.erro;document.getElementById('upd').textContent='Erro';return}
+  er.style.display='none';
+  document.getElementById('upd').textContent='Atualizado em '+new Date(d.atualizadoEm).toLocaleString('pt-BR');
+  const k=d.kpis;
+  document.getElementById('kpis').innerHTML=
+    (d.saldoDisponivel?kpi('Dinheiro em conta hoje',brl(d.saldo),'Soma das contas correntes no Omie'):'')+
+    kpi('Recebe por mês',brl(k.receitaMedia),'Média dos últimos 3 meses')+
+    kpi('Gasta por mês',brl(k.despesaMedia),'Média dos últimos 3 meses')+
+    kpi('Sobra por mês',brl(k.resultadoMedio),'Margem de '+pct(k.margem),k.resultadoMedio>=0?'pos':'neg')+
+    (k.runway!==null?kpi('Fôlego de caixa',k.runway.toFixed(1)+' meses','Quanto tempo o saldo dura no ritmo atual',k.runway<6?'neg':''):'')+
+    kpi('Entra nos próximos 30 dias',brl(k.receber30),'Contas a receber lançadas')+
+    kpi('Sai nos próximos 30 dias',brl(k.pagar30),'Contas a pagar lançadas')+
+    kpi('Atrasado para receber',brl(k.atrasadoReceber),'Clientes que não pagaram no prazo',k.atrasadoReceber>0?'neg':'')+
+    kpi('Maior cliente',pct(k.top1),'da receita · top 3 = '+pct(k.top3),k.top1>0.4?'neg':'');
+
+  document.getElementById('alertas').innerHTML=d.alertas.map(a=>`<div class="alerta ${a.nivel}"><b>${a.titulo}</b>${a.texto}</div>`).join('');
+
+  const cor=getComputedStyle(document.documentElement);const v=c=>cor.getPropertyValue(c).trim();
+  Chart.defaults.color='#8b98a5';Chart.defaults.borderColor='#26313d';
+  g1&&g1.destroy();g1=new Chart(gMeses,{data:{labels:d.meses.map(nomeMes),datasets:[
+    {type:'bar',label:'Entradas',data:d.entradas,backgroundColor:v('--verde')},
+    {type:'bar',label:'Saídas',data:d.saidas,backgroundColor:v('--verm')},
+    {type:'line',label:'Resultado',data:d.resultado,borderColor:v('--azul'),tension:.3}]},
+    options:{scales:{y:{ticks:{callback:x=>brl(x)}}}}});
+  g2&&g2.destroy();g2=new Chart(gFluxo,{data:{labels:d.semanas.map(s=>s.semana),datasets:[
+    {type:'line',label:d.saldoDisponivel?'Saldo projetado':'Variação acumulada',data:d.semanas.map(s=>s.saldo),borderColor:v('--azul'),fill:false,tension:.3},
+    {type:'bar',label:'Entradas',data:d.semanas.map(s=>s.entradas),backgroundColor:v('--verde')},
+    {type:'bar',label:'Saídas',data:d.semanas.map(s=>-s.saidas),backgroundColor:v('--verm')}]},
+    options:{scales:{y:{ticks:{callback:x=>brl(x)}}}}});
+
+  const tab=(id,lista,tot)=>document.getElementById(id).innerHTML='<tr><th>Nome</th><th class="n">Valor</th><th class="n">%</th></tr>'+lista.map(x=>`<tr><td>${x.nome}</td><td class="n">${brl(x.valor)}</td><td class="n">${pct(x.valor/tot)}</td></tr>`).join('');
+  tab('tCli',d.clientes,k.receita12||1);
+  tab('tDesp',d.despesas,d.despesas.reduce((s,x)=>s+x.valor,0)||1);
+  document.getElementById('tAtr').innerHTML=d.atrasados.length?'<tr><th>Cliente</th><th>Vencimento</th><th class="n">Dias</th><th class="n">Valor</th></tr>'+d.atrasados.map(a=>`<tr><td>${a.cliente}</td><td>${a.venc}</td><td class="n">${a.dias}</td><td class="n">${brl(a.valor)}</td></tr>`).join(''):'<tr><td>Nenhum recebimento atrasado. 👏</td></tr>';
+}
+
+const sugestoes=['Como está a saúde financeira da StartGi?','Dá pra contratar mais uma pessoa?','Qual cliente devo cobrar primeiro?','Onde posso cortar gastos?','Explique o que é runway'];
+document.getElementById('sug').innerHTML=sugestoes.map(s=>`<span onclick="perguntar('${s}')">${s}</span>`).join('');
+
+async function perguntar(t){
+  const inp=document.getElementById('pergunta');const q=t||inp.value.trim();if(!q)return;inp.value='';
+  const chat=document.getElementById('chat');
+  chat.insertAdjacentHTML('beforeend',`<div class="msg u"></div>`);chat.lastChild.textContent=q;
+  chat.insertAdjacentHTML('beforeend',`<div class="msg g">Analisando…</div>`);const el=chat.lastChild;chat.scrollTop=1e9;
+  hist.push({role:'user',content:q});
+  const r=await fetch('/api/guru',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({historico:hist})});
+  const j=await r.json();el.textContent=j.resposta;hist.push({role:'assistant',content:j.resposta});chat.scrollTop=1e9;
+}
+carregar();
+</script>
+</body>
+</html>
