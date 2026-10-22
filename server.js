@@ -799,15 +799,16 @@ Regras:
 - Não invente números. Use apenas os dados fornecidos.
 - Não diga "cobre o cliente" nem proponha cobrança óbvia. Em cobranca, entregue engenharia de recebimento: novação com garantia, entrada, cessão de crédito, antecipação, escrow, seguro de crédito, retenção de marcos, quebra de escopo, desconto condicionado à vista, mediação ou proteção contratual.
 - Se rescisões forem relevantes, use rescisoes.total, rescisoes.porMes e rescisoes.itens.
-- Até 4 insights e até 4 estratégias de recebimento.
+- Sempre inclua 4 estratégias em cobranca, mesmo que precise ser mais enxuto nos insights.
+- Até 4 insights.
 - Responda SOMENTE com JSON válido, sem markdown e sem cercas de código.
 
 Formato:
 {
   "resumo": "3 frases curtas com a tese da semana, citando o caixa total e o principal trade-off.",
   "focoSemana": {"titulo": "...", "acao": "...", "porque": "..."},
-  "insights": [{"area": "Caixa|Receita|Custos|Pessoas|Clientes|Produto|Crescimento", "prioridade": "alta|media|baixa", "titulo": "...", "diagnostico": "...", "implicacao": "...", "acao": "...", "impacto": "...", "prazo": "..."}],
-  "cobranca": [{"publico": "...", "situacao": "...", "estrategia": "...", "abordagem": "...", "porque": "...", "impacto": "..."}]
+  "cobranca": [{"publico": "...", "situacao": "...", "estrategia": "...", "abordagem": "...", "porque": "...", "impacto": "..."}],
+  "insights": [{"area": "Caixa|Receita|Custos|Pessoas|Clientes|Produto|Crescimento", "prioridade": "alta|media|baixa", "titulo": "...", "diagnostico": "...", "implicacao": "...", "acao": "...", "impacto": "...", "prazo": "..."}]
 }
 
 DADOS: ${JSON.stringify(dadosIA)}`;
@@ -839,11 +840,15 @@ DADOS: ${JSON.stringify(dadosIA)}`;
     impacto: limpa(pega(i, 'impacto', 'resultado', 'efeito')), prazo: limpa(pega(i, 'prazo', 'horizonte', 'quando')),
   })).filter(i => i.titulo && i.acao);
   if (!insights.length) throw new Error('a IA não retornou insights utilizáveis: ' + JSON.stringify(j).slice(0, 500));
-  const cobranca = lista(j.cobranca || j.recebimento).slice(0, 4).map(c => ({
-    publico: limpa(pega(c, 'publico', 'público', 'cliente', 'grupo')), situacao: limpa(pega(c, 'situacao', 'situação', 'contexto')),
-    estrategia: limpa(pega(c, 'estrategia', 'estratégia', 'movimento', 'acao', 'ação')), abordagem: limpa(pega(c, 'abordagem', 'como', 'plano')),
-    porque: limpa(pega(c, 'porque', 'porquê', 'justificativa')), impacto: limpa(pega(c, 'impacto', 'resultado')),
-  })).filter(c => c.estrategia && c.abordagem);
+  const cobranca = lista(j.cobranca || j.recebimento || j.planoRecebimento || j.collection).slice(0, 4).map(c => {
+    const est = limpa(pega(c, 'estrategia', 'estratégia', 'movimento', 'acao', 'ação', 'recomendacao', 'recomendação', 'titulo', 'título'));
+    const ab = limpa(pega(c, 'abordagem', 'como', 'plano', 'detalhe', 'execucao', 'execução')) || est;
+    return {
+      publico: limpa(pega(c, 'publico', 'público', 'cliente', 'devedor', 'grupo')), situacao: limpa(pega(c, 'situacao', 'situação', 'contexto', 'problema')),
+      estrategia: est || ab, abordagem: ab, porque: limpa(pega(c, 'porque', 'porquê', 'justificativa', 'motivo', 'razao', 'razão')),
+      impacto: limpa(pega(c, 'impacto', 'resultado', 'efeito', 'ganho')),
+    };
+  }).filter(c => c.estrategia && c.abordagem);
   return {
     geradoEm: new Date().toISOString(),
     proximaEm: new Date(Date.now() + INSIGHTS_MIN * 60e3).toISOString(),
