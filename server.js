@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 const REFRESH_MIN = Number(process.env.ATUALIZACAO_MINUTOS || 120);
 const CACHE_MIN = Number(process.env.CACHE_MINUTOS || REFRESH_MIN);
 const INSIGHTS_MIN = Number(process.env.INSIGHTS_MINUTOS || 10080); // 7 dias
-const INSIGHTS_MODEL = process.env.INSIGHTS_MODELO || 'google/gemini-3.5-flash';
+const INSIGHTS_MODEL = process.env.INSIGHTS_MODELO || 'claude-haiku-5-5';
 
 // Command Code Provider API (compatível com Anthropic Messages)
 const AI_KEY = process.env.COMMAND_IA || process.env.COMMANDCODE_API_KEY || process.env.CMD_API_KEY || process.env.ANTHROPIC_API_KEY;
