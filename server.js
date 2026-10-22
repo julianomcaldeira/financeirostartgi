@@ -807,13 +807,20 @@ DADOS: ${JSON.stringify(dadosIA)}`;
   }
   if (!j) throw new Error('a IA não retornou JSON: ' + String(texto || '').slice(0, 160));
   const limpa = v => String(v ?? '').trim().slice(0, 1200);
-  const insights = (Array.isArray(j.insights) ? j.insights : []).slice(0, 4).map(i => ({
-    area: limpa(i.area || 'Estratégia'), prioridade: ['alta', 'media', 'baixa'].includes(String(i.prioridade).toLowerCase()) ? String(i.prioridade).toLowerCase() : 'media',
-    titulo: limpa(i.titulo), diagnostico: limpa(i.diagnostico), implicacao: limpa(i.implicacao), acao: limpa(i.acao), impacto: limpa(i.impacto), prazo: limpa(i.prazo),
+  const pega = (o, ...chaves) => { for (const k of chaves) { const v = o?.[k]; if (v !== undefined && v !== null && String(v).trim()) return v; } return ''; };
+  const lista = v => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
+  const normPrio = v => { const p = String(v || '').toLowerCase(); return /alta|high|urgente/.test(p) ? 'alta' : /baixa|low/.test(p) ? 'baixa' : 'media'; };
+  const insights = lista(j.insights).slice(0, 4).map(i => ({
+    area: limpa(pega(i, 'area', 'tema', 'categoria') || 'Estratégia'), prioridade: normPrio(pega(i, 'prioridade', 'nivel', 'urgencia')),
+    titulo: limpa(pega(i, 'titulo', 'título', 'title')), diagnostico: limpa(pega(i, 'diagnostico', 'diagnóstico', 'leitura', 'contexto')),
+    implicacao: limpa(pega(i, 'implicacao', 'implicação', 'numero', 'número', 'dado')), acao: limpa(pega(i, 'acao', 'ação', 'action', 'movimento', 'recomendacao', 'recomendação')),
+    impacto: limpa(pega(i, 'impacto', 'resultado', 'efeito')), prazo: limpa(pega(i, 'prazo', 'horizonte', 'quando')),
   })).filter(i => i.titulo && i.acao);
-  if (!insights.length) throw new Error('a IA não retornou insights utilizáveis');
-  const cobranca = (Array.isArray(j.cobranca) ? j.cobranca : []).slice(0, 4).map(c => ({
-    publico: limpa(c.publico), situacao: limpa(c.situacao), estrategia: limpa(c.estrategia), abordagem: limpa(c.abordagem), porque: limpa(c.porque), impacto: limpa(c.impacto),
+  if (!insights.length) throw new Error('a IA não retornou insights utilizáveis: ' + JSON.stringify(j).slice(0, 500));
+  const cobranca = lista(j.cobranca || j.recebimento).slice(0, 4).map(c => ({
+    publico: limpa(pega(c, 'publico', 'público', 'cliente', 'grupo')), situacao: limpa(pega(c, 'situacao', 'situação', 'contexto')),
+    estrategia: limpa(pega(c, 'estrategia', 'estratégia', 'movimento', 'acao', 'ação')), abordagem: limpa(pega(c, 'abordagem', 'como', 'plano')),
+    porque: limpa(pega(c, 'porque', 'porquê', 'justificativa')), impacto: limpa(pega(c, 'impacto', 'resultado')),
   })).filter(c => c.estrategia && c.abordagem);
   return {
     geradoEm: new Date().toISOString(),
