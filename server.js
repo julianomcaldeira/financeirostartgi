@@ -186,8 +186,8 @@ app.post('/api/guru', async (req, res) => {
       headers: { 'content-type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model: process.env.GURU_MODELO || 'claude-sonnet-5-5',
-        max_tokens: 900,
-        system: `Você é o guru financeiro da StartGi Tecnologia, empresa GovTech/B2B de ~25 pessoas investida pelo FIP GovTech. Fala com o CEO, que não é especialista em finanças. Responda em português, direto e objetivo, sem jargão (ou explique o termo em uma frase). Use só os números abaixo, vindos do Omie; se faltar dado, diga. Termine com uma ação prática quando fizer sentido. Não use listas com hífen; prefira prosa curta.\n\nDADOS: ${contexto}`,
+        max_tokens: 1200,
+        system: `Você é o CFO as a Service da StartGi Tecnologia (GovTech/B2B, ~25 pessoas, investida pelo FIP GovTech). Seu cliente é o CEO, Juliano, que não é especialista em finanças. Aja como um CFO experiente e franco: dê o diagnóstico, diga o que importa, recomende decisões concretas com números, aponte riscos sem suavizar e explique qualquer termo técnico em uma frase. Responda em português, objetivo, em prosa curta (sem listas com hífen). Use apenas os dados abaixo, vindos do Omie; se faltar dado para decidir, diga qual e como obtê-lo. Feche com a recomendação: o que fazer esta semana.\n\nDADOS: ${contexto}`,
         messages: (req.body.historico || []).slice(-10),
       }),
     });

@@ -2,119 +2,272 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Painel Financeiro StartGi</title>
+<title>CFO StartGi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-:root{--bg:#0f1419;--card:#182029;--line:#26313d;--tx:#e6edf3;--mut:#8b98a5;--verde:#3fb950;--verm:#f85149;--amar:#d29922;--azul:#58a6ff}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid var(--line)}
-h1{font-size:18px;margin:0}h2{font-size:14px;margin:0 0 12px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
-main{padding:20px 24px;display:grid;gap:16px;max-width:1400px;margin:auto}
-.grid{display:grid;gap:16px}.k4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}.k2{grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
-.kpi .v{font-size:24px;font-weight:700;margin:4px 0}.kpi .l{color:var(--mut);font-size:12px}.kpi .e{color:var(--mut);font-size:12px;margin-top:6px}
-.pos{color:var(--verde)}.neg{color:var(--verm)}
-button{background:var(--azul);color:#0b1220;border:0;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer}
-.alerta{border-left:4px solid var(--mut);padding:10px 12px;margin-bottom:10px;background:#1c2530;border-radius:6px}
-.alerta.alto{border-color:var(--verm)}.alerta.medio{border-color:var(--amar)}.alerta.ok{border-color:var(--verde)}
-.alerta b{display:block;margin-bottom:2px}
-table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--mut);font-weight:500;font-size:12px}td.n{text-align:right}
-#chat{height:260px;overflow:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
-.msg{padding:8px 12px;border-radius:10px;max-width:85%;white-space:pre-wrap}.u{align-self:flex-end;background:#1f3a5f}.g{background:#1c2530}
-.row{display:flex;gap:8px}input{flex:1;background:#0f1419;border:1px solid var(--line);color:var(--tx);border-radius:8px;padding:9px}
-.sug{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.sug span{border:1px solid var(--line);border-radius:20px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--mut)}
-#erro{display:none;background:#3d1418;border:1px solid var(--verm);padding:12px;border-radius:8px}
-@media(max-width:600px){.k2{grid-template-columns:1fr}main,header{padding:14px 16px}}
+:root{
+  --bg:#f6f5f1;--card:#ffffff;--ink:#16202b;--ink2:#4b5866;--mut:#8a94a0;--line:#e7e4dc;
+  --brand:#0f5c4d;--brand-soft:#e3f0ec;--pos:#1a7f5a;--neg:#c2412d;--neg-soft:#fbeae6;--warn:#b7791f;--warn-soft:#fbf1df;--ok-soft:#e5f3ec;
+  --r:14px;--sh:0 1px 2px rgba(22,32,43,.04),0 4px 16px rgba(22,32,43,.05)
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1280px;margin:0 auto;padding:0 28px 60px}
+header{display:flex;justify-content:space-between;align-items:center;padding:22px 0;border-bottom:1px solid var(--line);margin-bottom:28px}
+.logo{display:flex;align-items:center;gap:12px}
+.logo .mark{width:36px;height:36px;border-radius:10px;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:700}
+.logo b{display:block;font-size:15px}.logo span{color:var(--mut);font-size:12px}
+.btn{background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 16px;font:600 13px Inter;cursor:pointer}
+.btn:hover{border-color:var(--brand);color:var(--brand)}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);font-weight:600;margin:0 0 10px}
+h2.sec{font:600 22px Fraunces,Georgia,serif;margin:40px 0 14px;letter-spacing:-.01em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;box-shadow:var(--sh)}
+.g{display:grid;gap:18px}
+
+/* Parecer */
+.parecer{display:grid;grid-template-columns:230px 1fr;gap:28px;align-items:center}
+.score{position:relative;width:200px;height:200px;margin:auto}
+.score .n{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.score .n b{font:600 52px Fraunces,serif;line-height:1}
+.score .n span{display:block;font-size:12px;color:var(--mut);margin-top:6px}
+.parecer h1{font:600 30px/1.2 Fraunces,Georgia,serif;margin:0 0 10px;letter-spacing:-.015em}
+.parecer p.lead{font-size:16px;color:var(--ink2);margin:0 0 18px;max-width:720px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600}
+.chip.alto{background:var(--neg-soft);color:var(--neg)}.chip.medio{background:var(--warn-soft);color:var(--warn)}.chip.ok{background:var(--ok-soft);color:var(--pos)}
+
+/* KPIs */
+.kpis{grid-template-columns:repeat(4,1fr)}
+.kpi .l{font-size:12px;color:var(--mut);font-weight:500}
+.kpi .v{font:600 28px Fraunces,serif;margin:8px 0 4px;letter-spacing:-.01em}
+.kpi .e{font-size:12px;color:var(--ink2)}
+.kpi .tag{display:inline-block;margin-top:10px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px}
+.pos{color:var(--pos)}.neg{color:var(--neg)}
+
+/* Decisões */
+.acoes{grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
+.acao{border-left:4px solid var(--line);padding:18px 20px}
+.acao.alto{border-left-color:var(--neg)}.acao.medio{border-left-color:var(--warn)}.acao.ok{border-left-color:var(--pos)}
+.acao .pri{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.acao.alto .pri{color:var(--neg)}.acao.medio .pri{color:var(--warn)}.acao.ok .pri{color:var(--pos)}
+.acao h3{font-size:16px;margin:6px 0 6px}.acao p{margin:0;color:var(--ink2)}
+.acao .faca{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);font-size:13px}
+.acao .faca b{color:var(--brand)}
+
+.two{grid-template-columns:1.4fr 1fr}
+.half{grid-template-columns:1fr 1fr}
+.chart-h{height:280px}
+.legend-note{font-size:12px;color:var(--mut);margin-top:10px}
+
+/* DRE */
+.dre{width:100%;border-collapse:collapse;font-size:14px}
+.dre td{padding:11px 0;border-bottom:1px solid var(--line)}
+.dre td.n{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.dre tr.tot td{font-weight:700;border-bottom:none;border-top:2px solid var(--ink);padding-top:14px}
+.dre .exp{font-size:12px;color:var(--mut);display:block;font-weight:400}
+
+/* Rankings */
+.rank{list-style:none;margin:0;padding:0}
+.rank li{padding:10px 0;border-bottom:1px solid var(--line)}
+.rank .top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+.rank .top b{font-weight:500}.rank .top span{font-variant-numeric:tabular-nums;color:var(--ink2)}
+.bar{height:6px;background:#f0eee8;border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;border-radius:4px}
+
+table.lst{width:100%;border-collapse:collapse;font-size:13px}
+table.lst th{text-align:left;color:var(--mut);font-weight:500;font-size:12px;padding:0 0 8px;border-bottom:1px solid var(--line)}
+table.lst td{padding:11px 0;border-bottom:1px solid var(--line)}
+table.lst .n{text-align:right;font-variant-numeric:tabular-nums}
+.dias{font-weight:600;font-size:12px;padding:2px 8px;border-radius:6px;background:var(--warn-soft);color:var(--warn)}
+.dias.g{background:var(--neg-soft);color:var(--neg)}
+
+/* CFO chat */
+.cfo{display:grid;grid-template-columns:280px 1fr;gap:0;padding:0;overflow:hidden}
+.cfo aside{background:var(--brand);color:#fff;padding:26px}
+.cfo aside h3{font:600 22px Fraunces,serif;margin:0 0 8px}.cfo aside p{opacity:.8;margin:0 0 18px;font-size:13px}
+.cfo aside .s{display:block;width:100%;text-align:left;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:10px;padding:9px 12px;margin-bottom:8px;font:500 13px Inter;cursor:pointer}
+.cfo aside .s:hover{background:rgba(255,255,255,.2)}
+.cfo .conv{display:flex;flex-direction:column;padding:22px}
+#chat{flex:1;min-height:320px;max-height:460px;overflow:auto;display:flex;flex-direction:column;gap:12px;margin-bottom:14px}
+.msg{padding:12px 16px;border-radius:14px;max-width:85%;white-space:pre-wrap}
+.msg.u{align-self:flex-end;background:var(--brand-soft);color:var(--ink)}
+.msg.c{background:#f7f6f2;border:1px solid var(--line)}
+.msg.c .who{font-size:11px;font-weight:700;color:var(--brand);letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:4px}
+.inp{display:flex;gap:10px}
+.inp input{flex:1;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font:14px Inter;background:#fff}
+.inp input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
+
+#erro{display:none;background:var(--neg-soft);color:var(--neg);border-radius:10px;padding:14px;margin-bottom:18px;font-weight:500}
+.sk{color:var(--mut)}
+@media(max-width:980px){.kpis{grid-template-columns:1fr 1fr}.two,.half,.parecer,.cfo{grid-template-columns:1fr}}
+@media(max-width:560px){.wrap{padding:0 16px 40px}.kpis{grid-template-columns:1fr}.acoes{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<header><div><h1>Painel Financeiro StartGi</h1><div id="upd" style="color:var(--mut);font-size:12px">Carregando dados do Omie…</div></div><button onclick="carregar(1)">Atualizar</button></header>
-<main>
+<div class="wrap">
+<header>
+  <div class="logo"><div class="mark">S</div><div><b>CFO StartGi</b><span id="upd">Conectando ao Omie…</span></div></div>
+  <div style="display:flex;gap:8px"><button class="btn" onclick="window.print()">Imprimir</button><button class="btn pri" onclick="carregar(1)">Atualizar dados</button></div>
+</header>
+
 <div id="erro"></div>
 
-<section class="grid k4" id="kpis"></section>
-
-<section class="grid k2">
-  <div class="card"><h2>O que o guru está vendo</h2><div id="alertas"></div></div>
-  <div class="card"><h2>Pergunte ao guru</h2>
-    <div class="sug" id="sug"></div>
-    <div id="chat"><div class="msg g">Olá, Juliano. Pergunte qualquer coisa sobre o financeiro da StartGi. Eu respondo com base nos números do Omie.</div></div>
-    <div class="row"><input id="pergunta" placeholder="Ex.: dá pra contratar mais um dev?" onkeydown="if(event.key==='Enter')perguntar()"><button onclick="perguntar()">Enviar</button></div>
+<section class="card">
+  <div class="parecer">
+    <div class="score"><canvas id="gScore"></canvas><div class="n"><div><b id="nota">–</b><span>saúde financeira</span></div></div></div>
+    <div>
+      <p class="eyebrow">Parecer do CFO · <span id="dataP"></span></p>
+      <h1 id="titulo" class="sk">Analisando os números…</h1>
+      <p class="lead" id="resumo"></p>
+      <div class="chips" id="chips"></div>
+    </div>
   </div>
 </section>
 
-<section class="grid k2">
-  <div class="card"><h2>Entradas x saídas (12 meses)</h2><canvas id="gMeses" height="200"></canvas></div>
-  <div class="card"><h2>Caixa projetado (próximas 12 semanas)</h2><canvas id="gFluxo" height="200"></canvas><div class="kpi"><div class="e">Considera só o que está lançado no Omie como a receber e a pagar.</div></div></div>
+<h2 class="sec">Números que importam</h2>
+<section class="g kpis" id="kpis"></section>
+
+<h2 class="sec">Decisões da semana</h2>
+<section class="g acoes" id="acoes"></section>
+
+<h2 class="sec">Caixa e resultado</h2>
+<section class="g two">
+  <div class="card"><p class="eyebrow">Entradas, saídas e resultado · 12 meses</p><div class="chart-h"><canvas id="gMeses"></canvas></div></div>
+  <div class="card"><p class="eyebrow">Resultado simplificado · média mensal</p><table class="dre" id="dre"></table></div>
+</section>
+<section class="g" style="margin-top:18px">
+  <div class="card"><p class="eyebrow">Caixa projetado · próximas 12 semanas</p><div class="chart-h"><canvas id="gFluxo"></canvas></div><div class="legend-note">Projeção feita só com o que está lançado no Omie como a receber e a pagar. Lançamentos que faltam no Omie não aparecem aqui.</div></div>
 </section>
 
-<section class="grid k2">
-  <div class="card"><h2>De onde vem o dinheiro (12 meses)</h2><table id="tCli"></table></div>
-  <div class="card"><h2>Para onde vai o dinheiro (12 meses)</h2><table id="tDesp"></table></div>
+<h2 class="sec">Clientes e custos</h2>
+<section class="g half">
+  <div class="card"><p class="eyebrow">De onde vem o dinheiro · 12 meses</p><ul class="rank" id="rCli"></ul></div>
+  <div class="card"><p class="eyebrow">Para onde vai o dinheiro · 12 meses</p><ul class="rank" id="rDesp"></ul></div>
 </section>
+<section class="card" style="margin-top:18px"><p class="eyebrow">Fila de cobrança · recebimentos vencidos</p><table class="lst" id="tAtr"></table></section>
 
-<div class="card"><h2>Recebimentos atrasados — cobrar primeiro</h2><table id="tAtr"></table></div>
-</main>
+<h2 class="sec">Fale com seu CFO</h2>
+<section class="card cfo">
+  <aside>
+    <h3>Seu CFO de plantão</h3>
+    <p>Pergunte como perguntaria a um diretor financeiro. As respostas usam os números atuais do Omie.</p>
+    <div id="sug"></div>
+  </aside>
+  <div class="conv">
+    <div id="chat"><div class="msg c"><span class="who">CFO</span>Bom dia, Juliano. Já olhei os números do Omie. Me diga qual decisão você está avaliando e eu te dou minha recomendação.</div></div>
+    <div class="inp"><input id="pergunta" placeholder="Ex.: posso contratar mais um dev em janeiro?" onkeydown="if(event.key==='Enter')perguntar()"><button class="btn pri" onclick="perguntar()">Perguntar</button></div>
+  </div>
+</section>
+</div>
 
 <script>
 const brl=v=>(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+const k$=v=>{const a=Math.abs(v||0),s=v<0?'-':'';return a>=1e6?s+'R$ '+(a/1e6).toFixed(1).replace('.',',')+' mi':a>=1e3?s+'R$ '+Math.round(a/1e3)+' mil':brl(v)};
 const pct=v=>((v||0)*100).toFixed(0)+'%';
-let g1,g2,hist=[];
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const nomeMes=m=>{const[a,b]=m.split('-');return['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][b-1]+'/'+a.slice(2)};
+let charts={},hist=[];
 
-function kpi(l,v,e,cls=''){return `<div class="card kpi"><div class="l">${l}</div><div class="v ${cls}">${v}</div><div class="e">${e}</div></div>`}
+const ACAO={
+  'Gastando mais do que entra':'Corte ou adie as duas maiores despesas não essenciais e acelere o faturamento do mês.',
+  'Operação se pagando':'Defina quanto dessa sobra vira reserva antes de assumir custos fixos novos.',
+  'Dependência de um cliente':'Feche ao menos um contrato novo de porte médio no trimestre para diluir o risco.',
+  'Caixa negativo à vista':'Antecipe recebíveis ou renegocie vencimentos dessa semana agora, não na véspera.'
+};
+const acaoPara=a=>ACAO[a.titulo]||(a.titulo.startsWith('Fôlego')?'Mantenha a meta de no mínimo 6 meses de fôlego. Abaixo disso, congele novas contratações.':a.titulo.includes('atraso')?'Cobre hoje os três maiores da fila de cobrança abaixo.':'Revise este ponto na próxima reunião financeira.');
+
+function nota(d){let s=100;d.alertas.forEach(a=>s-=a.nivel==='alto'?22:a.nivel==='medio'?9:0);return Math.max(5,Math.min(100,s))}
 
 async function carregar(force){
   document.getElementById('upd').textContent='Consultando o Omie…';
-  const r=await fetch('/api/dados'+(force?'?atualizar=1':''));const d=await r.json();
+  let d;try{d=await (await fetch('/api/dados'+(force?'?atualizar=1':''))).json()}catch(e){d={erro:'Não foi possível falar com o servidor.'}}
   const er=document.getElementById('erro');
-  if(d.erro){er.style.display='block';er.textContent=d.erro;document.getElementById('upd').textContent='Erro';return}
+  if(d.erro){er.style.display='block';er.textContent=d.erro;document.getElementById('upd').textContent='Sem conexão com o Omie';return}
   er.style.display='none';
-  document.getElementById('upd').textContent='Atualizado em '+new Date(d.atualizadoEm).toLocaleString('pt-BR');
-  const k=d.kpis;
+  const k=d.kpis, dt=new Date(d.atualizadoEm);
+  document.getElementById('upd').textContent='Omie · atualizado '+dt.toLocaleString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('dataP').textContent=dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+
+  // Parecer
+  const n=nota(d), cor=n>=75?css('--pos'):n>=50?css('--warn'):css('--neg');
+  document.getElementById('nota').textContent=n;document.getElementById('nota').style.color=cor;
+  const t=document.getElementById('titulo');t.classList.remove('sk');
+  t.textContent=n>=75?'A StartGi está financeiramente saudável.':n>=50?'A StartGi está estável, mas há pontos que pedem atenção.':'A StartGi precisa de ação financeira imediata.';
+  const altos=d.alertas.filter(a=>a.nivel==='alto');
+  document.getElementById('resumo').textContent=
+    `Em média entram ${k$(k.receitaMedia)} e saem ${k$(k.despesaMedia)} por mês, `+
+    (k.resultadoMedio>=0?`sobrando ${k$(k.resultadoMedio)} (${pct(k.margem)} de margem). `:`um déficit de ${k$(-k.resultadoMedio)}. `)+
+    (k.runway!==null?`No ritmo atual, o caixa dura ${k.runway.toFixed(1)} meses. `:'')+
+    (altos.length?`Minha prioridade número um: ${altos[0].titulo.toLowerCase()}.`:'Nenhum risco crítico no momento.');
+  document.getElementById('chips').innerHTML=d.alertas.map(a=>`<span class="chip ${a.nivel}">${a.titulo}</span>`).join('');
+  charts.s&&charts.s.destroy();
+  charts.s=new Chart(gScore,{type:'doughnut',data:{datasets:[{data:[n,100-n],backgroundColor:[cor,'#efece5'],borderWidth:0}]},options:{cutout:'80%',rotation:-120,circumference:240,plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:900}}});
+
+  // KPIs
+  const kp=(l,v,e,cls='',tag='')=>`<div class="card kpi"><div class="l">${l}</div><div class="v ${cls}">${v}</div><div class="e">${e}</div>${tag}</div>`;
+  const tg=(txt,c)=>`<span class="tag" style="background:var(--${c}-soft);color:var(--${c==='ok'?'pos':c})">${txt}</span>`;
   document.getElementById('kpis').innerHTML=
-    (d.saldoDisponivel?kpi('Dinheiro em conta hoje',brl(d.saldo),'Soma das contas correntes no Omie'):'')+
-    kpi('Recebe por mês',brl(k.receitaMedia),'Média dos últimos 3 meses')+
-    kpi('Gasta por mês',brl(k.despesaMedia),'Média dos últimos 3 meses')+
-    kpi('Sobra por mês',brl(k.resultadoMedio),'Margem de '+pct(k.margem),k.resultadoMedio>=0?'pos':'neg')+
-    (k.runway!==null?kpi('Fôlego de caixa',k.runway.toFixed(1)+' meses','Quanto tempo o saldo dura no ritmo atual',k.runway<6?'neg':''):'')+
-    kpi('Entra nos próximos 30 dias',brl(k.receber30),'Contas a receber lançadas')+
-    kpi('Sai nos próximos 30 dias',brl(k.pagar30),'Contas a pagar lançadas')+
-    kpi('Atrasado para receber',brl(k.atrasadoReceber),'Clientes que não pagaram no prazo',k.atrasadoReceber>0?'neg':'')+
-    kpi('Maior cliente',pct(k.top1),'da receita · top 3 = '+pct(k.top3),k.top1>0.4?'neg':'');
+    (d.saldoDisponivel?kp('Caixa hoje',k$(d.saldo),'Saldo das contas no Omie'):kp('Caixa hoje','—','Saldo bancário não disponível na API'))+
+    kp('Receita mensal',k$(k.receitaMedia),'Média dos últimos 3 meses')+
+    kp('Despesa mensal',k$(k.despesaMedia),'Média dos últimos 3 meses')+
+    kp('Resultado mensal',k$(k.resultadoMedio),'Margem de '+pct(k.margem),k.resultadoMedio>=0?'pos':'neg',k.resultadoMedio>=0?tg('Gerando caixa','ok'):tg('Queimando caixa','neg'))+
+    kp('Fôlego de caixa',k.runway!==null?k.runway.toFixed(1)+' meses':'Sem queima','Quanto tempo o caixa dura no ritmo atual',k.runway!==null&&k.runway<6?'neg':'',k.runway!==null&&k.runway<6?tg('Abaixo do mínimo','neg'):'')+
+    kp('A receber em 30 dias',k$(k.receber30),'Já lançado no Omie')+
+    kp('A pagar em 30 dias',k$(k.pagar30),'Já lançado no Omie',k.pagar30>k.receber30?'neg':'',k.pagar30>k.receber30?tg('Sai mais do que entra','warn'):'')+
+    kp('Inadimplência',k$(k.atrasadoReceber),'Clientes com pagamento vencido',k.atrasadoReceber>0?'neg':'',k.atrasadoReceber>0?tg('Cobrar','warn'):tg('Em dia','ok'));
 
-  document.getElementById('alertas').innerHTML=d.alertas.map(a=>`<div class="alerta ${a.nivel}"><b>${a.titulo}</b>${a.texto}</div>`).join('');
+  // Decisões
+  const ord={alto:0,medio:1,ok:2};
+  document.getElementById('acoes').innerHTML=[...d.alertas].sort((a,b)=>ord[a.nivel]-ord[b.nivel]).map(a=>
+    `<div class="card acao ${a.nivel}"><div class="pri">${a.nivel==='alto'?'Prioridade alta':a.nivel==='medio'?'Atenção':'Sob controle'}</div><h3>${a.titulo}</h3><p>${a.texto}</p><div class="faca"><b>Recomendação:</b> ${acaoPara(a)}</div></div>`).join('');
 
-  const cor=getComputedStyle(document.documentElement);const v=c=>cor.getPropertyValue(c).trim();
-  Chart.defaults.color='#8b98a5';Chart.defaults.borderColor='#26313d';
-  g1&&g1.destroy();g1=new Chart(gMeses,{data:{labels:d.meses.map(nomeMes),datasets:[
-    {type:'bar',label:'Entradas',data:d.entradas,backgroundColor:v('--verde')},
-    {type:'bar',label:'Saídas',data:d.saidas,backgroundColor:v('--verm')},
-    {type:'line',label:'Resultado',data:d.resultado,borderColor:v('--azul'),tension:.3}]},
-    options:{scales:{y:{ticks:{callback:x=>brl(x)}}}}});
-  g2&&g2.destroy();g2=new Chart(gFluxo,{data:{labels:d.semanas.map(s=>s.semana),datasets:[
-    {type:'line',label:d.saldoDisponivel?'Saldo projetado':'Variação acumulada',data:d.semanas.map(s=>s.saldo),borderColor:v('--azul'),fill:false,tension:.3},
-    {type:'bar',label:'Entradas',data:d.semanas.map(s=>s.entradas),backgroundColor:v('--verde')},
-    {type:'bar',label:'Saídas',data:d.semanas.map(s=>-s.saidas),backgroundColor:v('--verm')}]},
-    options:{scales:{y:{ticks:{callback:x=>brl(x)}}}}});
+  // Gráficos
+  Chart.defaults.font.family='Inter';Chart.defaults.color=css('--mut');Chart.defaults.borderColor=css('--line');
+  const yfmt={ticks:{callback:x=>k$(x)},grid:{color:'#f0eee8'}},xfmt={grid:{display:false}};
+  const leg={position:'bottom',labels:{usePointStyle:true,boxWidth:8}};
+  charts.m&&charts.m.destroy();
+  charts.m=new Chart(gMeses,{data:{labels:d.meses.map(nomeMes),datasets:[
+    {type:'line',label:'Resultado',data:d.resultado,borderColor:css('--ink'),backgroundColor:css('--ink'),tension:.35,pointRadius:3,order:0},
+    {type:'bar',label:'Entradas',data:d.entradas,backgroundColor:css('--brand'),borderRadius:4,order:1},
+    {type:'bar',label:'Saídas',data:d.saidas,backgroundColor:'#d9c9a8',borderRadius:4,order:1}]},
+    options:{maintainAspectRatio:false,plugins:{legend:leg,tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},scales:{y:yfmt,x:xfmt}}});
+  charts.f&&charts.f.destroy();
+  charts.f=new Chart(gFluxo,{data:{labels:d.semanas.map(s=>'sem '+s.semana),datasets:[
+    {type:'line',label:d.saldoDisponivel?'Saldo projetado':'Variação acumulada',data:d.semanas.map(s=>s.saldo),borderColor:css('--brand'),backgroundColor:'rgba(15,92,77,.08)',fill:true,tension:.35,pointRadius:3,order:0},
+    {type:'bar',label:'Entradas',data:d.semanas.map(s=>s.entradas),backgroundColor:'#9cc7b8',borderRadius:4,order:1},
+    {type:'bar',label:'Saídas',data:d.semanas.map(s=>-s.saidas),backgroundColor:'#e8b4a8',borderRadius:4,order:1}]},
+    options:{maintainAspectRatio:false,plugins:{legend:leg,tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},scales:{y:yfmt,x:xfmt}}});
 
-  const tab=(id,lista,tot)=>document.getElementById(id).innerHTML='<tr><th>Nome</th><th class="n">Valor</th><th class="n">%</th></tr>'+lista.map(x=>`<tr><td>${x.nome}</td><td class="n">${brl(x.valor)}</td><td class="n">${pct(x.valor/tot)}</td></tr>`).join('');
-  tab('tCli',d.clientes,k.receita12||1);
-  tab('tDesp',d.despesas,d.despesas.reduce((s,x)=>s+x.valor,0)||1);
-  document.getElementById('tAtr').innerHTML=d.atrasados.length?'<tr><th>Cliente</th><th>Vencimento</th><th class="n">Dias</th><th class="n">Valor</th></tr>'+d.atrasados.map(a=>`<tr><td>${a.cliente}</td><td>${a.venc}</td><td class="n">${a.dias}</td><td class="n">${brl(a.valor)}</td></tr>`).join(''):'<tr><td>Nenhum recebimento atrasado. 👏</td></tr>';
+  // DRE simplificada
+  document.getElementById('dre').innerHTML=
+    `<tr><td>Receita recebida<span class="exp">Dinheiro que entrou de clientes</span></td><td class="n pos">${brl(k.receitaMedia)}</td></tr>`+
+    `<tr><td>Despesas pagas<span class="exp">Folha, fornecedores, impostos e demais saídas</span></td><td class="n neg">−${brl(k.despesaMedia)}</td></tr>`+
+    `<tr><td>Margem<span class="exp">Quanto sobra de cada R$ 100 recebidos</span></td><td class="n">R$ ${Math.round(k.margem*100)}</td></tr>`+
+    `<tr class="tot"><td>Resultado do mês</td><td class="n ${k.resultadoMedio>=0?'pos':'neg'}">${brl(k.resultadoMedio)}</td></tr>`;
+
+  // Rankings
+  const rk=(id,l,tot,c)=>document.getElementById(id).innerHTML=l.map(x=>`<li><div class="top"><b>${x.nome}</b><span>${k$(x.valor)} · ${pct(x.valor/tot)}</span></div><div class="bar"><i style="width:${Math.max(2,x.valor/l[0].valor*100)}%;background:${c}"></i></div></li>`).join('')||'<li class="sk">Sem dados no período.</li>';
+  rk('rCli',d.clientes,k.receita12||1,css('--brand'));
+  rk('rDesp',d.despesas,d.despesas.reduce((s,x)=>s+x.valor,0)||1,'#c9a86a');
+
+  document.getElementById('tAtr').innerHTML=d.atrasados.length
+    ?'<tr><th>Cliente</th><th>Venceu em</th><th>Atraso</th><th class="n">Valor</th></tr>'+d.atrasados.map(a=>`<tr><td>${a.cliente}</td><td>${a.venc}</td><td><span class="dias ${a.dias>30?'g':''}">${a.dias} dias</span></td><td class="n">${brl(a.valor)}</td></tr>`).join('')
+    :'<tr><td class="sk">Nenhum recebimento vencido. Carteira em dia.</td></tr>';
 }
 
-const sugestoes=['Como está a saúde financeira da StartGi?','Dá pra contratar mais uma pessoa?','Qual cliente devo cobrar primeiro?','Onde posso cortar gastos?','Explique o que é runway'];
-document.getElementById('sug').innerHTML=sugestoes.map(s=>`<span onclick="perguntar('${s}')">${s}</span>`).join('');
+['Como está a saúde financeira da StartGi?','Posso contratar mais uma pessoa?','Onde devo cortar custos primeiro?','Quanto preciso faturar para não queimar caixa?','O que levo para o board do FIP?'].forEach(s=>{
+  const b=document.createElement('button');b.className='s';b.textContent=s;b.onclick=()=>perguntar(s);document.getElementById('sug').appendChild(b)});
 
 async function perguntar(t){
-  const inp=document.getElementById('pergunta');const q=t||inp.value.trim();if(!q)return;inp.value='';
+  const inp=document.getElementById('pergunta');const q=(t||inp.value).trim();if(!q)return;inp.value='';
   const chat=document.getElementById('chat');
-  chat.insertAdjacentHTML('beforeend',`<div class="msg u"></div>`);chat.lastChild.textContent=q;
-  chat.insertAdjacentHTML('beforeend',`<div class="msg g">Analisando…</div>`);const el=chat.lastChild;chat.scrollTop=1e9;
+  const u=document.createElement('div');u.className='msg u';u.textContent=q;chat.appendChild(u);
+  const c=document.createElement('div');c.className='msg c';c.innerHTML='<span class="who">CFO</span><span class="sk">Analisando…</span>';chat.appendChild(c);chat.scrollTop=1e9;
   hist.push({role:'user',content:q});
-  const r=await fetch('/api/guru',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({historico:hist})});
-  const j=await r.json();el.textContent=j.resposta;hist.push({role:'assistant',content:j.resposta});chat.scrollTop=1e9;
+  let r;try{r=await (await fetch('/api/guru',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({historico:hist})})).json()}catch(e){r={resposta:'Não consegui responder agora.'}}
+  c.lastChild.className='';c.lastChild.textContent=r.resposta;hist.push({role:'assistant',content:r.resposta});chat.scrollTop=1e9;
 }
 carregar();
 </script>
