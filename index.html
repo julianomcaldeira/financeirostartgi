@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>StartGi · Painel Financeiro</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/favicon.svg">
+<meta name="theme-color" content="#0b3b31">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
@@ -414,6 +417,7 @@ const brl=v=>(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maxi
 const k$=v=>{const a=Math.abs(v||0),s=v<0?'-':'';return a>=1e6?s+'R$ '+(a/1e6).toFixed(1).replace('.',',')+' mi':a>=1e3?s+'R$ '+Math.round(a/1e3)+' mil':brl(v)};
 const pct=v=>((v||0)*100).toFixed(0)+'%';
 const runwayTxt=v=>v===null||v===undefined?'Sem queima':v<1?'< 1 mês':v.toFixed(1)+' meses';
+const cadTxt=m=>m>=60?`a cada ${m/60} h`:`a cada ${m} min`;
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const nomeMes=m=>{const[a,b]=m.split('-');return['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][b-1]+'/'+a.slice(2)};
 const CTX_KEY='startgi.contexto';
@@ -500,8 +504,8 @@ async function carregar(force){
   document.getElementById('sideUpd').textContent=upd;
   const cad=d.intervaloAtualizacaoMin;
   const prox=d.proximaAtualizacao?new Date(d.proximaAtualizacao):null;
-  document.getElementById('sideCadencia').textContent=cad>0?(prox?'Auto a cada '+cad+' min · próxima '+prox.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'Auto a cada '+cad+' min'):'Atualização manual';
-  document.getElementById('dataP').textContent=dt.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})+(cad>0?` · atualiza a cada ${cad} min`:' · atualização manual');
+  document.getElementById('sideCadencia').textContent=cad>0?(prox?'Auto '+cadTxt(cad)+' · próxima '+prox.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'Auto '+cadTxt(cad)):'Atualização manual';
+  document.getElementById('dataP').textContent=dt.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})+(cad>0?` · ${cadTxt(cad)}`:' · atualização manual');
   renderVisao(d);renderReceita(d);renderCaixa(d);renderAtrasados(d);renderClientes(d);
   agendarAuto(d);
 }

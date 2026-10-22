@@ -5,8 +5,8 @@ const fs = require('fs');
 
 const { OMIE_APP_KEY, OMIE_APP_SECRET, PAINEL_SENHA } = process.env;
 const PORT = process.env.PORT || 3000;
-const CACHE_MIN = Number(process.env.CACHE_MINUTOS || 15);
-const REFRESH_MIN = Number(process.env.ATUALIZACAO_MINUTOS || 15);
+const REFRESH_MIN = Number(process.env.ATUALIZACAO_MINUTOS || 120);
+const CACHE_MIN = Number(process.env.CACHE_MINUTOS || REFRESH_MIN);
 
 // Command Code Provider API (compatível com Anthropic Messages)
 const AI_KEY = process.env.COMMAND_IA || process.env.COMMANDCODE_API_KEY || process.env.CMD_API_KEY || process.env.ANTHROPIC_API_KEY;
@@ -23,6 +23,10 @@ function contextoEmpresa() {
 
 const app = express();
 app.use(express.json());
+
+// Favicon público (antes da proteção por senha)
+app.get('/favicon.svg', (req, res) => res.type('image/svg+xml').sendFile(path.join(__dirname, 'favicon.svg')));
+app.get('/favicon.ico', (req, res) => res.redirect(302, '/favicon.svg'));
 
 // Proteção simples por senha (os dados são sensíveis)
 app.use((req, res, next) => {
