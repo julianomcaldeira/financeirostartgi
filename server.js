@@ -52,8 +52,11 @@ async function chamarIA(system, mensagens, maxTokens = 4096) {
   let j;
   try { j = JSON.parse(bruto); } catch { throw new Error(`IA ${r.status} respondeu HTML/texto em vez de JSON: ${bruto.slice(0, 180)}`); }
   if (!r.ok) throw new Error(`IA ${r.status}: ${j.error?.message || j.message || 'falha na chamada'}`);
-  const texto = j.content?.map?.(b => b.text).filter(Boolean).join('\n') || j.choices?.[0]?.message?.content || j.output_text || '';
-  if (!texto && j.content) return typeof j.content === 'string' ? j.content : JSON.stringify(j.content);
+  const texto = j.content?.filter?.(b => b.type === 'text' || b.text)?.map?.(b => b.text).filter(Boolean).join('\n') || j.choices?.[0]?.message?.content || j.output_text || '';
+  if (!texto) {
+    const tipos = Array.isArray(j.content) ? j.content.map(b => b.type || 'sem-tipo').join(',') : typeof j.content;
+    throw new Error(`IA sem texto (blocos: ${tipos}; stop: ${j.stop_reason || '—'}; tokens: ${j.usage?.output_tokens ?? '—'})`);
+  }
   return texto;
 }
 
@@ -796,7 +799,7 @@ DADOS: ${JSON.stringify(dadosIA)}`;
     texto = await chamarIA(
       system + (tentativa > 1 ? '\n\nATENÇÃO: a tentativa anterior não veio em JSON. Responda agora SOMENTE com o objeto JSON, começando por { e terminando em }.' : ''),
       [{ role: 'user', content: 'Gere a leitura estratégica desta semana no JSON pedido. Responda somente com JSON.' }],
-      3000
+      8192
     );
     const m = String(texto || '').match(/\{[\s\S]*\}/);
     if (m) {
