@@ -103,6 +103,35 @@ h1,h2,h3,p{margin:0}
 .acao .faca{margin-top:12px;padding-top:11px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink2)}
 .acao .faca b{color:var(--brand)}
 
+/* ---------- Alertas e regimes ---------- */
+.alert-banner{display:none;align-items:center;justify-content:space-between;gap:18px;background:linear-gradient(135deg,#fff8f5,#fbe9e4);border:1px solid #f2cfc6;border-radius:var(--radius);padding:18px 22px;margin-bottom:18px}
+.alert-banner .ab-left{display:flex;align-items:center;gap:14px;min-width:0}
+.alert-banner .ab-icon{width:42px;height:42px;border-radius:12px;background:var(--neg);color:#fff;display:grid;place-items:center;font:700 20px Fraunces,serif;flex:0 0 auto}
+.alert-banner b{display:block;font-size:15px}
+.alert-banner span{display:block;font-size:12.5px;color:var(--ink2);margin-top:2px}
+.alert-banner .btn{border-color:#e2b9ae;color:var(--neg);background:#fff;white-space:nowrap}
+.alert-banner .btn:hover{background:var(--neg);color:#fff;border-color:var(--neg)}
+.regime-intro{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.regime-box{border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;background:#fff}
+.regime-box.caixa{background:linear-gradient(135deg,#f4fbf7,#e7f3ed);border-color:#cfe5da}
+.regime-box.comp{background:linear-gradient(135deg,#fffaf0,#fbf1de);border-color:#ecd9b6}
+.regime-box h3{font:600 19px Fraunces,serif;margin:8px 0 6px}
+.regime-box p{font-size:13px;color:var(--ink2);line-height:1.55}
+.regime-box .regime-tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:3px 8px;border-radius:5px;background:#fff;color:var(--brand)}
+.regime-box.comp .regime-tag{color:var(--warn)}
+.aging{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.aging .box{border:1px solid var(--line);border-radius:13px;padding:15px 16px;background:#fff}
+.aging .box.hot{border-color:#f2cfc6;background:#fff8f5}
+.aging .box .faixa{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.aging .box .valor{font:600 20px Fraunces,serif;margin:7px 0 2px}
+.aging .box .qtd{font-size:12px;color:var(--ink2)}
+.table-scroll{max-height:590px;overflow:auto;border:1px solid var(--line);border-radius:12px}
+.table-scroll table.lst{min-width:760px;padding:0 14px}
+.table-scroll thead th{position:sticky;top:0;background:#fff;z-index:2;padding-top:12px}
+.table-scroll tbody tr:hover{background:#faf9f5}
+.nav-badge{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--neg);color:#fff;font-size:10px;font-weight:800;display:none;place-items:center}
+.nav-badge.show{display:grid}
+
 /* ---------- Tables ---------- */
 table.lst{width:100%;border-collapse:collapse;font-size:13px}
 table.lst th{text-align:left;color:var(--muted);font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:0 0 10px;border-bottom:1px solid var(--line)}
@@ -185,14 +214,15 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
   <nav class="nav" id="nav">
     <button class="active" data-view="visao"><span class="dot"></span>Visão geral</button>
     <button data-view="receita"><span class="dot"></span>Receita</button>
-    <button data-view="caixa"><span class="dot"></span>Caixa</button>
+    <button data-view="caixa"><span class="dot"></span>Caixa e competência</button>
+    <button data-view="atrasados"><span class="dot"></span>Atrasados<span class="nav-badge" id="badgeAtrasados">0</span></button>
     <button data-view="clientes"><span class="dot"></span>Clientes e custos</button>
     <button data-view="cfo"><span class="dot"></span>CFO de plantão</button>
     <button onclick="openContexto()"><span class="dot"></span>Contexto</button>
   </nav>
   <div class="side-foot">
     <div class="live"></div>
-    <div><b>Omie conectado</b><span id="sideUpd">Consultando dados…</span></div>
+    <div><b>Omie conectado</b><span id="sideUpd">Consultando dados…</span><span id="sideCadencia">Atualização automática</span></div>
   </div>
 </aside>
 <div class="overlay" onclick="toggleSidebar(false)"></div>
@@ -206,7 +236,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     <div class="top-actions">
       <button class="btn ghost" onclick="openContexto()">Contexto</button>
       <button class="btn ghost" onclick="window.print()">Imprimir</button>
-      <button class="btn primary" onclick="carregar(1)">Atualizar dados</button>
+      <button class="btn primary" id="btnAtualizar" onclick="carregar(1)">Atualizar agora</button>
     </div>
   </header>
 
@@ -224,13 +254,14 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
       </div>
     </div>
     <div class="kpis" id="kpis"></div>
+    <div class="alert-banner" id="bannerAtraso"></div>
     <div class="grid two">
       <div class="card">
         <div class="card-head"><div><p class="eyebrow">Entradas, saídas e resultado</p><h2>Últimos 12 meses</h2></div><span class="muted">O mês corrente é parcial</span></div>
         <div class="chart-h"><canvas id="gMeses"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-head"><div><p class="eyebrow">Resultado simplificado</p><h2>Média mensal</h2></div></div>
+        <div class="card-head"><div><p class="eyebrow">Regime de caixa</p><h2>Resultado simplificado</h2></div></div>
         <table class="dre" id="dre"></table>
       </div>
     </div>
@@ -270,9 +301,33 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     </div>
   </section>
 
-  <!-- CAIXA -->
+  <!-- CAIXA E COMPETÊNCIA -->
   <section class="view" data-view="caixa">
-    <div class="kpis" id="kpisCaixa"></div>
+    <div class="regime-intro">
+      <div class="regime-box caixa">
+        <span class="regime-tag">Caixa</span>
+        <h3>O que já entrou e saiu</h3>
+        <p>Mostra o dinheiro efetivamente recebido e pago, pela data de vencimento dos títulos quitados. É a visão de liquidez: responde “quanto tem no caixa e quanto passou por ele”.</p>
+      </div>
+      <div class="regime-box comp">
+        <span class="regime-tag">Competência</span>
+        <h3>O que foi faturado e incorrido</h3>
+        <p>Mostra a receita e a despesa pela data de emissão, independentemente de já ter sido paga. É a visão de resultado: responde “o mês gerou lucro ou prejuízo”.</p>
+      </div>
+    </div>
+    <div class="kpis" id="kpisRegimes"></div>
+    <div class="grid even">
+      <div class="card">
+        <div class="card-head"><div><p class="eyebrow">Comparativo mensal</p><h2>Resultado: caixa x competência</h2></div><span class="muted">12 meses</span></div>
+        <div class="chart-h"><canvas id="gRegimes"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><p class="eyebrow">Detalhe</p><h2>Caixa e competência</h2></div></div>
+        <table class="lst" id="tRegimes"></table>
+        <p class="muted" style="margin-top:12px">Caixa usa títulos quitados por vencimento. Competência usa a data de emissão, paga ou não.</p>
+      </div>
+    </div>
+    <div class="kpis" id="kpisCaixa" style="margin-top:18px"></div>
     <div class="card">
       <div class="card-head"><div><p class="eyebrow">Projeção</p><h2>Caixa das próximas 12 semanas</h2></div><span class="muted">Só o que está lançado no Omie</span></div>
       <div class="chart-h"><canvas id="gFluxo"></canvas></div>
@@ -295,6 +350,19 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     </div>
   </section>
 
+  <!-- ATRASADOS -->
+  <section class="view" data-view="atrasados">
+    <div class="card" style="border-color:#f2cfc6;background:linear-gradient(135deg,#fffdfb,#fff8f5)">
+      <div class="card-head"><div><p class="eyebrow">Cobrança prioritária</p><h2>Todos os atrasados a receber</h2></div><span class="muted" id="atrasadosNota"></span></div>
+      <div class="kpis" id="kpisAtrasados" style="margin-bottom:0"></div>
+    </div>
+    <div class="aging" id="aging"></div>
+    <div class="card">
+      <div class="card-head"><div><p class="eyebrow">Lista completa</p><h2>Títulos vencidos em aberto</h2></div><input id="filtroAtraso" oninput="filtrarAtrasados()" placeholder="Filtrar por cliente ou categoria" style="border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:13px Inter;min-width:240px"></div>
+      <div class="table-scroll"><table class="lst" id="tAtrasados"></table></div>
+    </div>
+  </section>
+
   <!-- CLIENTES -->
   <section class="view" data-view="clientes">
     <div class="kpis" id="kpisClientes"></div>
@@ -303,7 +371,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
       <div class="card"><div class="card-head"><div><p class="eyebrow">Despesas</p><h2>Para onde vai o dinheiro</h2></div><span class="muted">12 meses</span></div><ul class="rank" id="rDesp"></ul></div>
     </div>
     <div class="card" style="margin-top:18px">
-      <div class="card-head"><div><p class="eyebrow">Cobrança</p><h2>Recebimentos vencidos</h2></div><span class="muted" id="atrTotal"></span></div>
+      <div class="card-head"><div><p class="eyebrow">Cobrança</p><h2>10 maiores vencidos</h2></div><div style="display:flex;align-items:center;gap:10px"><span class="muted" id="atrTotal"></span><button class="btn" onclick="go('atrasados')">Ver todos</button></div></div>
       <table class="lst" id="tAtr"></table>
     </div>
   </section>
@@ -352,11 +420,12 @@ const CTX_KEY='startgi.contexto';
 const TITLES={
   visao:['Visão geral','O retrato financeiro da StartGi'],
   receita:['Receita','De onde vem o dinheiro, produto a produto'],
-  caixa:['Caixa','Quanto entra, quanto sai e até quando dura'],
+  caixa:['Caixa e competência','O que já passou pelo caixa x o que foi faturado'],
+  atrasados:['Atrasados a receber','Todos os títulos vencidos em aberto'],
   clientes:['Clientes e custos','Concentração, cobrança e despesas'],
   cfo:['CFO de plantão','Conversa com o seu diretor financeiro']
 };
-let charts={},hist=[];
+let charts={},hist=[],atrasadosCache=[],autoTimer=null;
 
 function toggleSidebar(force){
   const open=typeof force==='boolean'?force:!document.body.classList.contains('side-open');
@@ -403,18 +472,38 @@ const ACAO={
 const acaoPara=a=>ACAO[a.titulo]||(a.titulo.startsWith('Fôlego')?'Mantenha a meta de no mínimo 6 meses de fôlego. Abaixo disso, congele novas contratações.':a.titulo.includes('atraso')?'Cobre hoje os três maiores da fila de cobrança abaixo.':'Revise este ponto na próxima reunião financeira.');
 function nota(d){let s=100;d.alertas.forEach(a=>s-=a.nivel==='alto'?22:a.nivel==='medio'?9:0);return Math.max(5,Math.min(100,s))}
 
+function agendarAuto(d){
+  clearTimeout(autoTimer);
+  if(!d.intervaloAtualizacaoMin||!d.proximaAtualizacao)return;
+  const alvo=new Date(d.proximaAtualizacao).getTime();
+  const espera=alvo>Date.now()?Math.max(20e3,alvo-Date.now()+5e3):Math.max(60e3,(d.intervaloAtualizacaoMin||1)*60e3);
+  autoTimer=setTimeout(()=>carregar(false),espera);
+}
+
 async function carregar(force){
+  const btn=document.getElementById('btnAtualizar');
+  btn.disabled=true;btn.textContent='Atualizando…';
   document.getElementById('sideUpd').textContent='Consultando o Omie…';
   document.getElementById('dataP').textContent='Atualizando…';
   let d;try{d=await (await fetch('/api/dados'+(force?'?atualizar=1':''))).json()}catch(e){d={erro:'Não foi possível falar com o servidor.'}}
+  btn.disabled=false;btn.textContent='Atualizar agora';
   const er=document.getElementById('erro');
-  if(d.erro){er.style.display='block';er.textContent=d.erro;document.getElementById('sideUpd').textContent='Sem conexão com o Omie';document.getElementById('dataP').textContent='Sem conexão';return}
+  if(d.erro){
+    er.style.display='block';er.textContent=d.erro;
+    document.getElementById('sideUpd').textContent='Sem conexão com o Omie';
+    document.getElementById('dataP').textContent='Sem conexão';
+    return;
+  }
   er.style.display='none';
   const dt=new Date(d.atualizadoEm);
   const upd='Omie · '+dt.toLocaleString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
   document.getElementById('sideUpd').textContent=upd;
+  const cad=d.intervaloAtualizacaoMin;
+  const prox=d.proximaAtualizacao?new Date(d.proximaAtualizacao):null;
+  document.getElementById('sideCadencia').textContent=cad>0?(prox?'Auto a cada '+cad+' min · próxima '+prox.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'Auto a cada '+cad+' min'):'Atualização manual';
   document.getElementById('dataP').textContent=dt.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-  renderVisao(d);renderReceita(d);renderCaixa(d);renderClientes(d);
+  renderVisao(d);renderReceita(d);renderCaixa(d);renderAtrasados(d);renderClientes(d);
+  agendarAuto(d);
 }
 
 function kpi(label,value,sub,cls='',tag=''){
@@ -433,18 +522,25 @@ function renderVisao(d){
     (k.runway!==null?`No ritmo atual, o caixa dura ${runwayTxt(k.runway)}. `:'')+
     (altos.length?`Minha prioridade número um: ${altos[0].titulo.toLowerCase()}.`:'Nenhum risco crítico no momento.');
   document.getElementById('chips').innerHTML=d.alertas.map(a=>`<span class="chip ${a.nivel}">${a.titulo}</span>`).join('');
+  const atr=d.atrasadosResumo||{}, banner=document.getElementById('bannerAtraso');
+  if(atr.qtd){
+    banner.style.display='flex';
+    banner.innerHTML=`<div class="ab-left"><div class="ab-icon">!</div><div><b>${k$(atr.total)} a receber em atraso</b><span>${atr.qtd} títulos vencidos · o mais antigo está há ${atr.maiorDias} dias · média de ${atr.mediaDias} dias</span></div></div><button class="btn" onclick="go('atrasados')">Ver todos os atrasados</button>`;
+  }else{
+    banner.style.display='none';
+  }
   charts.s&&charts.s.destroy();
   charts.s=new Chart(document.getElementById('gScore'),{type:'doughnut',data:{datasets:[{data:[n,100-n],backgroundColor:[cor,'#ece8dc'],borderWidth:0}]},options:{cutout:'82%',rotation:-125,circumference:250,plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:900}}});
 
   document.getElementById('kpis').innerHTML=
     (d.saldoDisponivel?kpi('Caixa hoje',k$(d.saldo),'Saldo das contas no Omie'):kpi('Caixa hoje','—','Saldo bancário não disponível na API'))+
-    kpi('Receita mensal',k$(k.receitaMedia),'Média dos últimos 3 meses')+
+    kpi('Receita realizada',k$(k.receitaMedia),'Regime de caixa · média dos últimos 3 meses')+
     kpi('Receita recorrente',k$(rec.mensalMedia||0),'Média mensal de mensalidades · '+pct(rec.participacao||0)+' da receita', '', ['Recorrente','pos'])+
-    kpi('Resultado mensal',k$(k.resultadoMedio),'Margem de '+pct(k.margem),k.resultadoMedio>=0?'pos':'neg',[k.resultadoMedio>=0?'Gerando caixa':'Queimando caixa',k.resultadoMedio>=0?'pos':'neg'])+
+    kpi('Resultado de caixa',k$(k.resultadoMedio),'Regime de caixa · margem de '+pct(k.margem),k.resultadoMedio>=0?'pos':'neg',[k.resultadoMedio>=0?'Gerando caixa':'Queimando caixa',k.resultadoMedio>=0?'pos':'neg'])+
     kpi('Fôlego de caixa',k.runway!==null?runwayTxt(k.runway):'Sem queima','Quanto o caixa dura no ritmo atual',k.runway!==null&&k.runway<6?'neg':'',[k.runway!==null&&k.runway<6?'Abaixo do mínimo':'Saudável',k.runway!==null&&k.runway<6?'neg':'pos'])+
     kpi('A receber em 30 dias',k$(k.receber30),'Já lançado no Omie')+
     kpi('A pagar em 30 dias',k$(k.pagar30),'Já lançado no Omie',k.pagar30>k.receber30?'neg':'',[k.pagar30>k.receber30?'Sai mais do que entra':'Coberto','warn'])+
-    kpi('Inadimplência',k$(k.atrasadoReceber),'Clientes com pagamento vencido',k.atrasadoReceber>0?'neg':'',[k.atrasadoReceber>0?'Cobrar':'Em dia',k.atrasadoReceber>0?'warn':'pos']);
+    kpi('Atrasados a receber',k$(k.atrasadoReceber),'Todos os títulos vencidos em aberto',k.atrasadoReceber>0?'neg':'',[k.atrasadoReceber>0?'Cobrar':'Em dia',k.atrasadoReceber>0?'warn':'pos']);
 
   const ord={alto:0,medio:1,ok:2};
   document.getElementById('acoes').innerHTML=[...d.alertas].sort((a,b)=>ord[a.nivel]-ord[b.nivel]).map(a=>
@@ -509,7 +605,27 @@ function renderReceita(d){
 }
 
 function renderCaixa(d){
-  const k=d.kpis, ult=d.semanas[d.semanas.length-1]||{};
+  const k=d.kpis, ult=d.semanas[d.semanas.length-1]||{}, reg=d.regimes||{}, cx=reg.caixa||{}, cp=reg.competencia||{}, dif=reg.diferenca||{};
+  document.getElementById('kpisRegimes').innerHTML=
+    kpi('Receita no caixa',k$(cx.receita||0),'Recebida nos últimos 12 meses')+
+    kpi('Receita na competência',k$(cp.receita||0),'Emitida nos últimos 12 meses')+
+    kpi('Resultado no caixa',k$(cx.resultado||0),'Recebido menos pago',((cx.resultado||0)>=0?'pos':'neg'))+
+    kpi('Resultado na competência',k$(cp.resultado||0),'Faturado menos incorrido',((cp.resultado||0)>=0?'pos':'neg'))+
+    kpi('Ajuste de regime',k$(dif.resultado||0),'Competência menos caixa',((dif.resultado||0)>=0?'pos':'neg'),[((dif.resultado||0)>=0?'Competência maior':'Caixa maior'),((dif.resultado||0)>=0?'pos':'warn')])+
+    kpi('Margem na competência',pct(cp.margem||0),'Resultado sobre a receita faturada');
+
+  const serieCx=cx.serie||[], serieCp=cp.serie||[];
+  charts.reg&&charts.reg.destroy();
+  charts.reg=new Chart(document.getElementById('gRegimes'),{type:'bar',data:{labels:serieCx.map(x=>nomeMes(x.mes)),datasets:[
+    {label:'Resultado caixa',data:serieCx.map(x=>x.resultado),backgroundColor:css('--brand'),borderRadius:4},
+    {label:'Resultado competência',data:serieCp.map(x=>x.resultado),backgroundColor:css('--sand'),borderRadius:4}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},scales:{y:{ticks:{callback:x=>k$(x)},grid:{color:'#f0eee6'}},x:{grid:{display:false}}}}});
+
+  document.getElementById('tRegimes').innerHTML=
+    '<tr><th>Mês</th><th class="n">Caixa</th><th class="n">Competência</th><th class="n">Diferença</th></tr>'+
+    serieCx.map((x,i)=>{const c=serieCp[i]||{};const d=(c.resultado||0)-x.resultado;return `<tr><td>${nomeMes(x.mes)}</td><td class="n ${x.resultado>=0?'pos':'neg'}">${k$(x.resultado)}</td><td class="n ${(c.resultado||0)>=0?'pos':'neg'}">${k$(c.resultado||0)}</td><td class="n ${d>=0?'pos':'neg'}">${(d>=0?'+':'')+k$(d)}</td></tr>`}).join('')+
+    `<tr class="tot"><td>Total 12 meses</td><td class="n ${(cx.resultado||0)>=0?'pos':'neg'}">${k$(cx.resultado||0)}</td><td class="n ${(cp.resultado||0)>=0?'pos':'neg'}">${k$(cp.resultado||0)}</td><td class="n ${(dif.resultado||0)>=0?'pos':'neg'}">${(dif.resultado||0)>=0?'+':''}${k$(dif.resultado||0)}</td></tr>`;
+
   document.getElementById('kpisCaixa').innerHTML=
     (d.saldoDisponivel?kpi('Caixa hoje',k$(d.saldo),'Saldo das contas no Omie'):kpi('Caixa hoje','—','Saldo bancário não disponível'))+
     kpi('A receber em 30 dias',k$(k.receber30),'Já lançado no Omie')+
@@ -546,6 +662,31 @@ function renderCaixa(d){
     `<tr class="tot"><td>Total 12 meses</td><td class="n">${k$(tr12.receita)}</td><td class="n">${k$(tr12.despesa)}</td><td class="n ${tr12.resultado>=0?'pos':'neg'}">${k$(tr12.resultado)}</td><td class="n">${tr12.receita?pct(tr12.resultado/tr12.receita):'—'}</td></tr>`;
 }
 
+function filtrarAtrasados(){
+  const q=(document.getElementById('filtroAtraso').value||'').toLowerCase().trim();
+  const lista=atrasadosCache.filter(a=>!q||a.cliente.toLowerCase().includes(q)||(a.categoria||'').toLowerCase().includes(q));
+  const total=lista.reduce((s,a)=>s+a.valor,0);
+  document.getElementById('tAtrasados').innerHTML=
+    '<thead><tr><th>Cliente</th><th>Categoria</th><th>Venceu em</th><th>Atraso</th><th class="n">Valor</th></tr></thead><tbody>'+
+    (lista.map(a=>`<tr><td>${a.cliente}</td><td class="muted">${a.categoria||'—'}</td><td>${a.venc}</td><td><span class="dias ${a.dias>30?'g':''}">${a.dias} dias</span></td><td class="n">${brl(a.valor)}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">Nenhum título encontrado para o filtro.</td></tr>')+
+    '</tbody>'+(lista.length?`<tfoot><tr class="tot"><td colspan="4">Total filtrado (${lista.length} títulos)</td><td class="n">${brl(total)}</td></tr></tfoot>`:'');
+}
+
+function renderAtrasados(d){
+  const r=d.atrasadosResumo||{};
+  atrasadosCache=d.atrasadosTodos||[];
+  const badge=document.getElementById('badgeAtrasados');
+  badge.textContent=r.qtd||0;badge.classList.toggle('show',(r.qtd||0)>0);
+  document.getElementById('atrasadosNota').textContent=`${r.qtd||0} títulos · ${k$(r.total||0)} em aberto`;
+  document.getElementById('kpisAtrasados').innerHTML=
+    kpi('Total em atraso',k$(r.total||0),'Soma de todos os títulos vencidos',(r.total||0)>0?'neg':'')+
+    kpi('Títulos vencidos',String(r.qtd||0),'Lançamentos em aberto')+
+    kpi('Atraso mais antigo',(r.maiorDias||0)+' dias','Título mais antigo da carteira')+
+    kpi('Atraso médio',(r.mediaDias||0)+' dias','Média ponderada por título');
+  document.getElementById('aging').innerHTML=(r.buckets||[]).map(b=>`<div class="box ${b.qtd?'hot':''}"><div class="faixa">${b.faixa}</div><div class="valor">${k$(b.valor)}</div><div class="qtd">${b.qtd} títulos</div></div>`).join('');
+  filtrarAtrasados();
+}
+
 function renderClientes(d){
   const k=d.kpis;
   document.getElementById('kpisClientes').innerHTML=
@@ -556,7 +697,7 @@ function renderClientes(d){
   const rk=(id,l,tot,c)=>document.getElementById(id).innerHTML=l.map(x=>`<li><div class="top"><b>${x.nome}</b><span>${k$(x.valor)} · ${pct(x.valor/tot)}</span></div><div class="bar"><i style="width:${Math.max(2,x.valor/l[0].valor*100)}%;background:${c}"></i></div></li>`).join('')||'<li class="muted">Sem dados no período.</li>';
   rk('rCli',d.clientes,k.receita12||1,css('--brand'));
   rk('rDesp',d.despesas,d.despesas.reduce((s,x)=>s+x.valor,0)||1,css('--sand'));
-  document.getElementById('atrTotal').textContent=d.atrasados.length+' títulos';
+  document.getElementById('atrTotal').textContent=(d.atrasadosResumo?.qtd||0)+' títulos no total';
   document.getElementById('tAtr').innerHTML=d.atrasados.length
     ?'<tr><th>Cliente</th><th>Venceu em</th><th>Atraso</th><th class="n">Valor</th></tr>'+d.atrasados.map(a=>`<tr><td>${a.cliente}</td><td>${a.venc}</td><td><span class="dias ${a.dias>30?'g':''}">${a.dias} dias</span></td><td class="n">${brl(a.valor)}</td></tr>`).join('')
     :'<tr><td class="muted">Nenhum recebimento vencido. Carteira em dia.</td></tr>';

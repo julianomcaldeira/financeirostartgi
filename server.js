@@ -6,6 +6,7 @@ const fs = require('fs');
 const { OMIE_APP_KEY, OMIE_APP_SECRET, PAINEL_SENHA } = process.env;
 const PORT = process.env.PORT || 3000;
 const CACHE_MIN = Number(process.env.CACHE_MINUTOS || 15);
+const REFRESH_MIN = Number(process.env.ATUALIZACAO_MINUTOS || 15);
 
 // Command Code Provider API (compatível com Anthropic Messages)
 const AI_KEY = process.env.COMMAND_IA || process.env.COMMANDCODE_API_KEY || process.env.CMD_API_KEY || process.env.ANTHROPIC_API_KEY;
@@ -90,6 +91,7 @@ async function montarDados() {
     tipo,
     valor: Number(t.valor_documento || 0),
     venc: dt(t.data_vencimento),
+    emissao: dt(t.data_emissao) || dt(t.data_previsao) || dt(t.data_registro) || dt(t.data_vencimento),
     status: (t.status_titulo || '').toUpperCase(),
     categoria: nomeCat[t.codigo_categoria] || t.codigo_categoria || 'Sem categoria',
     parceiro: nomeCli[t.codigo_cliente_fornecedor] || 'Não identificado',
@@ -107,7 +109,14 @@ async function montarDados() {
     const receita = somaNoMes(R, m), despesa = somaNoMes(P, m);
     return { mes: m, receita, despesa, resultado: receita - despesa, margem: receita ? (receita - despesa) / receita : null };
   });
+  // Competência: tudo que foi emitido no mês, pago ou não
+  const somaCompNoMes = (lista, m) => soma(lista.filter(t => t.emissao && mesKey(t.emissao) === m).map(t => t.valor));
+  const compMensal = meses24.map(m => {
+    const receita = somaCompNoMes(R, m), despesa = somaCompNoMes(P, m);
+    return { mes: m, receita, despesa, resultado: receita - despesa, margem: receita ? (receita - despesa) / receita : null };
+  });
   const ult12 = serieMensal.slice(-12);
+  const competencia = compMensal.slice(-12);
   const meses = ult12.map(x => x.mes);
   const entradas = ult12.map(x => x.receita), saidas = ult12.map(x => x.despesa);
   const resultado = ult12.map(x => x.resultado);
@@ -121,6 +130,13 @@ async function montarDados() {
     return { ano, meses, receita, despesa, resultado: receita - despesa, margem: receita ? (receita - despesa) / receita : null, mediaReceita: receita / meses, mediaDespesa: despesa / meses };
   };
   const ano = { atual: panoramaAno(hoje.getFullYear(), mesesYTD), anterior: panoramaAno(hoje.getFullYear() - 1, mesesYTD) };
+  const panoramaComp = (ano, meses) => {
+    const noPeriodo = lista => lista.filter(t => t.emissao && t.emissao.getFullYear() === ano && t.emissao.getMonth() < meses);
+    const receita = soma(noPeriodo(R).map(t => t.valor));
+    const despesa = soma(noPeriodo(P).map(t => t.valor));
+    return { ano, meses, receita, despesa, resultado: receita - despesa, margem: receita ? (receita - despesa) / receita : null };
+  };
+  const anoCompetencia = { atual: panoramaComp(hoje.getFullYear(), mesesYTD), anterior: panoramaComp(hoje.getFullYear() - 1, mesesYTD) };
 
   // Médias dos últimos 3 meses fechados
   const ult3 = a => soma(a.slice(-4, -1)) / 3;
@@ -128,6 +144,7 @@ async function montarDados() {
 
   // Em aberto
   const atrasadoR = R.filter(t => aberto(t) && t.venc < hoje);
+  const diasDe = t => Math.max(0, Math.round((hoje - t.venc) / 864e5));
   const atrasadoP = P.filter(t => aberto(t) && t.venc < hoje);
   const janela = (lista, dias) => soma(lista.filter(t => aberto(t) && t.venc >= hoje && t.venc <= new Date(hoje.getTime() + dias * 864e5)).map(t => t.valor));
 
@@ -156,6 +173,14 @@ async function montarDados() {
   const clientesRank = agrupa(R, 'parceiro');
   const despesasCat = agrupa(P, 'categoria');
   const receita12 = soma(entradas);
+  const somaSerie = s => ({ receita: soma(s.map(x => x.receita)), despesa: soma(s.map(x => x.despesa)), resultado: soma(s.map(x => x.resultado)) });
+  const caixa12 = somaSerie(ult12);
+  const comp12 = somaSerie(competencia);
+  const regimes = {
+    caixa: { ...caixa12, margem: caixa12.receita ? caixa12.resultado / caixa12.receita : null, serie: ult12 },
+    competencia: { ...comp12, margem: comp12.receita ? comp12.resultado / comp12.receita : null, serie: competencia, ano: anoCompetencia },
+    diferenca: { receita: comp12.receita - caixa12.receita, despesa: comp12.despesa - caixa12.despesa, resultado: comp12.resultado - caixa12.resultado },
+  };
 
   // Receita por produto (categorias do Omie) e recorrência (categorias de mensalidade)
   const ehRecorrente = nome => /mensalidade/i.test(nome || '');
@@ -223,7 +248,17 @@ async function montarDados() {
       serie: serieRecorrente,
       produtos: recProdutos.slice(0, 8),
     },
-    atrasados: atrasadoR.sort((a, b) => b.valor - a.valor).slice(0, 10).map(t => ({ cliente: t.parceiro, valor: t.valor, venc: t.venc.toLocaleDateString('pt-BR'), dias: Math.round((hoje - t.venc) / 864e5) })),
+    competencia, regimes,
+    atrasados: atrasadoR.slice().sort((a, b) => b.valor - a.valor).slice(0, 10).map(t => ({ cliente: t.parceiro, valor: t.valor, venc: t.venc.toLocaleDateString('pt-BR'), dias: diasDe(t) })),
+    atrasadosTodos: atrasadoR.slice().sort((a, b) => b.valor - a.valor).map(t => ({ cliente: t.parceiro, categoria: t.categoria, valor: t.valor, venc: t.venc.toLocaleDateString('pt-BR'), dias: diasDe(t) })),
+    atrasadosResumo: (() => {
+      const faixas = [[1, 30], [31, 60], [61, 90], [91, 99999]];
+      const buckets = faixas.map(([de, ate]) => {
+        const l = atrasadoR.filter(t => { const d = diasDe(t); return d >= de && d <= ate; });
+        return { faixa: de === 91 ? '90+ dias' : `${de} a ${ate} dias`, qtd: l.length, valor: soma(l.map(t => t.valor)) };
+      });
+      return { qtd: atrasadoR.length, total: totAtrasoR, maiorDias: atrasadoR.length ? Math.max(...atrasadoR.map(diasDe)) : 0, mediaDias: atrasadoR.length ? Math.round(soma(atrasadoR.map(diasDe)) / atrasadoR.length) : 0, buckets };
+    })(),
     alertas,
   };
 }
@@ -241,16 +276,37 @@ app.get('/api/contexto', (req, res) => {
 
 app.get('/api/dados', async (req, res) => {
   if (!OMIE_APP_KEY || !OMIE_APP_SECRET) return res.status(500).json({ erro: 'Configure OMIE_APP_KEY e OMIE_APP_SECRET nas variáveis de ambiente.' });
-  try { res.json(await dados(req.query.atualizar === '1')); }
-  catch (e) { res.status(500).json({ erro: e.message }); }
+  try {
+    const d = await dados(req.query.atualizar === '1');
+    res.json({ ...d, intervaloAtualizacaoMin: REFRESH_MIN, proximaAtualizacao: REFRESH_MIN > 0 ? new Date(cache.at + REFRESH_MIN * 60e3).toISOString() : null });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
 });
+
+// Atualização automática em segundo plano (mesmo intervalo do cache por padrão)
+let aquecendo = false;
+async function atualizarEmSegundoPlano() {
+  if (aquecendo) return;
+  aquecendo = true;
+  try {
+    await dados(true);
+    console.log(`[auto] dados atualizados em ${new Date().toLocaleString('pt-BR')}`);
+  } catch (e) {
+    console.error('[auto] falha ao atualizar:', e.message);
+  } finally {
+    aquecendo = false;
+  }
+}
+if (REFRESH_MIN > 0) {
+  setInterval(atualizarEmSegundoPlano, REFRESH_MIN * 60e3);
+  console.log(`[auto] atualização automática a cada ${REFRESH_MIN} minutos`);
+}
 
 // ---------- Guru (chat) ----------
 app.post('/api/guru', async (req, res) => {
   if (!AI_KEY) return res.json({ resposta: 'O chat do guru precisa da variável COMMANDCODE_API_KEY configurada no servidor.' });
   try {
     const d = await dados();
-    const contexto = JSON.stringify({ saldo: d.saldo, saldoDisponivel: d.saldoDisponivel, kpis: d.kpis, serieMensal: d.serieMensal, ano: d.ano, mesAtual: d.meses[d.meses.length - 1], fluxo12semanas: d.semanas, clientes: d.clientes, despesas: d.despesas, atrasados: d.atrasados, produtosReceita: d.produtosReceita, recorrente: d.recorrente, contratos: d.contratos });
+    const contexto = JSON.stringify({ saldo: d.saldo, saldoDisponivel: d.saldoDisponivel, kpis: d.kpis, serieMensal: d.serieMensal, competencia: d.competencia, regimes: d.regimes, ano: d.ano, mesAtual: d.meses[d.meses.length - 1], fluxo12semanas: d.semanas, clientes: d.clientes, despesas: d.despesas, atrasados: d.atrasados, atrasadosResumo: d.atrasadosResumo, produtosReceita: d.produtosReceita, recorrente: d.recorrente, contratos: d.contratos });
     const ctx = (typeof req.body.contexto === 'string' && req.body.contexto.trim()) ? req.body.contexto.trim().slice(0, 12000) : contextoEmpresa();
     const r = await fetch(`${AI_BASE}/messages`, {
       method: 'POST',
