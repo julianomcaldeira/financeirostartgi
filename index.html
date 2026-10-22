@@ -345,6 +345,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 const brl=v=>(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const k$=v=>{const a=Math.abs(v||0),s=v<0?'-':'';return a>=1e6?s+'R$ '+(a/1e6).toFixed(1).replace('.',',')+' mi':a>=1e3?s+'R$ '+Math.round(a/1e3)+' mil':brl(v)};
 const pct=v=>((v||0)*100).toFixed(0)+'%';
+const runwayTxt=v=>v===null||v===undefined?'Sem queima':v<1?'< 1 mês':v.toFixed(1)+' meses';
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const nomeMes=m=>{const[a,b]=m.split('-');return['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][b-1]+'/'+a.slice(2)};
 const CTX_KEY='startgi.contexto';
@@ -429,7 +430,7 @@ function renderVisao(d){
     `Em média entram ${k$(k.receitaMedia)} e saem ${k$(k.despesaMedia)} por mês, `+
     (k.resultadoMedio>=0?`sobrando ${k$(k.resultadoMedio)} (${pct(k.margem)} de margem). `:`um déficit de ${k$(-k.resultadoMedio)}. `)+
     (rec.receita12?`A receita recorrente soma ${k$(rec.receita12)} em 12 meses e representa ${pct(rec.participacao)} do total. `:'')+
-    (k.runway!==null?`No ritmo atual, o caixa dura ${k.runway.toFixed(1)} meses. `:'')+
+    (k.runway!==null?`No ritmo atual, o caixa dura ${runwayTxt(k.runway)}. `:'')+
     (altos.length?`Minha prioridade número um: ${altos[0].titulo.toLowerCase()}.`:'Nenhum risco crítico no momento.');
   document.getElementById('chips').innerHTML=d.alertas.map(a=>`<span class="chip ${a.nivel}">${a.titulo}</span>`).join('');
   charts.s&&charts.s.destroy();
@@ -440,7 +441,7 @@ function renderVisao(d){
     kpi('Receita mensal',k$(k.receitaMedia),'Média dos últimos 3 meses')+
     kpi('Receita recorrente',k$(rec.mensalMedia||0),'Média mensal de mensalidades · '+pct(rec.participacao||0)+' da receita', '', ['Recorrente','pos'])+
     kpi('Resultado mensal',k$(k.resultadoMedio),'Margem de '+pct(k.margem),k.resultadoMedio>=0?'pos':'neg',[k.resultadoMedio>=0?'Gerando caixa':'Queimando caixa',k.resultadoMedio>=0?'pos':'neg'])+
-    kpi('Fôlego de caixa',k.runway!==null?k.runway.toFixed(1)+' meses':'Sem queima','Quanto o caixa dura no ritmo atual',k.runway!==null&&k.runway<6?'neg':'',[k.runway!==null&&k.runway<6?'Abaixo do mínimo':'Saudável',k.runway!==null&&k.runway<6?'neg':'pos'])+
+    kpi('Fôlego de caixa',k.runway!==null?runwayTxt(k.runway):'Sem queima','Quanto o caixa dura no ritmo atual',k.runway!==null&&k.runway<6?'neg':'',[k.runway!==null&&k.runway<6?'Abaixo do mínimo':'Saudável',k.runway!==null&&k.runway<6?'neg':'pos'])+
     kpi('A receber em 30 dias',k$(k.receber30),'Já lançado no Omie')+
     kpi('A pagar em 30 dias',k$(k.pagar30),'Já lançado no Omie',k.pagar30>k.receber30?'neg':'',[k.pagar30>k.receber30?'Sai mais do que entra':'Coberto','warn'])+
     kpi('Inadimplência',k$(k.atrasadoReceber),'Clientes com pagamento vencido',k.atrasadoReceber>0?'neg':'',[k.atrasadoReceber>0?'Cobrar':'Em dia',k.atrasadoReceber>0?'warn':'pos']);

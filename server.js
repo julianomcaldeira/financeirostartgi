@@ -188,7 +188,10 @@ async function montarDados() {
   const alertas = [];
   if (margem < 0) alertas.push({ nivel: 'alto', titulo: 'Gastando mais do que entra', texto: `Nos últimos 3 meses a StartGi gastou em média ${brl(despesaMedia)} e recebeu ${brl(receitaMedia)} por mês. Cada mês consome ${brl(burn)} do caixa.` });
   else alertas.push({ nivel: 'ok', titulo: 'Operação se pagando', texto: `Média dos últimos 3 meses: entra ${brl(receitaMedia)}, sai ${brl(despesaMedia)}. Sobra ${(margem * 100).toFixed(0)}% de cada real recebido.` });
-  if (runway !== null) alertas.push({ nivel: runway < 6 ? 'alto' : runway < 12 ? 'medio' : 'ok', titulo: `Fôlego de caixa: ${runway.toFixed(1)} meses`, texto: `Se nada mudar, o saldo atual dura cerca de ${runway.toFixed(1)} meses. Abaixo de 6 meses é zona de atenção para uma empresa investida.` });
+  if (runway !== null) {
+    const folego = runway < 1 ? 'menos de 1 mês' : `${runway.toFixed(1)} meses`;
+    alertas.push({ nivel: runway < 6 ? 'alto' : runway < 12 ? 'medio' : 'ok', titulo: `Fôlego de caixa: ${folego}`, texto: `Se nada mudar, o saldo atual dura ${folego}. Abaixo de 6 meses é zona de atenção para uma empresa investida.` });
+  }
   if (top1 > 0.3) alertas.push({ nivel: top1 > 0.5 ? 'alto' : 'medio', titulo: 'Dependência de um cliente', texto: `${clientesRank[0].nome} representa ${(top1 * 100).toFixed(0)}% da receita dos últimos 12 meses. Se esse cliente atrasar ou sair, o impacto é direto no caixa.` });
   const totAtrasoR = soma(atrasadoR.map(t => t.valor));
   if (totAtrasoR > 0) alertas.push({ nivel: totAtrasoR > receitaMedia * 0.5 ? 'alto' : 'medio', titulo: `${brl(totAtrasoR)} para receber em atraso`, texto: `São ${atrasadoR.length} títulos vencidos. Cobrar isso é o dinheiro mais barato que a empresa pode conseguir.` });
