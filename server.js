@@ -428,19 +428,47 @@ async function montarDados() {
   const nomeCat = Object.fromEntries(categorias.map(c => [c.codigo, c.descricao]));
   const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
 
-  const norm = (t, tipo) => ({
-    tipo,
-    valor: Number(t.valor_documento || 0),
-    venc: dt(t.data_vencimento),
-    pagamento: dt(t.data_pagamento) || dt(t.data_baixa),
-    emissao: dt(t.data_emissao) || dt(t.data_previsao) || dt(t.data_registro) || dt(t.data_vencimento),
-    status: (t.status_titulo || '').toUpperCase(),
-    categoria: nomeCat[t.codigo_categoria] || t.codigo_categoria || 'Sem categoria',
-    parceiro: nomeCli[t.codigo_cliente_fornecedor] || 'Não identificado',
-    descricao: [t.descricao, t.observacao].filter(Boolean).map(x => String(x).trim()).filter(Boolean).join(' · '),
-    codigo: String(t.codigo_lancamento_omie ?? t.codigo_lancamento_integracao ?? ''),
-    documento: String(t.numero_documento ?? ''),
-  });
+  const baixasDe = t => {
+    const lista = [];
+    for (const v of [t.recebimento, t.pagamento]) {
+      if (!v) continue;
+      if (Array.isArray(v)) lista.push(...v);
+      else if (typeof v === 'object') {
+        if (v.data || v.data_pagamento || v.data_baixa || v.data_recebimento) lista.push(v);
+        else lista.push(...Object.values(v).filter(x => x && typeof x === 'object'));
+      }
+    }
+    return lista.map(b => ({
+      data: dt(b.data || b.data_pagamento || b.data_baixa || b.data_recebimento),
+      valor: Number(b.valor || b.valor_pago || b.valor_recebido || 0),
+    })).filter(b => b.data);
+  };
+  const norm = (t, tipo) => {
+    const valor = Number(t.valor_documento || 0);
+    const status = (t.status_titulo || '').toUpperCase();
+    const baixas = baixasDe(t);
+    const pagamento = baixas.length
+      ? new Date(Math.max(...baixas.map(b => +b.data)))
+      : dt(t.data_pagamento) || dt(t.data_baixa);
+    const somaBaixas = baixas.reduce((a, b) => a + (b.valor || 0), 0);
+    const liquidado = status === 'RECEBIDO' || status === 'PAGO' || status === 'LIQUIDADO';
+    const valorPago = baixas.length ? (somaBaixas || valor) : (liquidado ? valor : 0);
+    return {
+      tipo,
+      valor,
+      valorPago,
+      baixas,
+      venc: dt(t.data_vencimento),
+      pagamento,
+      emissao: dt(t.data_emissao) || dt(t.data_previsao) || dt(t.data_registro) || dt(t.data_vencimento),
+      status,
+      categoria: nomeCat[t.codigo_categoria] || t.codigo_categoria || 'Sem categoria',
+      parceiro: nomeCli[t.codigo_cliente_fornecedor] || 'Não identificado',
+      descricao: [t.descricao, t.observacao].filter(Boolean).map(x => String(x).trim()).filter(Boolean).join(' · '),
+      codigo: String(t.codigo_lancamento_omie ?? t.codigo_lancamento_integracao ?? ''),
+      documento: String(t.numero_documento ?? ''),
+    };
+  };
   const R = receber.map(t => norm(t, 'R')).filter(t => t.status !== 'CANCELADO' && t.venc);
   const P = pagar.map(t => norm(t, 'P')).filter(t => t.status !== 'CANCELADO' && t.venc);
   const quitado = t => t.status === 'RECEBIDO' || t.status === 'PAGO' || t.status === 'LIQUIDADO';
@@ -455,6 +483,8 @@ async function montarDados() {
     categoria: t.categoria,
     documento: t.documento,
     valor: t.valor,
+    valorPago: t.valorPago,
+    baixas: (t.baixas || []).map(b => ({ data: iso(b.data), valor: b.valor })),
     emissao: iso(t.emissao),
     vencimento: iso(t.venc),
     pagamento: iso(t.pagamento),
@@ -975,14 +1005,24 @@ function clientesReceita(d, mes, ordem = 'pago_desc') {
     }
     const valor = Number(l.valor || 0);
     const emissao = String(l.emissao || l.vencimento || '');
-    const pagamento = String(l.pagamento || '');
+    const baixas = (l.baixas || []).length
+      ? l.baixas
+      : (l.pagamento ? [{ data: l.pagamento, valor: Number(l.valorPago || valor) }] : []);
+    const pagamento = String(l.pagamento || (baixas.length ? baixas[baixas.length - 1].data : '') || '');
     if (pagamento) mesesSet.add(pagamento.slice(0, 7));
     if (emissao) mesesSet.add(emissao.slice(0, 7));
-    if (pagamento.slice(0, 7) === ref) { c.pago += valor; c.qtdPagos++; }
+    let pagouNoMes = false;
+    for (const b of baixas) {
+      const data = String(b.data || '');
+      if (!data) continue;
+      mesesSet.add(data.slice(0, 7));
+      if (data.slice(0, 7) === ref) { c.pago += Number(b.valor || valor); pagouNoMes = true; }
+      if (data > c.ultimoPagamento) c.ultimoPagamento = data;
+    }
+    if (pagouNoMes) c.qtdPagos++;
     if (emissao.slice(0, 7) === ref) c.receitaMes += valor;
-    if (!pagamento) c.aberto += valor;
+    if (!['RECEBIDO', 'PAGO', 'LIQUIDADO'].includes(String(l.status || '').toUpperCase())) c.aberto += Math.max(0, valor - Number(l.valorPago || 0));
     if (emissao >= inicio12 && emissao <= fim) c.receita12m += valor;
-    if (pagamento && pagamento > c.ultimoPagamento) c.ultimoPagamento = pagamento;
     c.qtdTitulos++;
     if (cat) c.produtosMap.set(cat, (c.produtosMap.get(cat) || 0) + valor);
   }
