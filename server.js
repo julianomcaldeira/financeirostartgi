@@ -1,6 +1,7 @@
 // Painel Financeiro StartGi — backend que consulta o Omie e calcula os indicadores
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 
 const { OMIE_APP_KEY, OMIE_APP_SECRET, PAINEL_SENHA } = process.env;
 const PORT = process.env.PORT || 3000;
@@ -10,6 +11,14 @@ const CACHE_MIN = Number(process.env.CACHE_MINUTOS || 15);
 const AI_KEY = process.env.COMMAND_IA || process.env.COMMANDCODE_API_KEY || process.env.CMD_API_KEY || process.env.ANTHROPIC_API_KEY;
 const AI_BASE = (process.env.COMMANDCODE_BASE_URL || 'https://api.commandcode.ai/provider/v1').replace(/\/$/, '');
 const AI_MODEL = process.env.GURU_MODELO || 'claude-sonnet-5-5';
+
+// Contexto livre da empresa (editável em contexto.md, sem mexer no código)
+function contextoEmpresa() {
+  let txt = '';
+  try { txt = fs.readFileSync(path.join(__dirname, 'contexto.md'), 'utf8'); } catch {}
+  if (process.env.CONTEXTO_EXTRA) txt += '\n\n' + process.env.CONTEXTO_EXTRA;
+  return txt.trim().slice(0, 12000);
+}
 
 const app = express();
 app.use(express.json());
@@ -25,7 +34,6 @@ app.use((req, res, next) => {
 });
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => {
-  const fs = require('fs');
   const a = path.join(__dirname, 'public', 'index.html'), b = path.join(__dirname, 'index.html');
   res.sendFile(fs.existsSync(a) ? a : b);
 });
@@ -90,12 +98,28 @@ async function montarDados() {
   const quitado = t => t.status === 'RECEBIDO' || t.status === 'PAGO' || t.status === 'LIQUIDADO';
   const aberto = t => !quitado(t);
 
-  // Últimos 12 meses (por vencimento dos títulos quitados)
-  const meses = [];
-  for (let i = 11; i >= 0; i--) meses.push(mesKey(new Date(hoje.getFullYear(), hoje.getMonth() - i, 1)));
-  const porMes = (lista) => meses.map(m => soma(lista.filter(t => quitado(t) && mesKey(t.venc) === m).map(t => t.valor)));
-  const entradas = porMes(R), saidas = porMes(P);
-  const resultado = entradas.map((e, i) => e - saidas[i]);
+  // Série mensal (24 meses) — 12 para o painel, 24 para o CFO
+  const meses24 = [];
+  for (let i = 23; i >= 0; i--) meses24.push(mesKey(new Date(hoje.getFullYear(), hoje.getMonth() - i, 1)));
+  const somaNoMes = (lista, m) => soma(lista.filter(t => quitado(t) && mesKey(t.venc) === m).map(t => t.valor));
+  const serieMensal = meses24.map(m => {
+    const receita = somaNoMes(R, m), despesa = somaNoMes(P, m);
+    return { mes: m, receita, despesa, resultado: receita - despesa, margem: receita ? (receita - despesa) / receita : null };
+  });
+  const ult12 = serieMensal.slice(-12);
+  const meses = ult12.map(x => x.mes);
+  const entradas = ult12.map(x => x.receita), saidas = ult12.map(x => x.despesa);
+  const resultado = ult12.map(x => x.resultado);
+
+  // Panorama do ano: YTD e mesmo período do ano anterior
+  const mesesYTD = hoje.getMonth() + 1;
+  const panoramaAno = (ano, meses) => {
+    const noPeriodo = lista => lista.filter(t => quitado(t) && t.venc.getFullYear() === ano && t.venc.getMonth() < meses);
+    const receita = soma(noPeriodo(R).map(t => t.valor));
+    const despesa = soma(noPeriodo(P).map(t => t.valor));
+    return { ano, meses, receita, despesa, resultado: receita - despesa, margem: receita ? (receita - despesa) / receita : null, mediaReceita: receita / meses, mediaDespesa: despesa / meses };
+  };
+  const ano = { atual: panoramaAno(hoje.getFullYear(), mesesYTD), anterior: panoramaAno(hoje.getFullYear() - 1, mesesYTD) };
 
   // Médias dos últimos 3 meses fechados
   const ult3 = a => soma(a.slice(-4, -1)) / 3;
@@ -159,7 +183,7 @@ async function montarDados() {
       atrasadoReceber: totAtrasoR, atrasadoPagar: soma(atrasadoP.map(t => t.valor)),
       top1, top3, receita12,
     },
-    meses, entradas, saidas, resultado, semanas,
+    meses, entradas, saidas, resultado, semanas, serieMensal, ano,
     clientes: clientesRank.slice(0, 8),
     despesas: despesasCat.slice(0, 8),
     atrasados: atrasadoR.sort((a, b) => b.valor - a.valor).slice(0, 10).map(t => ({ cliente: t.parceiro, valor: t.valor, venc: t.venc.toLocaleDateString('pt-BR'), dias: Math.round((hoje - t.venc) / 864e5) })),
@@ -185,14 +209,30 @@ app.post('/api/guru', async (req, res) => {
   if (!AI_KEY) return res.json({ resposta: 'O chat do guru precisa da variável COMMANDCODE_API_KEY configurada no servidor.' });
   try {
     const d = await dados();
-    const contexto = JSON.stringify({ saldo: d.saldo, saldoDisponivel: d.saldoDisponivel, kpis: d.kpis, meses: d.meses, entradas: d.entradas, saidas: d.saidas, fluxo12semanas: d.semanas, clientes: d.clientes, despesas: d.despesas, atrasados: d.atrasados });
+    const contexto = JSON.stringify({ saldo: d.saldo, saldoDisponivel: d.saldoDisponivel, kpis: d.kpis, serieMensal: d.serieMensal, ano: d.ano, mesAtual: d.meses[d.meses.length - 1], fluxo12semanas: d.semanas, clientes: d.clientes, despesas: d.despesas, atrasados: d.atrasados });
     const r = await fetch(`${AI_BASE}/messages`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}`, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model: AI_MODEL,
         max_tokens: 8192,
-        system: `Você é o CFO as a Service da StartGi Tecnologia (GovTech/B2B, ~25 pessoas, investida pelo FIP GovTech). Seu cliente é o CEO, Juliano, que não é especialista em finanças. Aja como um CFO experiente e franco: dê o diagnóstico, diga o que importa, recomende decisões concretas com números, aponte riscos sem suavizar e explique qualquer termo técnico em uma frase. Responda em português, objetivo, em prosa curta (sem listas com hífen), em no máximo 5 parágrafos. Use apenas os dados abaixo, vindos do Omie; se faltar dado para decidir, diga qual e como obtê-lo. Feche com a recomendação: o que fazer esta semana.\n\nDADOS: ${contexto}`,
+        system: `Você é o CFO as a Service da StartGi Tecnologia (GovTech/B2B, ~25 pessoas, investida pelo FIP GovTech). Seu cliente é o CEO, Juliano, que não é especialista em finanças. Aja como um CFO experiente e franco.
+
+Regras de resposta:
+- Comece pela resposta direta em uma frase.
+- Máximo 3 parágrafos curtos, sem markdown e sem listas.
+- Use só os números que sustentam a decisão; não repita a base inteira.
+- Quando a pergunta envolver tendência ou comparação, cite a evolução mês a mês.
+- Inclua o panorama do ano (YTD x mesmo período do ano anterior) quando for relevante.
+- O mês corrente é parcial; não o trate como fechado.
+- Explique qualquer termo técnico em uma frase.
+- Feche com "Esta semana: " e uma única ação concreta.
+- Use apenas os dados e o contexto abaixo; se faltar dado, diga qual e como obtê-lo.
+
+CONTEXTO DA EMPRESA:
+${contextoEmpresa() || '(não informado)'}
+
+DADOS: ${contexto}`,
         messages: (req.body.historico || []).slice(-10),
       }),
     });

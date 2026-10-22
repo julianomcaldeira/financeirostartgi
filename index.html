@@ -141,6 +141,12 @@ table.lst .n{text-align:right;font-variant-numeric:tabular-nums}
   <div class="card"><p class="eyebrow">Caixa projetado · próximas 12 semanas</p><div class="chart-h"><canvas id="gFluxo"></canvas></div><div class="legend-note">Projeção feita só com o que está lançado no Omie como a receber e a pagar. Lançamentos que faltam no Omie não aparecem aqui.</div></div>
 </section>
 
+<h2 class="sec">Mês a mês e panorama do ano</h2>
+<section class="g two">
+  <div class="card"><p class="eyebrow">Resultado mês a mês · últimos 12 meses</p><table class="lst" id="tMeses"></table></div>
+  <div class="card"><p class="eyebrow">Panorama do ano</p><table class="dre" id="tAno"></table><div class="legend-note" id="anoNota"></div></div>
+</section>
+
 <h2 class="sec">Clientes e custos</h2>
 <section class="g half">
   <div class="card"><p class="eyebrow">De onde vem o dinheiro · 12 meses</p><ul class="rank" id="rCli"></ul></div>
@@ -246,6 +252,21 @@ async function carregar(force){
     `<tr><td>Despesas pagas<span class="exp">Folha, fornecedores, impostos e demais saídas</span></td><td class="n neg">−${brl(k.despesaMedia)}</td></tr>`+
     `<tr><td>Margem<span class="exp">Quanto sobra de cada R$ 100 recebidos</span></td><td class="n">R$ ${Math.round(k.margem*100)}</td></tr>`+
     `<tr class="tot"><td>Resultado do mês</td><td class="n ${k.resultadoMedio>=0?'pos':'neg'}">${brl(k.resultadoMedio)}</td></tr>`;
+
+  // Mês a mês e panorama do ano
+  document.getElementById('tMeses').innerHTML=
+    '<tr><th>Mês</th><th class="n">Entradas</th><th class="n">Saídas</th><th class="n">Resultado</th><th class="n">Margem</th></tr>'+
+    d.serieMensal.slice(-12).reverse().map(x=>
+      `<tr><td>${nomeMes(x.mes)}</td><td class="n">${k$(x.receita)}</td><td class="n">${k$(x.despesa)}</td><td class="n ${x.resultado>=0?'pos':'neg'}">${k$(x.resultado)}</td><td class="n">${x.margem===null?'—':pct(x.margem)}</td></tr>`).join('');
+
+  const a=d.ano.atual, p=d.ano.anterior;
+  document.getElementById('tAno').innerHTML=
+    `<tr><td>Receita recebida<span class="exp">${a.meses} meses de ${a.ano}</span></td><td class="n pos">${k$(a.receita)}</td></tr>`+
+    `<tr><td>Despesas pagas<span class="exp">${a.meses} meses de ${a.ano}</span></td><td class="n neg">−${k$(a.despesa)}</td></tr>`+
+    `<tr><td>Resultado do ano<span class="exp">${a.meses === 12 ? 'Ano fechado' : 'Ano em curso'}</span></td><td class="n ${a.resultado>=0?'pos':'neg'}">${k$(a.resultado)}</td></tr>`+
+    `<tr><td>Margem do ano</td><td class="n">${a.margem===null?'—':pct(a.margem)}</td></tr>`+
+    `<tr class="tot"><td>${a.ano} vs ${p.ano}<span class="exp">Mesmo período (${p.meses} meses)</span></td><td class="n ${a.resultado>=p.resultado?'pos':'neg'}">${(a.resultado-p.resultado>=0?'+':'')+k$(a.resultado-p.resultado)}</td></tr>`;
+  document.getElementById('anoNota').textContent=`Comparação justa: ${a.ano} (${a.meses} meses) contra ${p.ano} (${p.meses} meses). O mês corrente é parcial.`;
 
   // Rankings
   const rk=(id,l,tot,c)=>document.getElementById(id).innerHTML=l.map(x=>`<li><div class="top"><b>${x.nome}</b><span>${k$(x.valor)} · ${pct(x.valor/tot)}</span></div><div class="bar"><i style="width:${Math.max(2,x.valor/l[0].valor*100)}%;background:${c}"></i></div></li>`).join('')||'<li class="sk">Sem dados no período.</li>';
