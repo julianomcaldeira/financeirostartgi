@@ -75,6 +75,286 @@ async function listarTudo(endpoint, call, chave, extra = {}) {
 const dt = s => { if (!s) return null; const [d, m, a] = s.split('/'); return new Date(+a, +m - 1, +d); };
 const mesKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 const soma = arr => arr.reduce((s, x) => s + x, 0);
+const media = arr => arr.length ? soma(arr) / arr.length : 0;
+const desvio = arr => {
+  if (!arr.length) return 0;
+  const m = media(arr);
+  return Math.sqrt(media(arr.map(x => (x - m) ** 2)));
+};
+const varRel = (atual, anterior) => anterior ? (atual - anterior) / Math.abs(anterior) : null;
+const moedaIns = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+const pctIns = v => (v === null || v === undefined || Number.isNaN(v)) ? '—' : `${(v * 100).toFixed(0)}%`;
+const NOMES_MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+function montarInsights(d) {
+  const k = d.kpis || {};
+  const atr = d.atrasadosResumo || { buckets: [] };
+  const rec = d.recorrente || {};
+  const ctr = d.contratos || {};
+  const reg = d.regimes || {};
+  const caixa = reg.caixa || {};
+  const comp = reg.competencia || {};
+  const dif = reg.diferenca || {};
+  const fechados = (d.serieMensal || []).slice(0, -1);
+  const ult3Arr = fechados.slice(-3);
+  const ant3Arr = fechados.slice(-6, -3);
+  const recMedia = media(ult3Arr.map(x => x.receita));
+  const recAnt = media(ant3Arr.map(x => x.receita));
+  const despMedia = media(ult3Arr.map(x => x.despesa));
+  const despAnt = media(ant3Arr.map(x => x.despesa));
+  const resMedia = recMedia - despMedia;
+  const margem3 = recMedia ? resMedia / recMedia : null;
+  const varReceita = varRel(recMedia, recAnt);
+  const varDespesa = varRel(despMedia, despAnt);
+
+  const recSerie = (rec.serie || []).slice(0, -1);
+  const recMedia3 = media(recSerie.slice(-3).map(x => Number(x.recorrente || 0)));
+  const recAntMedia = media(recSerie.slice(-6, -3).map(x => Number(x.recorrente || 0)));
+  const varRec = varRel(recMedia3, recAntMedia);
+
+  const receita12 = caixa.receita || k.receita12 || 0;
+  const atrasoRatio = receita12 ? Number(atr.total || 0) / receita12 : 0;
+  const bucket90 = (atr.buckets || []).find(b => /90\+/.test(b.faixa || '')) || {};
+  const ratio90 = atr.total ? Number(bucket90.valor || 0) / atr.total : 0;
+  const gapMrr = Number(ctr.mrr || 0) - Number(rec.mensalMedia || 0);
+
+  const topCli = (d.clientes || [])[0];
+  const topProd = (d.produtosReceita || [])[0];
+  const topDesp = (d.despesas || [])[0];
+  const desp12 = soma((d.serieMensal || []).slice(-12).map(x => x.despesa));
+  const topDespShare = topDesp && desp12 ? topDesp.valor / desp12 : 0;
+
+  const rec12Arr = fechados.slice(-12).map(x => x.receita);
+  const mediaRec12 = media(rec12Arr);
+  const vol12 = mediaRec12 ? desvio(rec12Arr) / mediaRec12 : 0;
+  const piorSemana = (d.semanas || []).reduce((a, b) => (b.saldo < a.saldo ? b : a), (d.semanas || [])[0]);
+
+  const mapaSaz = {};
+  fechados.forEach(x => {
+    if (!x.mes) return;
+    const m = Number(x.mes.split('-')[1]);
+    if (!mapaSaz[m]) mapaSaz[m] = [];
+    mapaSaz[m].push(x);
+  });
+  const sazonalidade = NOMES_MES.map((nome, i) => {
+    const arr = mapaSaz[i + 1] || [];
+    return { mes: i + 1, nome, receita: media(arr.map(x => x.receita)), resultado: media(arr.map(x => x.resultado)), amostra: arr.length };
+  });
+  const comSaz = sazonalidade.filter(x => x.amostra > 0);
+  const melhorMes = comSaz.slice().sort((a, b) => b.resultado - a.resultado)[0] || null;
+  const piorMes = comSaz.slice().sort((a, b) => a.resultado - b.resultado)[0] || null;
+
+  const mapaAtraso = {};
+  (d.atrasadosTodos || []).forEach(t => {
+    const nome = t.cliente || 'Não identificado';
+    if (!mapaAtraso[nome]) mapaAtraso[nome] = { cliente: nome, total: 0, qtd: 0, maiorDias: 0 };
+    const x = mapaAtraso[nome];
+    x.total += Number(t.valor || 0);
+    x.qtd += 1;
+    x.maiorDias = Math.max(x.maiorDias, Number(t.dias || 0));
+  });
+  const clientesAtraso = Object.values(mapaAtraso).sort((a, b) => b.total - a.total).slice(0, 6);
+
+  const anoAtual = (d.ano || {}).atual || {};
+  const anoAnt = (d.ano || {}).anterior || {};
+  const varYTD = varRel(anoAtual.receita, anoAnt.receita);
+
+  const insights = [];
+  const add = (tema, nivel, titulo, leitura, numero, acao, comportamento) =>
+    insights.push({ tema, nivel, titulo, leitura, numero, acao, comportamento });
+
+  const gapCaixa = Number(dif.resultado || 0);
+  if (gapCaixa > 50000) {
+    add('Caixa', 'alto', 'O resultado na competência não virou caixa',
+      `Nos últimos 12 meses a competência fechou em ${moedaIns(comp.resultado)} e o caixa em ${moedaIns(caixa.resultado)}. A diferença de ${moedaIns(gapCaixa)} está presa em recebíveis e prazos.`,
+      `Gap de ${moedaIns(gapCaixa)}`,
+      'Colocar os maiores atrasados em cobrança ativa e revisar prazos dos novos contratos.',
+      'Toda segunda, comparar competência x caixa e cobrar a diferença.');
+  }
+  if (atr.total > 0) {
+    add('Cobrança', atrasoRatio > 0.08 || ratio90 > 0.4 ? 'alto' : 'medio', `${moedaIns(atr.total)} vencidos para receber`,
+      `São ${atr.qtd} títulos, equivalentes a ${pctIns(atrasoRatio)} da receita dos últimos 12 meses. ${pctIns(ratio90)} do saldo tem mais de 90 dias.`,
+      `${atr.qtd} títulos · ${pctIns(ratio90)} acima de 90 dias`,
+      'Colocar os 10 maiores em cobrança ativa esta semana e definir régua para os demais.',
+      'Régua semanal: D+1 lembrete, D+7 contato, D+15 negociação, D+30 escalação.');
+  } else {
+    add('Cobrança', 'ok', 'Carteira em dia', 'Não há títulos vencidos em aberto no momento.', 'R$ 0 em atraso', 'Manter a régua preventiva de cobrança.', 'Revisar semanalmente os vencimentos da semana.');
+  }
+  if (atr.maiorDias > 180) {
+    add('Cobrança', 'alto', 'Títulos antigos demais na carteira',
+      `O título mais antigo está vencido há ${atr.maiorDias} dias e a média da carteira é de ${atr.mediaDias} dias. Quanto mais velho, menor a chance de recuperação.`,
+      `Maior atraso: ${atr.maiorDias} dias`,
+      'Separar títulos acima de 180 dias para negociação, provisão ou baixa.',
+      'Revisar mensalmente a carteira acima de 180 dias e definir responsável.');
+  }
+  if (varReceita !== null && Math.abs(varReceita) >= 0.05) {
+    add('Receita', varReceita < 0 ? 'alto' : 'ok', varReceita < 0 ? 'A receita caiu no trimestre' : 'A receita cresceu no trimestre',
+      `A média mensal passou de ${moedaIns(recAnt)} para ${moedaIns(recMedia)} (${pctIns(varReceita)}).`,
+      `${varReceita >= 0 ? '+' : ''}${pctIns(varReceita)} vs trimestre anterior`,
+      varReceita < 0 ? 'Revisar pipeline, conversão e retenção dos próximos 90 dias.' : 'Identificar o que puxou o crescimento e repetir o playbook.',
+      'Revisar trimestralmente pipeline, conversão e churn.');
+  } else if (recMedia > 0) {
+    add('Receita', 'ok', 'Receita estável no trimestre',
+      `A média mensal dos últimos 3 meses fechados é de ${moedaIns(recMedia)}, sem variação relevante contra o trimestre anterior.`,
+      `Média de ${moedaIns(recMedia)}/mês`,
+      'Usar a estabilidade para corrigir margem e previsibilidade.',
+      'Acompanhar mensalmente a variação da receita.');
+  }
+  if (varDespesa !== null && varReceita !== null && varDespesa > varReceita + 0.05) {
+    add('Custos', 'alto', 'A despesa cresce mais rápido que a receita',
+      `No trimestre, a despesa variou ${pctIns(varDespesa)} contra ${pctIns(varReceita)} da receita. A margem perde espaço se isso continuar.`,
+      `Despesa ${pctIns(varDespesa)} x receita ${pctIns(varReceita)}`,
+      'Revisar as 3 maiores despesas e congelar contratações não essenciais.',
+      'Mensalmente, comparar a variação das 5 maiores despesas com a receita.');
+  }
+  if (margem3 !== null && margem3 < 0) {
+    add('Resultado', 'alto', 'A operação está consumindo caixa',
+      `Média dos últimos 3 meses fechados: ${moedaIns(resMedia)} de resultado e margem de ${pctIns(margem3)}.`,
+      `Resultado médio: ${moedaIns(resMedia)}`,
+      'Definir meta de ponto de equilíbrio e cortar o que não sustenta receita.',
+      'Revisar semanalmente as entradas e saídas contra a meta de equilíbrio.');
+  } else if (margem3 !== null && margem3 < 0.08) {
+    add('Resultado', 'medio', 'Margem apertada',
+      `A margem média dos últimos 3 meses é de ${pctIns(margem3)}, com resultado de ${moedaIns(resMedia)} por mês.`,
+      `Margem de ${pctIns(margem3)}`,
+      'Priorizar receita recorrente e renegociar as maiores despesas.',
+      'Acompanhar margem mensalmente antes de aumentar custo fixo.');
+  } else if (margem3 !== null) {
+    add('Resultado', 'ok', 'Operação com margem',
+      `A margem média dos últimos 3 meses é de ${pctIns(margem3)}, com resultado de ${moedaIns(resMedia)} por mês.`,
+      `Margem de ${pctIns(margem3)}`,
+      'Direcionar parte da sobra para reserva antes de novos custos fixos.',
+      'Mensalmente, definir quanto do resultado vira reserva.');
+  }
+  if (k.runway !== undefined && k.runway !== null && k.runway < 6) {
+    add('Caixa', 'alto', 'Fôlego de caixa curto',
+      `No ritmo atual, o saldo cobre ${k.runway.toFixed(1)} meses. Abaixo de 6 meses é zona de atenção.`,
+      `${k.runway.toFixed(1)} meses de fôlego`,
+      'Antecipar recebíveis, renegociar pagamentos e congelar novas contratações.',
+      'Revisar o runway toda semana até superar 6 meses.');
+  }
+  if (d.saldoDisponivel && piorSemana && piorSemana.saldo < 0) {
+    add('Caixa', 'alto', 'Caixa negativo à vista',
+      `Pelas contas lançadas no Omie, o saldo fica negativo na semana de ${piorSemana.semana}.`,
+      `Pior saldo: ${moedaIns(piorSemana.saldo)}`,
+      'Antecipar recebimentos ou renegociar vencimentos dessa semana.',
+      'Olhar o fluxo de 12 semanas toda segunda-feira.');
+  }
+  if ((rec.participacao || 0) >= 0.6) {
+    add('Receita', 'ok', 'Receita majoritariamente recorrente',
+      `${pctIns(rec.participacao)} da receita dos últimos 12 meses veio de mensalidades (${moedaIns(rec.receita12)}).`,
+      `${pctIns(rec.participacao)} recorrente`,
+      'Proteger renovações e usar a base para vender expansão.',
+      'Revisar mensalmente churn, renovações e upsell.');
+  } else {
+    add('Receita', 'medio', 'Receita ainda pouco previsível',
+      `Apenas ${pctIns(rec.participacao)} da receita de 12 meses é recorrente. O restante depende de vendas pontuais.`,
+      `${pctIns(rec.participacao)} recorrente`,
+      'Empacotar serviços de implantação em ofertas com mensalidade.',
+      'Medir a participação recorrente todo mês.');
+  }
+  if (varRec !== null && varRec < -0.05) {
+    add('Receita', 'alto', 'A receita recorrente caiu',
+      `A média de mensalidades passou de ${moedaIns(recAntMedia)} para ${moedaIns(recMedia3)} (${pctIns(varRec)}).`,
+      `${pctIns(varRec)} na recorrência`,
+      'Mapear contratos em risco e antecipar renovação dos maiores.',
+      'Revisar semanalmente os contratos com renovação nos próximos 90 dias.');
+  }
+  if (gapMrr > Math.max(10000, Number(ctr.mrr || 0) * 0.05)) {
+    add('Receita', 'oportunidade', 'Há MRR contratado sem virar caixa',
+      `Contratos ativos somam ${moedaIns(ctr.mrr)}/mês, mas a recorrência realizada é ${moedaIns(rec.mensalMedia)}/mês. Há um gap de ${moedaIns(gapMrr)}/mês.`,
+      `${moedaIns(gapMrr)}/mês de gap`,
+      'Conciliar contratos ativos com o faturamento e cobrar serviços contratados sem nota.',
+      'Mensalmente, reconciliar MRR contratado x faturado.');
+  }
+  if ((k.top1 || 0) > 0.3 && topCli) {
+    add('Clientes', (k.top1 || 0) > 0.5 ? 'alto' : 'medio', 'Dependência do maior cliente',
+      `${topCli.nome} representa ${pctIns(k.top1)} da receita dos últimos 12 meses.`,
+      `${pctIns(k.top1)} em um cliente`,
+      'Fechar ao menos um contrato novo de porte médio no trimestre.',
+      'Revisar a concentração da carteira a cada trimestre.');
+  }
+  if (topProd && (topProd.participacao || 0) > 0.3) {
+    add('Produtos', 'medio', 'Um produto concentra a receita',
+      `${topProd.nome} responde por ${pctIns(topProd.participacao)} da receita de 12 meses (${moedaIns(topProd.valor)}).`,
+      `${pctIns(topProd.participacao)} em um produto`,
+      'Criar ofertas complementares e reduzir a dependência do produto principal.',
+      'Revisar o mix de produtos todo trimestre.');
+  }
+  if (topDesp && topDespShare > 0.2) {
+    add('Custos', 'medio', 'Uma despesa concentra o orçamento',
+      `${topDesp.nome} representa ${pctIns(topDespShare)} das despesas dos últimos 12 meses.`,
+      `${pctIns(topDespShare)} das despesas`,
+      'Colocar a maior despesa em revisão e buscar ao menos uma alternativa de negociação.',
+      'Revisar mensalmente as 5 maiores despesas.');
+  }
+  if (melhorMes && piorMes && melhorMes.mes !== piorMes.mes && comSaz.length >= 6) {
+    add('Sazonalidade', 'oportunidade', 'O histórico tem meses mais fracos',
+      `Pela média histórica, ${piorMes.nome} rende ${moedaIns(piorMes.resultado)} de resultado e ${melhorMes.nome} rende ${moedaIns(melhorMes.resultado)}.`,
+      `Pior: ${piorMes.nome} · Melhor: ${melhorMes.nome}`,
+      'Planejar contratações, férias e compras grandes fora dos meses fracos.',
+      'Trimestralmente, revisar orçamento e metas contra a sazonalidade.');
+  }
+  if (vol12 > 0.25) {
+    add('Previsibilidade', 'medio', 'A receita oscila bastante',
+      `O desvio mensal é de ${pctIns(vol12)} em torno da média dos últimos 12 meses.`,
+      `Oscilação de ${pctIns(vol12)}`,
+      'Aumentar a parcela recorrente e formar reserva para os meses fracos.',
+      'Acompanhar a volatilidade da receita todo mês.');
+  }
+  if (varYTD !== null && anoAnt.ano) {
+    add('Receita', varYTD < 0 ? 'medio' : 'ok', `${anoAtual.ano || 'Ano atual'} vs ${anoAnt.ano}`,
+      `Receita YTD de ${moedaIns(anoAtual.receita)} contra ${moedaIns(anoAnt.receita)} (${pctIns(varYTD)}). Resultado de ${moedaIns(anoAtual.resultado)} contra ${moedaIns(anoAnt.resultado)}.`,
+      `${varYTD >= 0 ? '+' : ''}${pctIns(varYTD)} na receita`,
+      varYTD < 0 ? 'Recuperar o ritmo de vendas e rever o orçamento do ano.' : 'Manter o ritmo e proteger a margem.',
+      'Comparar o YTD com o mesmo período do ano anterior todo mês.');
+  }
+
+  const ordem = { alto: 0, medio: 1, oportunidade: 2, ok: 3 };
+  const ordenados = insights.sort((a, b) => ordem[a.nivel] - ordem[b.nivel]);
+  const criticos = ordenados.filter(i => i.nivel === 'alto').length;
+  const oportunidades = ordenados.filter(i => i.nivel === 'oportunidade').length;
+  const resumo = `Em 12 meses, a competência fechou em ${moedaIns(comp.resultado)} e o caixa em ${moedaIns(caixa.resultado)}. ` +
+    (atr.total ? `Há ${moedaIns(atr.total)} vencidos, ${pctIns(atrasoRatio)} da receita. ` : 'A carteira está em dia. ') +
+    `A recorrência responde por ${pctIns(rec.participacao)} da receita.`;
+
+  const acoes = [];
+  const addAcao = (prioridade, titulo, porque, impacto, prazo) => acoes.push({ prioridade, titulo, porque, impacto, prazo });
+  if (atr.total > 0) addAcao('Agora', 'Mutirão de cobrança', `São ${atr.qtd} títulos vencidos e ${pctIns(ratio90)} do saldo tem mais de 90 dias.`, `Recuperar até ${moedaIns(atr.total)}`, 'Esta semana');
+  if (gapCaixa > 50000) addAcao('Agora', 'Antecipar recebíveis e renegociar prazos', `O caixa está ${moedaIns(gapCaixa)} atrás da competência nos últimos 12 meses.`, `Fechar gap de ${moedaIns(gapCaixa)}`, 'Este mês');
+  if (margem3 !== null && margem3 < 0) addAcao('Agora', 'Plano para virar o resultado', `A operação queima ${moedaIns(-resMedia)} por mês, em média, nos últimos 3 meses.`, `Sair do negativo para o equilíbrio`, 'Este mês');
+  if (k.runway !== undefined && k.runway !== null && k.runway < 6) addAcao('Agora', 'Plano de fôlego de caixa', `O saldo cobre apenas ${k.runway.toFixed(1)} meses no ritmo atual.`, 'Levar o runway para 6+ meses', 'Este mês');
+  if (gapMrr > Math.max(10000, Number(ctr.mrr || 0) * 0.05)) addAcao('Este mês', 'Reconciliar contratos x faturamento', `Há ${moedaIns(gapMrr)}/mês de MRR contratado que não aparece na receita recorrente realizada.`, `Até ${moedaIns(gapMrr)}/mês`, '30 dias');
+  if (varDespesa !== null && varReceita !== null && varDespesa > varReceita + 0.05) addAcao('Este mês', 'Revisar as maiores despesas', `A despesa variou ${pctIns(varDespesa)} contra ${pctIns(varReceita)} da receita no trimestre.`, 'Proteger a margem', '30 dias');
+  if (atr.maiorDias > 180) addAcao('Este mês', 'Limpar a carteira antiga', `O título mais antigo tem ${atr.maiorDias} dias de atraso.`, 'Reduzir ruído e provisão', '30 dias');
+  if ((k.top1 || 0) > 0.3) addAcao('Este trimestre', 'Plano de diversificação comercial', `O maior cliente representa ${pctIns(k.top1)} da receita.`, `Reduzir dependência de ${pctIns(k.top1)}`, '90 dias');
+  if ((rec.participacao || 0) < 0.6) addAcao('Este trimestre', 'Empacotar ofertas recorrentes', `Só ${pctIns(rec.participacao)} da receita é recorrente.`, 'Aumentar previsibilidade', '90 dias');
+  if (!acoes.length) addAcao('Contínuo', 'Manter a rotina de acompanhamento', 'Os principais indicadores estão sob controle.', 'Preservar caixa e margem', 'Contínuo');
+  const ordemAcao = { Agora: 0, 'Este mês': 1, 'Este trimestre': 2, Contínuo: 3 };
+  acoes.sort((a, b) => ordemAcao[a.prioridade] - ordemAcao[b.prioridade]);
+
+  const comportamentos = [
+    { frequencia: 'Semanal', titulo: 'Reunião de caixa de 30 minutos', descricao: 'Abrir saldo, recebíveis da semana, atrasados acima de 7 dias e pagamentos que vencem.' },
+    { frequencia: 'Semanal', titulo: 'Régua de cobrança', descricao: 'D+1 lembrete, D+7 contato humano, D+15 negociação e D+30 escalação. Nada vencido fica sem próximo passo.' },
+    { frequencia: 'Mensal', titulo: 'Fechamento competência x caixa', descricao: 'Comparar os dois regimes e explicar a diferença antes de comemorar qualquer resultado.' },
+    { frequencia: 'Mensal', titulo: 'Revisão das 5 maiores despesas', descricao: 'Olhar variação, necessidade e alternativa de negociação para cada uma.' },
+    { frequencia: 'Mensal', titulo: 'Conciliação de contratos e faturamento', descricao: 'Comparar o MRR contratado com as mensalidades efetivamente faturadas e cobradas.' },
+    { frequencia: 'Trimestral', titulo: 'Preço, renovação e retenção', descricao: 'Revisar reajustes, contratos a vencer e clientes com risco de churn.' },
+    { frequencia: 'Trimestral', titulo: 'Orçamento contra a sazonalidade', descricao: 'Planejar contratações e compras usando os meses fortes e fracos do histórico.' },
+  ];
+
+  return {
+    geradoEm: new Date().toISOString(),
+    resumo,
+    criticos,
+    oportunidades,
+    insights: ordenados.slice(0, 12),
+    acoes: acoes.slice(0, 6),
+    comportamentos,
+    sazonalidade,
+    clientesAtraso,
+  };
+}
 
 // ---------- Cálculo dos indicadores ----------
 async function montarDados() {
@@ -227,7 +507,7 @@ async function montarDados() {
   const piorSemana = semanas.reduce((a, b) => (b.saldo < a.saldo ? b : a), semanas[0]);
   if (saldoDisponivel && piorSemana && piorSemana.saldo < 0) alertas.push({ nivel: 'alto', titulo: 'Caixa negativo à vista', texto: `Pelas contas lançadas no Omie, o saldo fica negativo na semana de ${piorSemana.semana}. Antecipe recebimentos ou renegocie pagamentos.` });
 
-  return {
+  const data = {
     atualizadoEm: new Date().toISOString(),
     saldo, saldoDisponivel,
     kpis: {
@@ -265,6 +545,8 @@ async function montarDados() {
     })(),
     alertas,
   };
+  data.insights = montarInsights(data);
+  return data;
 }
 
 let cache = { at: 0, data: null };
