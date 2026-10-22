@@ -130,9 +130,9 @@ async function listarTudo(endpoint, call, chave, extra = {}) {
 }
 
 const baixasCache = { CR: { at: 0, data: {} }, CP: { at: 0, data: {} } };
-async function listarBaixas(tipo) {
+async function listarBaixas(tipo, force = false) {
   const cache = baixasCache[tipo];
-  if (Date.now() - cache.at < CACHE_MIN * 60e3) return cache.data;
+  if (!force && Date.now() - cache.at < CACHE_MIN * 60e3) return cache.data;
   let pagina = 1, total = 1;
   const mapa = {};
   do {
@@ -1079,8 +1079,9 @@ function clientesReceita(d, mes, ordem = 'pago_desc') {
 
 app.get('/api/debug/baixas', async (req, res) => {
   try {
-    const j = await omie('financas/mf/', 'ListarMovimentos', { nPagina: 1, nRegPorPagina: 3, cTpLancamento: req.query.tipo || 'BXCR' });
-    res.json({ chaves: Object.keys(j || {}), paginas: j?.nTotPaginas, registros: j?.nTotRegistros, movimentos: (j?.movimentos || []).slice(0, 3) });
+    const tipo = req.query.tipo === 'BXCP' ? 'CP' : 'CR';
+    const mapa = await listarBaixas(tipo, true);
+    res.json({ tipo, total: Object.keys(mapa).length, amostra: Object.keys(mapa).slice(0, 8), titulo: req.query.titulo, baixas: mapa[req.query.titulo] || null });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
