@@ -198,7 +198,8 @@ app.post('/api/guru', async (req, res) => {
     });
     const j = await r.json();
     if (!r.ok) return res.status(502).json({ resposta: `Erro do provedor de IA (${r.status}): ${j.error?.message || j.message || 'falha na chamada'}` });
-    res.json({ resposta: j.content?.[0]?.text || 'Sem resposta.' });
+    const texto = j.content?.map?.(b => b.text).filter(Boolean).join('\n') || j.choices?.[0]?.message?.content || j.output_text;
+    res.json({ resposta: texto || `Sem resposta: ${j.error?.message || j.message || j.type || 'formato inesperado'}` });
   } catch (e) { res.status(500).json({ resposta: 'Erro: ' + e.message }); }
 });
 
