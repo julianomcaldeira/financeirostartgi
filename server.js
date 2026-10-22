@@ -204,17 +204,49 @@ app.get('/api/contexto', (req, res) => {
 
 // TEMPORÁRIO: inspeção da estrutura de dados do Omie
 app.get('/api/diagnostico', async (req, res) => {
+  const cru = async (endpoint, call, param) => {
+    try {
+      const r = await fetch(`https://app.omie.com.br/api/v1/${endpoint}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ call, app_key: OMIE_APP_KEY, app_secret: OMIE_APP_SECRET, param: [param] }),
+      });
+      const j = await r.json();
+      return { ok: r.ok, status: r.status, rawKeys: Object.keys(j || {}), fault: j.faultstring, total: j.total_de_registros, amostraKeys: Object.keys((Object.values(j || {}).find(v => Array.isArray(v)) || [])[0] || {}) };
+    } catch (e) { return { erro: e.message }; }
+  };
   try {
     const rec = await omie('financas/contareceber/', 'ListarContasReceber', { pagina: 1, registros_por_pagina: 2, apenas_importado_api: 'N' });
     const rec0 = rec?.conta_receber_cadastro?.[0] || {};
-    const ped = await omie('produtos/pedido/', 'ListarPedidos', { pagina: 1, registros_por_pagina: 2, apenas_importado_api: 'N' });
-    const ped0 = ped?.pedido_venda_produto?.[0] || {};
     const prod = await omie('geral/produtos/', 'ListarProdutos', { pagina: 1, registros_por_pagina: 2, apenas_importado_api: 'N' }).catch(e => ({ erro: e.message }));
     const prod0 = prod?.produto_servico_cadastro?.[0] || {};
+
+    const hoje = new Date();
+    const ini = new Date(hoje.getFullYear(), hoje.getMonth() - 11, 1);
+    const fmt = d => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    const [receber, categorias] = await Promise.all([
+      listarTudo('financas/contareceber/', 'ListarContasReceber', 'conta_receber_cadastro', { filtrar_por_data_de: fmt(ini), filtrar_por_data_ate: fmt(hoje) }).catch(() => []),
+      listarTudo('geral/categorias/', 'ListarCategorias', 'categoria_cadastro').catch(() => []),
+    ]);
+    const nomeCat = Object.fromEntries(categorias.map(c => [c.codigo, c.descricao]));
+    const porCat = {};
+    receber.filter(t => (t.status_titulo || '').toUpperCase() === 'RECEBIDO').forEach(t => {
+      const k = nomeCat[t.codigo_categoria] || t.codigo_categoria || 'Sem categoria';
+      porCat[k] = (porCat[k] || 0) + Number(t.valor_documento || 0);
+    });
+    const receitasCategoria = Object.entries(porCat).sort((a, b) => b[1] - a[1]).slice(0, 20).map(([nome, valor]) => ({ nome, valor }));
+    const totalRecebido = Object.values(porCat).reduce((s, v) => s + v, 0);
+
+    const ped = await cru('produtos/pedido/', 'ListarPedidos', { pagina: 1, registros_por_pagina: 2, filtrar_por_data_de: fmt(ini), filtrar_por_data_ate: fmt(hoje) });
+    const contratos = await cru('servicos/contrato/', 'ListarContratos', { pagina: 1, registros_por_pagina: 2 });
+    const os = await cru('servicos/os/', 'ListarOS', { pagina: 1, registros_por_pagina: 2 });
+    const servicos = await cru('servicos/servico/', 'ListarServicos', { pagina: 1, registros_por_pagina: 2 });
+
     res.json({
-      receber: { rawKeys: Object.keys(rec || {}), keys: Object.keys(rec0), campos: { numero_pedido: rec0.numero_pedido, nCodPedido: rec0.nCodPedido, cNumeroContrato: rec0.cNumeroContrato, codigo_categoria: rec0.codigo_categoria, status_titulo: rec0.status_titulo } },
-      pedidos: { rawKeys: Object.keys(ped || {}), keys: Object.keys(ped0), cabecalho: Object.keys(ped0.cabecalho || {}), item: Object.keys(ped0.det?.[0]?.produto || {}), amostra: { descricao: ped0.det?.[0]?.produto?.descricao, codigo_produto: ped0.det?.[0]?.produto?.codigo_produto, valor_total: ped0.det?.[0]?.produto?.valor_total } },
-      produtos: { rawKeys: Object.keys(prod || {}), keys: Object.keys(prod0), amostra: { codigo: prod0.codigo, codigo_produto: prod0.codigo_produto, descricao: prod0.descricao, unidade: prod0.unidade } },
+      receber: { rawKeys: Object.keys(rec || {}), keys: Object.keys(rec0), campos: { codigo_categoria: rec0.codigo_categoria, status_titulo: rec0.status_titulo }, categorias: rec0.categorias, info: rec0.info, distribuicao: rec0.distribuicao, amostra: rec0 },
+      receitasCategoria, totalRecebido, qtdReceber: receber.length,
+      pedidos: ped,
+      produtos: { rawKeys: Object.keys(prod || {}), keys: Object.keys(prod0), amostra: prod0 },
+      contratos, os, servicos,
     });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
