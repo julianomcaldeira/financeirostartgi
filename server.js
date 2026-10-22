@@ -46,8 +46,11 @@ async function chamarIA(system, mensagens, maxTokens = 4096) {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}`, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({ model: AI_MODEL, max_tokens: maxTokens, system, messages: mensagens }),
+    signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(90000) : undefined,
   });
-  const j = await r.json();
+  const bruto = await r.text();
+  let j;
+  try { j = JSON.parse(bruto); } catch { throw new Error(`IA ${r.status} respondeu HTML/texto em vez de JSON: ${bruto.slice(0, 180)}`); }
   if (!r.ok) throw new Error(`IA ${r.status}: ${j.error?.message || j.message || 'falha na chamada'}`);
   const texto = j.content?.map?.(b => b.text).filter(Boolean).join('\n') || j.choices?.[0]?.message?.content || j.output_text || '';
   if (!texto && j.content) return typeof j.content === 'string' ? j.content : JSON.stringify(j.content);
@@ -678,6 +681,28 @@ try {
   if (salvo && salvo.data) insightsCache = { at: Number(salvo.at || 0), data: salvo.data, gerando: null };
 } catch {}
 
+function montarContextoIA(d) {
+  const k = d.kpis || {}, r = d.recorrente || {}, ct = d.contratos || {}, atr = d.atrasadosResumo || {}, resc = d.rescisoes || {};
+  const serie = s => (s || []).slice(-12).map(x => ({ mes: x.mes, receita: x.receita, despesa: x.despesa, resultado: x.resultado }));
+  const reg = d.regimes || {}, cx = reg.caixa || {}, cp = reg.competencia || {};
+  return {
+    caixa: { total: d.saldo, omie: d.saldoOmie, aplicado: d.caixaAplicado, disponivel: d.saldoDisponivel, saldoOmie: d.caixa?.saldoOmie, saldoAplicado: d.caixa?.aplicado },
+    kpis: { receber30: k.receber30, pagar30: k.pagar30, queimaMensal: k.queimaMensal, runwayMeses: k.runwayMeses },
+    ano: d.ano, anoCaixa: d.anoCaixa,
+    caixa12m: { receita: cx.receita, despesa: cx.despesa, resultado: cx.resultado, margem: cx.margem, serie: serie(cx.serie) },
+    competencia12m: { receita: cp.receita, despesa: cp.despesa, resultado: cp.resultado, margem: cp.margem, serie: serie(cp.serie) },
+    diferencaRegime: reg.diferenca,
+    despesasAno: { total: d.despesasAno?.total, categorias: (d.despesasAno?.categorias || []).slice(0, 20) },
+    rescisoes: { ano: resc.ano, total: resc.total, porMes: resc.porMes, itens: (resc.itens || []).slice(0, 8) },
+    clientes: (d.clientes || []).slice(0, 8),
+    atrasados: { total: atr.total, qtd: atr.qtd, maiorDias: atr.maiorDias, mediaDias: atr.mediaDias, buckets: atr.buckets, maiores: (d.atrasadosTodos || []).slice(0, 10) },
+    produtos: (d.produtosReceita || []).slice(0, 8),
+    recorrente: { receita12: r.receita12, mensalMedia: r.mensalMedia, participacao: r.participacao, naoRecorrente12: r.naoRecorrente12 },
+    contratos: { ativos: ct.ativos, mrr: ct.mrr, arr: ct.arr, total: ct.total },
+    alertas: (d.alertas || []).slice(0, 6),
+  };
+}
+
 function montarCobrancaFallback(d) {
   const atr = d.atrasadosResumo || {};
   const clientes = (d.insights && d.insights.clientesAtraso) || [];
@@ -743,15 +768,7 @@ function fallbackInsights(d, motivo) {
 
 async function gerarInsightsIA(d) {
   if (!AI_KEY) return fallbackInsights(d, 'COMMANDCODE_API_KEY não configurada');
-  const dadosIA = {
-    caixa: d.caixa, caixaAplicado: d.caixaAplicado, saldo: d.saldo,
-    kpis: d.kpis, ano: d.ano, anoCaixa: d.anoCaixa,
-    serieMensal: (d.serieMensal || []).slice(-12), competencia: (d.competencia || []).slice(-12),
-    regimes: d.regimes, despesasAno: d.despesasAno, despesas12m: (d.despesas12m || []).slice(0, 25),
-    rescisoes: d.rescisoes, clientes: d.clientes, atrasadosResumo: d.atrasadosResumo,
-    maioresAtrasados: (d.atrasadosTodos || []).slice(0, 25), produtosReceita: d.produtosReceita,
-    recorrente: d.recorrente, contratos: d.contratos, alertas: d.alertas,
-  };
+  const dadosIA = montarContextoIA(d);
   const system = `Você é o CFO as a Service da StartGi Tecnologia (GovTech/B2B, ~25 pessoas, investida pelo FIP GovTech). Seu cliente é o CEO, Juliano. Hoje é ${new Date().toISOString().slice(0, 10)}.
 
 Gere uma leitura semanal ESTRATÉGICA, não uma repetição de alertas operacionais. Conecte dois ou mais fatos e proponha movimentos de alocação de capital, pricing, contratação, retenção, mix de receita, garantias, eficiência comercial ou gestão de caixa.
@@ -779,7 +796,7 @@ DADOS: ${JSON.stringify(dadosIA)}`;
     texto = await chamarIA(
       system + (tentativa > 1 ? '\n\nATENÇÃO: a tentativa anterior não veio em JSON. Responda agora SOMENTE com o objeto JSON, começando por { e terminando em }.' : ''),
       [{ role: 'user', content: 'Gere a leitura estratégica desta semana no JSON pedido. Responda somente com JSON.' }],
-      6000
+      3000
     );
     const m = String(texto || '').match(/\{[\s\S]*\}/);
     if (m) {
