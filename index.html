@@ -682,7 +682,7 @@ function renderAtrasados(d){
     kpi('Total em atraso',k$(r.total||0),'Soma de todos os títulos vencidos',(r.total||0)>0?'neg':'')+
     kpi('Títulos vencidos',String(r.qtd||0),'Lançamentos em aberto')+
     kpi('Atraso mais antigo',(r.maiorDias||0)+' dias','Título mais antigo da carteira')+
-    kpi('Atraso médio',(r.mediaDias||0)+' dias','Média ponderada por título');
+    kpi('Atraso médio',(r.mediaDias||0)+' dias','Média simples por título');
   document.getElementById('aging').innerHTML=(r.buckets||[]).map(b=>`<div class="box ${b.qtd?'hot':''}"><div class="faixa">${b.faixa}</div><div class="valor">${k$(b.valor)}</div><div class="qtd">${b.qtd} títulos</div></div>`).join('');
   filtrarAtrasados();
 }
