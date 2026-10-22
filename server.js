@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 const REFRESH_MIN = Number(process.env.ATUALIZACAO_MINUTOS || 120);
 const CACHE_MIN = Number(process.env.CACHE_MINUTOS || REFRESH_MIN);
 const INSIGHTS_MIN = Number(process.env.INSIGHTS_MINUTOS || 10080); // 7 dias
-const INSIGHTS_MODEL = process.env.INSIGHTS_MODELO || 'google/gemini-3.5-flash';
+const INSIGHTS_MODEL = process.env.INSIGHTS_MODELO || 'claude-haiku-5-5';
 
 // Command Code Provider API (compatível com Anthropic Messages)
 const AI_KEY = process.env.COMMAND_IA || process.env.COMMANDCODE_API_KEY || process.env.CMD_API_KEY || process.env.ANTHROPIC_API_KEY;
@@ -46,7 +46,7 @@ async function chamarIA(system, mensagens, maxTokens = 4096, modelo = AI_MODEL) 
   const r = await fetch(`${AI_BASE}/messages`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}`, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: modelo, max_tokens: maxTokens, system, messages: mensagens }),
+    body: JSON.stringify({ model: modelo, max_tokens: maxTokens, thinking: { type: 'enabled', budget_tokens: 1024 }, system, messages: mensagens }),
     signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(90000) : undefined,
   });
   const bruto = await r.text();
@@ -814,7 +814,7 @@ DADOS: ${JSON.stringify(dadosIA)}`;
   let texto = '';
   let j = null;
   for (let tentativa = 1; tentativa <= 2; tentativa++) {
-    texto = await chamarIAOpenAI(
+    texto = await chamarIA(
       system + (tentativa > 1 ? '\n\nATENÇÃO: a tentativa anterior não veio em JSON. Responda agora SOMENTE com o objeto JSON, começando por { e terminando em }.' : ''),
       [{ role: 'user', content: 'Gere a leitura estratégica desta semana no JSON pedido. Responda somente com JSON.' }],
       4096,
