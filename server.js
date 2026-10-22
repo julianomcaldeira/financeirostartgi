@@ -240,6 +240,8 @@ app.get('/api/diagnostico', async (req, res) => {
     const contratos = await cru('servicos/contrato/', 'ListarContratos', { pagina: 1, registros_por_pagina: 2 });
     const os = await cru('servicos/os/', 'ListarOS', { pagina: 1, registros_por_pagina: 2 });
     const servicos = await cru('servicos/servico/', 'ListarServicos', { pagina: 1, registros_por_pagina: 2 });
+    const c1 = await omie('servicos/contrato/', 'ListarContratos', { pagina: 1, registros_por_pagina: 1 }).catch(() => null);
+    const os1 = await omie('servicos/os/', 'ListarOS', { pagina: 1, registros_por_pagina: 1 }).catch(() => null);
 
     res.json({
       receber: { rawKeys: Object.keys(rec || {}), keys: Object.keys(rec0), campos: { codigo_categoria: rec0.codigo_categoria, status_titulo: rec0.status_titulo }, categorias: rec0.categorias, info: rec0.info, distribuicao: rec0.distribuicao, amostra: rec0 },
@@ -247,6 +249,8 @@ app.get('/api/diagnostico', async (req, res) => {
       pedidos: ped,
       produtos: { rawKeys: Object.keys(prod || {}), keys: Object.keys(prod0), amostra: prod0 },
       contratos, os, servicos,
+      contratoAmostra: c1?.contratoCadastro?.[0] || null,
+      osAmostra: os1?.osCadastro?.[0] || null,
     });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
