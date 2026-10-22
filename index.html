@@ -58,6 +58,9 @@ h2.sec{font:600 22px Fraunces,Georgia,serif;margin:40px 0 14px;letter-spacing:-.
 .acao .faca b{color:var(--brand)}
 
 .two{grid-template-columns:1.4fr 1fr}
+.ctx-area{width:100%;min-height:220px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:14px;font:14px/1.55 Inter,Segoe UI,sans-serif;color:var(--ink);background:#fff;box-sizing:border-box}
+.ctx-area:focus{outline:2px solid var(--brand);outline-offset:1px}
+.ctx-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
 .half{grid-template-columns:1fr 1fr}
 .chart-h{height:280px}
 .legend-note{font-size:12px;color:var(--mut);margin-top:10px}
@@ -109,7 +112,7 @@ table.lst .n{text-align:right;font-variant-numeric:tabular-nums}
 <div class="wrap">
 <header>
   <div class="logo"><div class="mark">S</div><div><b>CFO StartGi</b><span id="upd">Conectando ao Omie…</span></div></div>
-  <div style="display:flex;gap:8px"><button class="btn" onclick="window.print()">Imprimir</button><button class="btn pri" onclick="carregar(1)">Atualizar dados</button></div>
+  <div style="display:flex;gap:8px"><button class="btn" onclick="document.getElementById('ctxTitulo').scrollIntoView({behavior:'smooth',block:'center'})">Contexto</button><button class="btn" onclick="window.print()">Imprimir</button><button class="btn pri" onclick="carregar(1)">Atualizar dados</button></div>
 </header>
 
 <div id="erro"></div>
@@ -166,6 +169,17 @@ table.lst .n{text-align:right;font-variant-numeric:tabular-nums}
     <div class="inp"><input id="pergunta" placeholder="Ex.: posso contratar mais um dev em janeiro?" onkeydown="if(event.key==='Enter')perguntar()"><button class="btn pri" onclick="perguntar()">Perguntar</button></div>
   </div>
 </section>
+
+<h2 class="sec" id="ctxTitulo">Contexto da empresa</h2>
+<section class="card">
+  <p class="eyebrow">Campo livre · enviado ao CFO em todas as respostas</p>
+  <textarea id="ctx" class="ctx-area" placeholder="Ex.: recebemos um aporte de R$ 1 milhão, sendo que cerca de R$ 1 milhão está aplicado. Temos 25 pessoas. Meta de runway: 12 meses..."></textarea>
+  <div class="ctx-actions">
+    <button class="btn pri" onclick="salvarContexto()">Salvar contexto</button>
+    <button class="btn" onclick="restaurarContexto()">Restaurar padrão</button>
+    <span id="ctxStatus" class="legend-note"></span>
+  </div>
+</section>
 </div>
 
 <script>
@@ -175,6 +189,24 @@ const pct=v=>((v||0)*100).toFixed(0)+'%';
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const nomeMes=m=>{const[a,b]=m.split('-');return['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][b-1]+'/'+a.slice(2)};
 let charts={},hist=[];
+const CTX_KEY='startgi.contexto';
+function ctxStatus(t){const s=document.getElementById('ctxStatus');s.textContent=t;}
+async function carregarContexto(){
+  const el=document.getElementById('ctx');
+  const salvo=localStorage.getItem(CTX_KEY);
+  if(salvo!==null){el.value=salvo;ctxStatus('Contexto salvo neste navegador.');return}
+  try{const r=await (await fetch('/api/contexto')).json();el.value=r.contexto||'';ctxStatus('Contexto padrão carregado. Edite e salve para personalizar.');}
+  catch(e){ctxStatus('Não foi possível carregar o contexto padrão.');}
+}
+function salvarContexto(){
+  localStorage.setItem(CTX_KEY,document.getElementById('ctx').value);
+  ctxStatus('Contexto salvo neste navegador.');
+}
+async function restaurarContexto(){
+  if(!confirm('Restaurar o contexto padrão? O texto atual será substituído.'))return;
+  try{const r=await (await fetch('/api/contexto')).json();document.getElementById('ctx').value=r.contexto||'';localStorage.removeItem(CTX_KEY);ctxStatus('Contexto padrão restaurado. Salve se quiser mantê-lo.');}
+  catch(e){ctxStatus('Não foi possível restaurar o contexto padrão.');}
+}
 
 const ACAO={
   'Gastando mais do que entra':'Corte ou adie as duas maiores despesas não essenciais e acelere o faturamento do mês.',
@@ -287,9 +319,10 @@ async function perguntar(t){
   const u=document.createElement('div');u.className='msg u';u.textContent=q;chat.appendChild(u);
   const c=document.createElement('div');c.className='msg c';c.innerHTML='<span class="who">CFO</span><span class="sk">Analisando…</span>';chat.appendChild(c);chat.scrollTop=1e9;
   hist.push({role:'user',content:q});
-  let r;try{r=await (await fetch('/api/guru',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({historico:hist})})).json()}catch(e){r={resposta:'Não consegui responder agora.'}}
+  let r;try{r=await (await fetch('/api/guru',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({historico:hist,contexto:document.getElementById('ctx').value})})).json()}catch(e){r={resposta:'Não consegui responder agora.'}}
   c.lastChild.className='';c.lastChild.textContent=r.resposta;hist.push({role:'assistant',content:r.resposta});chat.scrollTop=1e9;
 }
+carregarContexto();
 carregar();
 </script>
 </body>

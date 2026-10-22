@@ -198,6 +198,10 @@ async function dados(force) {
   return cache.data;
 }
 
+app.get('/api/contexto', (req, res) => {
+  res.json({ contexto: contextoEmpresa() });
+});
+
 app.get('/api/dados', async (req, res) => {
   if (!OMIE_APP_KEY || !OMIE_APP_SECRET) return res.status(500).json({ erro: 'Configure OMIE_APP_KEY e OMIE_APP_SECRET nas variáveis de ambiente.' });
   try { res.json(await dados(req.query.atualizar === '1')); }
@@ -210,6 +214,7 @@ app.post('/api/guru', async (req, res) => {
   try {
     const d = await dados();
     const contexto = JSON.stringify({ saldo: d.saldo, saldoDisponivel: d.saldoDisponivel, kpis: d.kpis, serieMensal: d.serieMensal, ano: d.ano, mesAtual: d.meses[d.meses.length - 1], fluxo12semanas: d.semanas, clientes: d.clientes, despesas: d.despesas, atrasados: d.atrasados });
+    const ctx = (typeof req.body.contexto === 'string' && req.body.contexto.trim()) ? req.body.contexto.trim().slice(0, 12000) : contextoEmpresa();
     const r = await fetch(`${AI_BASE}/messages`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}`, 'anthropic-version': '2023-06-01' },
@@ -231,7 +236,7 @@ Regras de resposta:
 - Use apenas os dados e o contexto abaixo; se faltar dado, diga qual e como obtê-lo.
 
 CONTEXTO DA EMPRESA:
-${contextoEmpresa() || '(não informado)'}
+${ctx || '(não informado)'}
 
 DADOS: ${contexto}`,
         messages: (req.body.historico || []).slice(-10),
