@@ -49,7 +49,9 @@ async function chamarIA(system, mensagens, maxTokens = 4096) {
   });
   const j = await r.json();
   if (!r.ok) throw new Error(`IA ${r.status}: ${j.error?.message || j.message || 'falha na chamada'}`);
-  return j.content?.map?.(b => b.text).filter(Boolean).join('\n') || j.choices?.[0]?.message?.content || j.output_text || '';
+  const texto = j.content?.map?.(b => b.text).filter(Boolean).join('\n') || j.choices?.[0]?.message?.content || j.output_text || '';
+  if (!texto && j.content) return typeof j.content === 'string' ? j.content : JSON.stringify(j.content);
+  return texto;
 }
 
 const app = express();
@@ -771,10 +773,22 @@ Formato:
 }
 
 DADOS: ${JSON.stringify(dadosIA)}`;
-  const texto = await chamarIA(system, [{ role: 'user', content: 'Gere a leitura estratégica desta semana no JSON pedido.' }], 3500);
-  const m = String(texto || '').match(/\{[\s\S]*\}/);
-  if (!m) throw new Error('a IA não retornou JSON');
-  const j = JSON.parse(m[0]);
+  let texto = '';
+  let j = null;
+  for (let tentativa = 1; tentativa <= 2; tentativa++) {
+    texto = await chamarIA(
+      system + (tentativa > 1 ? '\n\nATENÇÃO: a tentativa anterior não veio em JSON. Responda agora SOMENTE com o objeto JSON, começando por { e terminando em }.' : ''),
+      [{ role: 'user', content: 'Gere a leitura estratégica desta semana no JSON pedido. Responda somente com JSON.' }],
+      6000
+    );
+    const m = String(texto || '').match(/\{[\s\S]*\}/);
+    if (m) {
+      try { j = JSON.parse(m[0]); break; } catch (e) { console.error('[insights] JSON inválido:', e.message, String(texto).slice(0, 300)); }
+    } else {
+      console.error('[insights] resposta sem JSON:', String(texto || '').slice(0, 300), 'len=', String(texto || '').length);
+    }
+  }
+  if (!j) throw new Error('a IA não retornou JSON: ' + String(texto || '').slice(0, 160));
   const limpa = v => String(v ?? '').trim().slice(0, 1200);
   const insights = (Array.isArray(j.insights) ? j.insights : []).slice(0, 4).map(i => ({
     area: limpa(i.area || 'Estratégia'), prioridade: ['alta', 'media', 'baixa'].includes(String(i.prioridade).toLowerCase()) ? String(i.prioridade).toLowerCase() : 'media',
