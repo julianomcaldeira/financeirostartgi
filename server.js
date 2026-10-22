@@ -7,6 +7,7 @@ const { OMIE_APP_KEY, OMIE_APP_SECRET, PAINEL_SENHA } = process.env;
 const PORT = process.env.PORT || 3000;
 const REFRESH_MIN = Number(process.env.ATUALIZACAO_MINUTOS || 120);
 const CACHE_MIN = Number(process.env.CACHE_MINUTOS || REFRESH_MIN);
+const INSIGHTS_MIN = Number(process.env.INSIGHTS_MINUTOS || 10080); // 7 dias
 
 // Command Code Provider API (compatível com Anthropic Messages)
 const AI_KEY = process.env.COMMAND_IA || process.env.COMMANDCODE_API_KEY || process.env.CMD_API_KEY || process.env.ANTHROPIC_API_KEY;
@@ -19,6 +20,36 @@ function contextoEmpresa() {
   try { txt = fs.readFileSync(path.join(__dirname, 'contexto.md'), 'utf8'); } catch {}
   if (process.env.CONTEXTO_EXTRA) txt += '\n\n' + process.env.CONTEXTO_EXTRA;
   return txt.trim().slice(0, 12000);
+}
+
+// Caixa aplicado que não aparece nas contas correntes do Omie.
+// Preferência: variável CAIXA_APLICADO. Fallback: extrai do contexto.md.
+function caixaAplicadoContexto() {
+  if (process.env.CAIXA_APLICADO !== undefined) {
+    const v = Number(String(process.env.CAIXA_APLICADO).replace(/\./g, '').replace(',', '.'));
+    return Number.isFinite(v) ? v : 0;
+  }
+  const txt = contextoEmpresa();
+  const m = txt.match(/R\$\s*([\d.,]+)\s*(milh(?:ão|ões)|mil)?[^.\n]{0,40}(?:aplicad|aplica[cç])/i)
+    || txt.match(/(?:caixa\s+aplicado|aplica[cç][aã]o)[^.\n]{0,40}?R\$\s*([\d.,]+)\s*(milh(?:ão|ões)|mil)?/i);
+  if (!m) return 0;
+  let v = Number(m[1].replace(/\./g, '').replace(',', '.'));
+  if (!Number.isFinite(v)) return 0;
+  const escala = (m[2] || '').toLowerCase();
+  if (escala.startsWith('milh')) v *= 1e6;
+  else if (escala === 'mil') v *= 1e3;
+  return v;
+}
+
+async function chamarIA(system, mensagens, maxTokens = 4096) {
+  const r = await fetch(`${AI_BASE}/messages`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}`, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: AI_MODEL, max_tokens: maxTokens, system, messages: mensagens }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(`IA ${r.status}: ${j.error?.message || j.message || 'falha na chamada'}`);
+  return j.content?.map?.(b => b.text).filter(Boolean).join('\n') || j.choices?.[0]?.message?.content || j.output_text || '';
 }
 
 const app = express();
@@ -381,11 +412,28 @@ async function montarDados() {
     categoria: nomeCat[t.codigo_categoria] || t.codigo_categoria || 'Sem categoria',
     parceiro: nomeCli[t.codigo_cliente_fornecedor] || 'Não identificado',
     descricao: [t.descricao, t.observacao].filter(Boolean).map(x => String(x).trim()).filter(Boolean).join(' · '),
+    codigo: String(t.codigo_lancamento_omie ?? t.codigo_lancamento_integracao ?? ''),
+    documento: String(t.numero_documento ?? ''),
   });
   const R = receber.map(t => norm(t, 'R')).filter(t => t.status !== 'CANCELADO' && t.venc);
   const P = pagar.map(t => norm(t, 'P')).filter(t => t.status !== 'CANCELADO' && t.venc);
   const quitado = t => t.status === 'RECEBIDO' || t.status === 'PAGO' || t.status === 'LIQUIDADO';
   const aberto = t => !quitado(t);
+  const iso = d => d ? d.toISOString().slice(0, 10) : '';
+  const lancamentos = [...R, ...P].map(t => ({
+    id: t.codigo,
+    tipo: t.tipo === 'R' ? 'receita' : 'despesa',
+    status: t.status,
+    descricao: t.descricao || t.parceiro || '(sem descrição)',
+    parceiro: t.parceiro,
+    categoria: t.categoria,
+    documento: t.documento,
+    valor: t.valor,
+    emissao: iso(t.emissao),
+    vencimento: iso(t.venc),
+    pagamento: iso(t.pagamento),
+    diasAtraso: aberto(t) && t.venc < hoje ? Math.max(0, Math.round((hoje - t.venc) / 864e5)) : 0,
+  })).sort((a, b) => (b.pagamento || b.vencimento || b.emissao || '').localeCompare(a.pagamento || a.vencimento || a.emissao || ''));
 
   // Série mensal (24 meses) — 12 para o painel, 24 para o CFO
   const meses24 = [];
@@ -443,9 +491,11 @@ async function montarDados() {
   const atrasadoP = P.filter(t => aberto(t) && t.venc < hoje);
   const janela = (lista, dias) => soma(lista.filter(t => aberto(t) && t.venc >= hoje && t.venc <= new Date(hoje.getTime() + dias * 864e5)).map(t => t.valor));
 
-  // Saldo bancário (se o Omie devolver)
-  const saldo = soma(contas.map(c => Number(c.saldo_atual ?? c.nSaldo ?? 0)));
-  const saldoDisponivel = contas.length > 0;
+  // Caixa total: contas correntes do Omie + valor aplicado informado no contexto.
+  const saldoOmie = soma(contas.map(c => Number(c.saldo_atual ?? c.nSaldo ?? 0)));
+  const caixaAplicado = caixaAplicadoContexto();
+  const saldo = saldoOmie + caixaAplicado;
+  const saldoDisponivel = contas.length > 0 || caixaAplicado > 0;
 
   // Fluxo projetado próximas 12 semanas
   const semanas = [];
@@ -566,7 +616,8 @@ async function montarDados() {
 
   const data = {
     atualizadoEm: new Date().toISOString(),
-    saldo, saldoDisponivel,
+    saldo, saldoOmie, caixaAplicado, saldoDisponivel,
+    caixa: { omie: saldoOmie, aplicado: caixaAplicado, total: saldo },
     kpis: {
       receitaMedia, despesaMedia, resultadoMedio: receitaMedia - despesaMedia, margem, burn, runway,
       receber30: janela(R, 30), pagar30: janela(P, 30),
@@ -579,6 +630,7 @@ async function montarDados() {
     despesas12m: despesasCat,
     despesasAno,
     rescisoes,
+    lancamentos,
     produtosReceita: produtosReceita.slice(0, 12),
     contratos: { total: contratosOmie.length, ativos: ctrAtivos.length, mrr: mrrContratado, arr: mrrContratado * 12 },
     recorrente: {
@@ -616,6 +668,171 @@ async function dados(force) {
   return cache.data;
 }
 
+// ---------- Insights estratégicos semanais (IA) ----------
+const INSIGHTS_FILE = path.join(process.env.TMPDIR || '/tmp', 'startgi-insights.json');
+let insightsCache = { at: 0, data: null, gerando: null };
+try {
+  const salvo = JSON.parse(fs.readFileSync(INSIGHTS_FILE, 'utf8'));
+  if (salvo && salvo.data) insightsCache = { at: Number(salvo.at || 0), data: salvo.data, gerando: null };
+} catch {}
+
+function montarCobrancaFallback(d) {
+  const atr = d.atrasadosResumo || {};
+  const clientes = (d.insights && d.insights.clientesAtraso) || [];
+  const maior = clientes[0];
+  const publico = (d.atrasadosTodos || []).filter(t => /prefeitura|municip|governo|secretaria|estado|federal/i.test(t.cliente || ''));
+  const plays = [];
+  if (atr.total > 0) {
+    plays.push({
+      publico: maior ? `${maior.cliente} e demais vencidos` : 'Carteira vencida',
+      situacao: `${atr.qtd || 0} títulos e ${moedaIns(atr.total)} vencidos${maior ? `; maior devedor: ${moedaIns(maior.total)}` : ''}.`,
+      estrategia: 'Novação com entrada e garantia',
+      abordagem: 'Mesa de negociação com quem decide: entrada de 20% a 30%, saldo em até 6x e garantia pessoal, aval ou recebível como lastro. O serviço ou a entrega fica condicionado ao cumprimento do acordo.',
+      porque: 'Troca desconto por prazo e garantia, em vez de repetir lembretes de cobrança.',
+      impacto: `Recuperação potencial de até ${moedaIns(atr.total)}, com menos desgaste comercial.`,
+    });
+    plays.push({
+      publico: 'Carteira acima de 60 dias',
+      situacao: `O saldo antigo representa ${moedaIns(atr.total)} e perde valor a cada mês parado.`,
+      estrategia: 'Desconto condicionado à quitação à vista',
+      abordagem: 'Oferecer desconto apenas para pagamento imediato, com validade curta e aprovação por alçada. Em paralelo, avaliar cessão de crédito ou antecipação com o banco para transformar o recebível em caixa.',
+      porque: 'Cria um incentivo econômico real para o devedor priorizar a StartGi e reduz o custo de oportunidade do caixa parado.',
+      impacto: 'Acelera a conversão da carteira antiga em caixa sem renegociar todo o contas a receber.',
+    });
+    plays.push({
+      publico: publico.length ? 'Clientes públicos' : 'Contratos com maior valor',
+      situacao: publico.length ? `Há ${publico.length} lançamentos ligados a entes públicos na carteira vencida.` : 'Os maiores saldos estão concentrados nos contratos de maior valor.',
+      estrategia: publico.length ? 'Ofício ao gestor e retenção de marcos' : 'Quebra de escopo e marcos de entrega',
+      abordagem: publico.length ? 'Formalizar ofício ao gestor do contrato com medição, empenho e cronograma de pagamento; alinhar retenção de novas entregas ao recebimento e avaliar garantia contratual.' : 'Vincular a próxima entrega a um marco de pagamento, revisar o cronograma e suspender expansões até o recebível entrar.',
+      porque: 'Ataca a causa do atraso no ponto onde a StartGi ainda tem alavancagem contratual.',
+      impacto: 'Reduz a exposição sem depender apenas de cobrança administrativa.',
+    });
+  }
+  plays.push({
+    publico: 'Prevenção da próxima carteira',
+    situacao: 'A empresa tem receita concentrada e precisa proteger o caixa contra novos atrasos.',
+    estrategia: 'Blindagem contratual e seguro de crédito',
+    abordagem: 'Padronizar cláusula de suspensão, garantia, conta escrow para contratos grandes e seguro de crédito para os maiores nomes. Para contratos públicos, trabalhar com empenho e cronograma de medição desde a assinatura.',
+    porque: 'O ganho maior está em não repetir o problema, não em cobrar mais rápido depois que ele acontece.',
+    impacto: 'Menor volatilidade de caixa e mais previsibilidade para o runway.',
+  });
+  return plays.slice(0, 4);
+}
+
+function fallbackInsights(d, motivo) {
+  const base = (d && d.insights) || {};
+  const prioridade = n => n === 'alto' ? 'alta' : n === 'medio' ? 'media' : 'baixa';
+  const acao = (base.acoes || [])[0];
+  return {
+    geradoEm: new Date().toISOString(),
+    proximaEm: new Date(Date.now() + INSIGHTS_MIN * 60e3).toISOString(),
+    fonte: 'regras',
+    modelo: null,
+    aviso: motivo ? `Leitura gerada por regras porque a IA não respondeu: ${motivo}` : 'Leitura gerada por regras.',
+    resumo: base.resumo || 'Ainda não há dados suficientes para uma leitura estratégica.',
+    focoSemana: acao ? { titulo: acao.titulo, acao: acao.titulo, porque: acao.porque } : { titulo: 'Organizar o caixa da semana', acao: 'Fechar a agenda de caixa e recebíveis.', porque: 'Sem dados suficientes para uma prioridade mais específica.' },
+    insights: (base.insights || []).slice(0, 4).map(i => ({
+      area: i.tema, prioridade: prioridade(i.nivel), titulo: i.titulo,
+      diagnostico: i.leitura, implicacao: i.numero, acao: i.acao, impacto: '', prazo: i.comportamento,
+    })),
+    cobranca: montarCobrancaFallback(d || {}),
+  };
+}
+
+async function gerarInsightsIA(d) {
+  if (!AI_KEY) return fallbackInsights(d, 'COMMANDCODE_API_KEY não configurada');
+  const dadosIA = {
+    caixa: d.caixa, caixaAplicado: d.caixaAplicado, saldo: d.saldo,
+    kpis: d.kpis, ano: d.ano, anoCaixa: d.anoCaixa,
+    serieMensal: (d.serieMensal || []).slice(-12), competencia: (d.competencia || []).slice(-12),
+    regimes: d.regimes, despesasAno: d.despesasAno, despesas12m: (d.despesas12m || []).slice(0, 25),
+    rescisoes: d.rescisoes, clientes: d.clientes, atrasadosResumo: d.atrasadosResumo,
+    maioresAtrasados: (d.atrasadosTodos || []).slice(0, 25), produtosReceita: d.produtosReceita,
+    recorrente: d.recorrente, contratos: d.contratos, alertas: d.alertas,
+  };
+  const system = `Você é o CFO as a Service da StartGi Tecnologia (GovTech/B2B, ~25 pessoas, investida pelo FIP GovTech). Seu cliente é o CEO, Juliano. Hoje é ${new Date().toISOString().slice(0, 10)}.
+
+Gere uma leitura semanal ESTRATÉGICA, não uma repetição de alertas operacionais. Conecte dois ou mais fatos e proponha movimentos de alocação de capital, pricing, contratação, retenção, mix de receita, garantias, eficiência comercial ou gestão de caixa.
+
+Regras:
+- Use sempre o caixa total (contas Omie + valor aplicado) para falar de fôlego e capacidade de investimento.
+- Não invente números. Use apenas os dados fornecidos.
+- Não diga "cobre o cliente" nem proponha cobrança óbvia. Em cobranca, entregue engenharia de recebimento: novação com garantia, entrada, cessão de crédito, antecipação, escrow, seguro de crédito, retenção de marcos, quebra de escopo, desconto condicionado à vista, mediação ou proteção contratual.
+- Se rescisões forem relevantes, use rescisoes.total, rescisoes.porMes e rescisoes.itens.
+- Até 4 insights e até 4 estratégias de recebimento.
+- Responda SOMENTE com JSON válido, sem markdown e sem cercas de código.
+
+Formato:
+{
+  "resumo": "3 frases curtas com a tese da semana, citando o caixa total e o principal trade-off.",
+  "focoSemana": {"titulo": "...", "acao": "...", "porque": "..."},
+  "insights": [{"area": "Caixa|Receita|Custos|Pessoas|Clientes|Produto|Crescimento", "prioridade": "alta|media|baixa", "titulo": "...", "diagnostico": "...", "implicacao": "...", "acao": "...", "impacto": "...", "prazo": "..."}],
+  "cobranca": [{"publico": "...", "situacao": "...", "estrategia": "...", "abordagem": "...", "porque": "...", "impacto": "..."}]
+}
+
+DADOS: ${JSON.stringify(dadosIA)}`;
+  const texto = await chamarIA(system, [{ role: 'user', content: 'Gere a leitura estratégica desta semana no JSON pedido.' }], 3500);
+  const m = String(texto || '').match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('a IA não retornou JSON');
+  const j = JSON.parse(m[0]);
+  const limpa = v => String(v ?? '').trim().slice(0, 1200);
+  const insights = (Array.isArray(j.insights) ? j.insights : []).slice(0, 4).map(i => ({
+    area: limpa(i.area || 'Estratégia'), prioridade: ['alta', 'media', 'baixa'].includes(String(i.prioridade).toLowerCase()) ? String(i.prioridade).toLowerCase() : 'media',
+    titulo: limpa(i.titulo), diagnostico: limpa(i.diagnostico), implicacao: limpa(i.implicacao), acao: limpa(i.acao), impacto: limpa(i.impacto), prazo: limpa(i.prazo),
+  })).filter(i => i.titulo && i.acao);
+  if (!insights.length) throw new Error('a IA não retornou insights utilizáveis');
+  const cobranca = (Array.isArray(j.cobranca) ? j.cobranca : []).slice(0, 4).map(c => ({
+    publico: limpa(c.publico), situacao: limpa(c.situacao), estrategia: limpa(c.estrategia), abordagem: limpa(c.abordagem), porque: limpa(c.porque), impacto: limpa(c.impacto),
+  })).filter(c => c.estrategia && c.abordagem);
+  return {
+    geradoEm: new Date().toISOString(),
+    proximaEm: new Date(Date.now() + INSIGHTS_MIN * 60e3).toISOString(),
+    fonte: 'ia',
+    modelo: AI_MODEL,
+    resumo: limpa(j.resumo),
+    focoSemana: {
+      titulo: limpa(j.focoSemana?.titulo || insights[0].titulo),
+      acao: limpa(j.focoSemana?.acao || insights[0].acao),
+      porque: limpa(j.focoSemana?.porque || insights[0].diagnostico),
+    },
+    insights,
+    cobranca: cobranca.length ? cobranca : montarCobrancaFallback(d),
+  };
+}
+
+async function obterInsightsSemanais(force = false) {
+  const valido = insightsCache.data && Date.now() - insightsCache.at < INSIGHTS_MIN * 60e3;
+  if (!force && valido) return insightsCache.data;
+  if (insightsCache.gerando) return insightsCache.gerando;
+  const prom = (async () => {
+    let out;
+    try {
+      const d = await dados();
+      out = await gerarInsightsIA(d);
+    } catch (e) {
+      console.error('[insights] IA falhou:', e.message);
+      try {
+        const d = await dados();
+        out = fallbackInsights(d, e.message);
+      } catch (e2) {
+        out = { geradoEm: new Date().toISOString(), proximaEm: new Date(Date.now() + INSIGHTS_MIN * 60e3).toISOString(), fonte: 'erro', resumo: 'Não foi possível gerar a leitura semanal.', insights: [], cobranca: [], aviso: e2.message };
+      }
+    }
+    insightsCache = { at: Date.now(), data: out, gerando: null };
+    try { fs.writeFileSync(INSIGHTS_FILE, JSON.stringify(insightsCache)); } catch {}
+    return out;
+  })();
+  insightsCache.gerando = prom;
+  try { return await prom; } finally { if (insightsCache.gerando === prom) insightsCache.gerando = null; }
+}
+
+app.get('/api/insights', async (req, res) => {
+  try {
+    const data = await obterInsightsSemanais(req.query.atualizar === '1');
+    res.json({ ...data, intervaloAtualizacaoMin: INSIGHTS_MIN });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 app.get('/api/contexto', (req, res) => {
   res.json({ contexto: contextoEmpresa() });
 });
@@ -624,8 +841,71 @@ app.get('/api/dados', async (req, res) => {
   if (!OMIE_APP_KEY || !OMIE_APP_SECRET) return res.status(500).json({ erro: 'Configure OMIE_APP_KEY e OMIE_APP_SECRET nas variáveis de ambiente.' });
   try {
     const d = await dados(req.query.atualizar === '1');
-    res.json({ ...d, intervaloAtualizacaoMin: REFRESH_MIN, proximaAtualizacao: REFRESH_MIN > 0 ? new Date(cache.at + REFRESH_MIN * 60e3).toISOString() : null });
+    const { lancamentos, ...publico } = d;
+    res.json({ ...publico, intervaloAtualizacaoMin: REFRESH_MIN, proximaAtualizacao: REFRESH_MIN > 0 ? new Date(cache.at + REFRESH_MIN * 60e3).toISOString() : null });
   } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+function filtrarLancamentos(d, q = {}) {
+  const base = ['vencimento', 'pagamento', 'emissao'].includes(q.base) ? q.base : 'vencimento';
+  const tipo = String(q.tipo || '').toLowerCase();
+  const status = String(q.status || '').toUpperCase();
+  const categoria = String(q.categoria || '');
+  const de = String(q.de || '');
+  const ate = String(q.ate || '');
+  const texto = String(q.q || '').trim().toLowerCase();
+  return (d.lancamentos || []).filter(l => {
+    if (tipo && l.tipo !== tipo) return false;
+    if (status && l.status !== status) return false;
+    if (categoria && l.categoria !== categoria) return false;
+    const data = l[base] || '';
+    if (de && data < de) return false;
+    if (ate && data > ate) return false;
+    if (texto && !`${l.descricao} ${l.parceiro} ${l.categoria} ${l.documento}`.toLowerCase().includes(texto)) return false;
+    return true;
+  });
+}
+
+function metaLancamentos(d) {
+  return {
+    categorias: [...new Set((d.lancamentos || []).map(l => l.categoria))].filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    status: [...new Set((d.lancamentos || []).map(l => l.status))].filter(Boolean).sort(),
+  };
+}
+
+app.get('/api/lancamentos', async (req, res) => {
+  if (!OMIE_APP_KEY || !OMIE_APP_SECRET) return res.status(500).json({ erro: 'Configure OMIE_APP_KEY e OMIE_APP_SECRET nas variáveis de ambiente.' });
+  try {
+    const d = await dados();
+    const itens = filtrarLancamentos(d, req.query);
+    const total = itens.length;
+    const limite = Math.min(1000, Math.max(20, Number(req.query.limite) || 100));
+    const pagina = Math.max(1, Number(req.query.pagina) || 1);
+    const resumo = itens.reduce((a, l) => { a[l.tipo] += Number(l.valor || 0); return a; }, { receita: 0, despesa: 0 });
+    resumo.saldo = resumo.receita - resumo.despesa;
+    res.json({ total, pagina, limite, resumo, itens: itens.slice((pagina - 1) * limite, pagina * limite), ...metaLancamentos(d) });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+app.get('/api/lancamentos.csv', async (req, res) => {
+  if (!OMIE_APP_KEY || !OMIE_APP_SECRET) return res.status(500).send('Configure OMIE_APP_KEY e OMIE_APP_SECRET.');
+  try {
+    const d = await dados();
+    const itens = filtrarLancamentos(d, req.query);
+    const dtbr = s => s ? s.split('-').reverse().join('/') : '';
+    const val = v => Number(v || 0).toFixed(2).replace('.', ',');
+    const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const linhas = [
+      ['Tipo', 'Status', 'Descrição', 'Parceiro', 'Categoria', 'Documento', 'Emissão', 'Vencimento', 'Pagamento', 'Dias em atraso', 'Valor'].join(';'),
+      ...itens.map(l => [
+        l.tipo === 'receita' ? 'Receita' : 'Despesa', l.status, l.descricao, l.parceiro, l.categoria, l.documento,
+        dtbr(l.emissao), dtbr(l.vencimento), dtbr(l.pagamento), String(l.diasAtraso || 0),
+      ].map(esc).join(';') + ';' + val(l.valor)),
+    ];
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="startgi-lancamentos-${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.send('\ufeff' + linhas.join('\r\n'));
+  } catch (e) { res.status(500).send('Erro ao exportar: ' + e.message); }
 });
 
 // Atualização automática em segundo plano (mesmo intervalo do cache por padrão)
@@ -647,12 +927,20 @@ if (REFRESH_MIN > 0) {
   console.log(`[auto] atualização automática a cada ${REFRESH_MIN} minutos`);
 }
 
+// Leitura estratégica semanal (gera no boot e renova a cada INSIGHTS_MIN)
+if (INSIGHTS_MIN > 0) {
+  setTimeout(() => obterInsightsSemanais().catch(e => console.error('[insights] boot:', e.message)), 6000);
+  const timerInsights = setInterval(() => obterInsightsSemanais(true).catch(e => console.error('[insights] semanal:', e.message)), INSIGHTS_MIN * 60e3);
+  if (timerInsights.unref) timerInsights.unref();
+  console.log(`[insights] leitura estratégica a cada ${INSIGHTS_MIN} minutos`);
+}
+
 // ---------- Guru (chat) ----------
 app.post('/api/guru', async (req, res) => {
   if (!AI_KEY) return res.json({ resposta: 'O chat do guru precisa da variável COMMANDCODE_API_KEY configurada no servidor.' });
   try {
     const d = await dados();
-    const contexto = JSON.stringify({ saldo: d.saldo, saldoDisponivel: d.saldoDisponivel, kpis: d.kpis, serieMensal: d.serieMensal, competencia: d.competencia, regimes: d.regimes, ano: d.ano, anoCaixa: d.anoCaixa, mesAtual: d.meses[d.meses.length - 1], fluxo12semanas: d.semanas, clientes: d.clientes, despesas: d.despesas, despesas12m: d.despesas12m, despesasAno: d.despesasAno, rescisoes: d.rescisoes, atrasados: d.atrasados, atrasadosResumo: d.atrasadosResumo, produtosReceita: d.produtosReceita, recorrente: d.recorrente, contratos: d.contratos });
+    const contexto = JSON.stringify({ saldo: d.saldo, saldoOmie: d.saldoOmie, caixaAplicado: d.caixaAplicado, caixa: d.caixa, saldoDisponivel: d.saldoDisponivel, kpis: d.kpis, serieMensal: d.serieMensal, competencia: d.competencia, regimes: d.regimes, ano: d.ano, anoCaixa: d.anoCaixa, mesAtual: d.meses[d.meses.length - 1], fluxo12semanas: d.semanas, clientes: d.clientes, despesas: d.despesas, despesas12m: d.despesas12m, despesasAno: d.despesasAno, rescisoes: d.rescisoes, atrasados: d.atrasados, atrasadosResumo: d.atrasadosResumo, produtosReceita: d.produtosReceita, recorrente: d.recorrente, contratos: d.contratos });
     const ctx = (typeof req.body.contexto === 'string' && req.body.contexto.trim()) ? req.body.contexto.trim().slice(0, 12000) : contextoEmpresa();
     const r = await fetch(`${AI_BASE}/messages`, {
       method: 'POST',

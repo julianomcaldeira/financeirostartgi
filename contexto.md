@@ -14,6 +14,8 @@ junto com os dados do Omie. Edite à vontade, sem mexer no código.
 - A empresa recebeu um aporte recente do fundo.
 - Cerca de R$ 1 milhão está aplicado. Esse valor é caixa disponível, mas não é
   receita operacional e pode não aparecer no saldo das contas correntes do Omie.
+- Caixa aplicado: R$ 1.000.000. O caixa total do painel soma esse valor ao saldo
+  das contas correntes do Omie. Ajuste aqui ou na variável CAIXA_APLICADO.
 - Ao avaliar fôlego de caixa, considere o valor aplicado; ao avaliar resultado,
   considere apenas receitas e despesas operacionais.
 

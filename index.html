@@ -169,6 +169,11 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 .ins-stat span{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800}
 .ins-stat b{display:block;font:600 28px/1 Fraunces,serif;margin:7px 0 4px}
 .ins-stat small{font-size:11px;color:var(--ink2)}
+.ins-focus{border-left:4px solid var(--brand);background:linear-gradient(120deg,#fffdf8,#f4faf7)}
+.ins-focus h2{font:600 28px/1.15 Fraunces,Georgia,serif;letter-spacing:-.02em;margin:7px 0 8px}
+.ins-focus p{font-size:14px;color:var(--ink2);max-width:920px;line-height:1.55}
+.ins-focus .rec{margin-top:12px;padding-top:11px;border-top:1px dashed var(--line);font-size:13px;color:var(--ink2)}
+.ins-focus .rec b{color:var(--brand)}
 .ins-actions{display:flex;flex-direction:column;gap:10px}
 .ins-action{border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:12px;padding:14px 16px;background:#fff}
 .ins-action.agora{border-left-color:var(--neg)}
@@ -249,6 +254,18 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 @media(max-width:1100px){.sim-intro{grid-template-columns:1fr}.sim-result-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.sim-form{grid-template-columns:1fr}.sim-form .wide{grid-column:auto}.sim-entry .val{font-size:12px}}
 
+/* ---------- Lançamentos ---------- */
+.lanc-filters{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0 12px}
+.lanc-filters label{display:flex;flex-direction:column;gap:5px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.lanc-filters input,.lanc-filters select{border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:13px Inter;background:#fff;color:var(--ink);width:100%;min-width:0}
+.lanc-filters input:focus,.lanc-filters select:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
+.lanc-filters .grow{grid-column:span 2}
+.lanc-filters .btn{align-self:end;justify-self:start}
+.lanc-resumo{background:#fcfbf7;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--ink2);margin-bottom:12px}
+.pager{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:14px}
+@media(max-width:1100px){.lanc-filters{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.lanc-filters{grid-template-columns:1fr}.lanc-filters .grow{grid-column:auto}}
+
 /* ---------- CFO ---------- */
 .cfo{display:grid;grid-template-columns:300px 1fr;padding:0;overflow:hidden;min-height:590px}
 .cfo aside{background:linear-gradient(180deg,#0d4f42,#0a3a30);color:#fff;padding:28px 24px}
@@ -309,6 +326,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     <button data-view="simulacao"><span class="dot"></span>Simulação</button>
     <button data-view="receita"><span class="dot"></span>Receita</button>
     <button data-view="caixa"><span class="dot"></span>Caixa e competência</button>
+    <button data-view="lancamentos"><span class="dot"></span>Lançamentos</button>
     <button data-view="atrasados"><span class="dot"></span>Atrasados<span class="nav-badge" id="badgeAtrasados">0</span></button>
     <button data-view="clientes"><span class="dot"></span>Clientes e custos</button>
     <button data-view="cfo"><span class="dot"></span>CFO de plantão</button>
@@ -369,40 +387,24 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
   <section class="view" data-view="insights">
     <div class="card ins-hero">
       <div>
-        <p class="eyebrow">Leitura do histórico</p>
-        <h2>O que os números estão pedindo</h2>
-        <p class="lead" id="insResumo">Cruzando os últimos meses para transformar histórico em ação.</p>
+        <p class="eyebrow">Inteligência semanal · IA</p>
+        <h2>O que eu faria esta semana</h2>
+        <p class="lead" id="insResumo">Lendo caixa, receita, despesas e carteira para montar a leitura da semana.</p>
         <div class="chips" id="insChips"></div>
       </div>
       <div class="ins-stats" id="insStats"></div>
     </div>
 
-    <div class="grid two" style="margin-bottom:18px">
-      <div class="card">
-        <div class="card-head"><div><p class="eyebrow">Plano de ação</p><h2>Ações prioritárias</h2></div><span class="muted">Ordenadas por urgência</span></div>
-        <div class="ins-actions" id="insAcoes"></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><div><p class="eyebrow">Rotina</p><h2>Comportamentos que mudam o jogo</h2></div></div>
-        <div class="ins-habits" id="insComportamentos"></div>
-      </div>
-    </div>
+    <div class="card ins-focus" id="insFocoCard" style="margin-bottom:18px;display:none"></div>
 
     <div class="card">
-      <div class="card-head"><div><p class="eyebrow">Radar</p><h2>Insights do histórico</h2></div><span class="muted" id="insNota"></span></div>
+      <div class="card-head"><div><p class="eyebrow">Leitura estratégica</p><h2>Movimentos que mudam o jogo</h2></div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="muted" id="insNota"></span><button class="btn ghost" onclick="carregarInsightsIA(1)">Atualizar leitura</button></div></div>
       <div class="ins-grid" id="insCards"></div>
     </div>
 
-    <div class="grid even" style="margin-top:18px">
-      <div class="card">
-        <div class="card-head"><div><p class="eyebrow">Sazonalidade</p><h2>Resultado médio por mês</h2></div><span class="muted">Meses fechados do histórico</span></div>
-        <div class="chart-h"><canvas id="gSazonalidade"></canvas></div>
-        <p class="muted" style="margin-top:10px">Meses com pouca amostra devem ser lidos com cautela. O mês corrente fica fora da média.</p>
-      </div>
-      <div class="card">
-        <div class="card-head"><div><p class="eyebrow">Cobrança</p><h2>Clientes que mais atrasam</h2></div><button class="btn" onclick="go('atrasados')">Ver títulos</button></div>
-        <table class="lst" id="tInsAtraso"></table>
-      </div>
+    <div class="card" style="margin-top:18px">
+      <div class="card-head"><div><p class="eyebrow">Recebimento</p><h2>Engenharia de caixa para a carteira</h2></div><button class="btn" onclick="go('atrasados')">Ver atrasados</button></div>
+      <div class="ins-actions" id="insCobranca"></div>
     </div>
   </section>
 
@@ -560,6 +562,10 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     </div>
     <div class="aging" id="aging"></div>
     <div class="card">
+      <div class="card-head"><div><p class="eyebrow">Engenharia de recebimento</p><h2>Como destravar a carteira</h2></div><span class="muted">Leitura semanal da IA</span></div>
+      <div class="ins-actions" id="atrPlays"></div>
+    </div>
+    <div class="card">
       <div class="card-head"><div><p class="eyebrow">Lista completa</p><h2>Títulos vencidos em aberto</h2></div><input id="filtroAtraso" oninput="filtrarAtrasados()" placeholder="Filtrar por cliente ou categoria" style="border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:13px Inter;min-width:240px"></div>
       <div class="table-scroll"><table class="lst" id="tAtrasados"></table></div>
     </div>
@@ -580,6 +586,31 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     <div class="card" style="margin-top:18px">
       <div class="card-head"><div><p class="eyebrow">Cobrança</p><h2>10 maiores vencidos</h2></div><div style="display:flex;align-items:center;gap:10px"><span class="muted" id="atrTotal"></span><button class="btn" onclick="go('atrasados')">Ver todos</button></div></div>
       <table class="lst" id="tAtr"></table>
+    </div>
+  </section>
+
+  <!-- LANÇAMENTOS -->
+  <section class="view" data-view="lancamentos">
+    <div class="card">
+      <div class="card-head">
+        <div><p class="eyebrow">Base completa do Omie</p><h2>Todas as receitas e despesas</h2></div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="muted" id="lancTotal"></span><button class="btn primary" onclick="exportarLancamentos()">Exportar CSV</button></div>
+      </div>
+      <div class="lanc-filters">
+        <label>Tipo<select id="lancTipo" onchange="lancFiltrar()"><option value="">Todos</option><option value="receita">Receitas</option><option value="despesa">Despesas</option></select></label>
+        <label>Status<select id="lancStatus" onchange="lancFiltrar()"><option value="">Todos</option></select></label>
+        <label>Categoria<select id="lancCategoria" onchange="lancFiltrar()"><option value="">Todas</option></select></label>
+        <label>Data base<select id="lancBase" onchange="lancFiltrar()"><option value="vencimento">Vencimento</option><option value="pagamento">Pagamento</option><option value="emissao">Emissão</option></select></label>
+        <label>De<input id="lancDe" type="date" onchange="lancFiltrar()"></label>
+        <label>Até<input id="lancAte" type="date" onchange="lancFiltrar()"></label>
+        <label class="grow">Buscar<input id="lancBusca" type="search" placeholder="Cliente, descrição, categoria ou documento" oninput="lancBuscaTimer()"></label>
+        <button class="btn ghost" onclick="lancLimpar()">Limpar filtros</button>
+      </div>
+      <p class="lanc-resumo" id="lancResumo"></p>
+      <div class="table-scroll" style="max-height:620px">
+        <table class="lst" id="tLancamentos"></table>
+      </div>
+      <div class="pager"><button class="btn ghost" id="lancPrev" onclick="lancPagina(-1)">Anterior</button><span class="muted" id="lancPage"></span><button class="btn ghost" id="lancNext" onclick="lancPagina(1)">Próxima</button></div>
     </div>
   </section>
 
@@ -618,6 +649,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 
 <script>
 const brl=v=>(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+const brl2=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const k$=v=>{const a=Math.abs(v||0),s=v<0?'-':'';return a>=1e6?s+'R$ '+(a/1e6).toFixed(1).replace('.',',')+' mi':a>=1e3?s+'R$ '+Math.round(a/1e3)+' mil':brl(v)};
 const pct=v=>((v||0)*100).toFixed(0)+'%';
 const runwayTxt=v=>v===null||v===undefined?'Sem queima':v<1?'< 1 mês':v.toFixed(1)+' meses';
@@ -627,15 +659,16 @@ const nomeMes=m=>{const[a,b]=m.split('-');return['jan','fev','mar','abr','mai','
 const CTX_KEY='startgi.contexto';
 const TITLES={
   visao:['Visão geral','O retrato financeiro da StartGi'],
-  insights:['Insights e ações','O que o histórico está pedindo da StartGi'],
+  insights:['Insights e ações','Leitura estratégica semanal gerada por IA'],
   simulacao:['Simulação','Simulador de faturamento e receita recorrente até dezembro'],
   receita:['Receita','De onde vem o dinheiro, produto a produto'],
   caixa:['Caixa e competência','O que já passou pelo caixa x o que foi faturado'],
+  lancamentos:['Lançamentos','Todas as receitas e despesas do Omie, com filtros e exportação'],
   atrasados:['Atrasados a receber','Todos os títulos vencidos em aberto'],
   clientes:['Clientes e custos','Concentração, cobrança e despesas'],
   cfo:['CFO de plantão','Conversa com o seu diretor financeiro']
 };
-let charts={},hist=[],atrasadosCache=[],autoTimer=null,ultimoD=null,simD=null,simEstado=null,simMsgTimer=null;
+let charts={},hist=[],atrasadosCache=[],autoTimer=null,ultimoD=null,simD=null,simEstado=null,simMsgTimer=null,lancPaginaAtual=1,lancTotalPaginas=1,lancBuscaTimerId=null,insightsIAState={data:null,loading:false,erro:null};
 
 function toggleSidebar(force){
   const open=typeof force==='boolean'?force:!document.body.classList.contains('side-open');
@@ -651,8 +684,9 @@ function go(view){
   window.scrollTo({top:0,behavior:'smooth'});
   const resize=()=>Object.values(charts).forEach(c=>c&&c.resize());
   requestAnimationFrame(resize);setTimeout(resize,180);
-  if(view==='insights'&&ultimoD)setTimeout(()=>renderInsights(ultimoD),60);
+  if(view==='insights')setTimeout(()=>renderInsights(ultimoD||{}),60);
   if(view==='simulacao'&&simD)setTimeout(()=>simRender(),60);
+  if(view==='lancamentos')setTimeout(()=>carregarLancamentos(lancPaginaAtual||1),60);
 }
 
 function openContexto(){document.getElementById('drawerCtx').classList.add('open');document.getElementById('ctx').focus()}
@@ -732,7 +766,7 @@ function renderVisao(d){
     `Em média entram ${k$(k.receitaMedia)} e saem ${k$(k.despesaMedia)} por mês, `+
     (k.resultadoMedio>=0?`sobrando ${k$(k.resultadoMedio)} (${pct(k.margem)} de margem). `:`um déficit de ${k$(-k.resultadoMedio)}. `)+
     (rec.receita12?`A receita recorrente soma ${k$(rec.receita12)} em 12 meses e representa ${pct(rec.participacao)} do total. `:'')+
-    (k.runway!==null?`No ritmo atual, o caixa dura ${runwayTxt(k.runway)}. `:'')+
+    (k.runway!==null?`O caixa total de ${k$(d.saldo)} (Omie + aplicado) cobre ${runwayTxt(k.runway)} no ritmo atual. `:'')+
     (altos.length?`Minha prioridade número um: ${altos[0].titulo.toLowerCase()}.`:'Nenhum risco crítico no momento.');
   document.getElementById('chips').innerHTML=d.alertas.map(a=>`<span class="chip ${a.nivel}">${a.titulo}</span>`).join('');
   const atr=d.atrasadosResumo||{}, banner=document.getElementById('bannerAtraso');
@@ -746,7 +780,7 @@ function renderVisao(d){
   charts.s=new Chart(document.getElementById('gScore'),{type:'doughnut',data:{datasets:[{data:[n,100-n],backgroundColor:[cor,'#ece8dc'],borderWidth:0}]},options:{cutout:'82%',rotation:-125,circumference:250,plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:900}}});
 
   document.getElementById('kpis').innerHTML=
-    (d.saldoDisponivel?kpi('Caixa hoje',k$(d.saldo),'Saldo das contas no Omie'):kpi('Caixa hoje','—','Saldo bancário não disponível na API'))+
+    (d.saldoDisponivel?kpi('Caixa total',k$(d.saldo),d.caixaAplicado?`Omie ${k$(d.saldoOmie)} + aplicado ${k$(d.caixaAplicado)}`:'Saldo das contas no Omie'):kpi('Caixa total','—','Saldo bancário não disponível na API'))+
     kpi('Receita realizada',k$(k.receitaMedia),'Regime de caixa · média dos últimos 3 meses')+
     kpi('Receita recorrente',k$(rec.mensalMedia||0),'Média mensal de mensalidades · '+pct(rec.participacao||0)+' da receita', '', ['Recorrente','pos'])+
     kpi('Resultado de caixa',k$(k.resultadoMedio),'Regime de caixa · margem de '+pct(k.margem),k.resultadoMedio>=0?'pos':'neg',[k.resultadoMedio>=0?'Gerando caixa':'Queimando caixa',k.resultadoMedio>=0?'pos':'neg'])+
@@ -932,47 +966,119 @@ function simRender(){
     `<tr class="tot"><td>Total do período</td><td class="n">${k$(p.recAcum)}</td><td class="n">${k$(p.pontual)}</td><td class="n">${k$(p.total)}</td></tr>`;
 }
 
-function renderInsights(d){
-  const ins=d.insights||{}, lista=ins.insights||[], acoes=ins.acoes||[];
-  const topAcao=acoes[0];
-  document.getElementById('insResumo').textContent=ins.resumo||'Ainda não há histórico suficiente para gerar uma leitura.';
-  const rotulo={alto:'Crítico',medio:'Atenção',oportunidade:'Oportunidade',ok:'Saudável'};
-  const priCls=p=>p==='Agora'?'agora':p==='Este mês'?'mes':p==='Este trimestre'?'tri':'continuo';
-  const chips=lista.filter(i=>i.nivel!=='ok').slice(0,4);
-  document.getElementById('insChips').innerHTML=chips.length
-    ?chips.map(i=>`<span class="chip ${i.nivel}">${i.titulo}</span>`).join('')
-    :'<span class="chip ok">Nenhum risco crítico no histórico</span>';
-  document.getElementById('insStats').innerHTML=
-    `<div class="ins-stat"><span>Pontos críticos</span><b>${ins.criticos||0}</b><small>pedem ação</small></div>`+
-    `<div class="ins-stat"><span>Oportunidades</span><b>${ins.oportunidades||0}</b><small>para capturar</small></div>`+
-    `<div class="ins-stat"><span>Ações sugeridas</span><b>${acoes.length}</b><small>no plano</small></div>`+
-    `<div class="ins-stat"><span>Prioridade agora</span><b style="font-size:15px;line-height:1.3">${topAcao?topAcao.titulo:'—'}</b><small>${topAcao?topAcao.prazo:''}</small></div>`;
-  document.getElementById('insNota').textContent=ins.geradoEm?'Leitura de '+new Date(ins.geradoEm).toLocaleString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
-
-  document.getElementById('insAcoes').innerHTML=acoes.map(a=>{
-    const c=priCls(a.prioridade);
-    return `<div class="ins-action ${c}"><div class="top"><span class="pill ${c}">${a.prioridade}</span><span class="muted">${a.prazo}</span></div><h3>${a.titulo}</h3><p>${a.porque}</p><div class="impact"><b>Impacto:</b> ${a.impacto}</div></div>`;
-  }).join('')||'<p class="muted">Sem ações sugeridas no momento.</p>';
-
-  document.getElementById('insComportamentos').innerHTML=(ins.comportamentos||[]).map(h=>
-    `<div class="ins-habit"><span class="freq">${h.frequencia}</span><h3>${h.titulo}</h3><p>${h.descricao}</p></div>`
-  ).join('')||'<p class="muted">Sem rotinas sugeridas.</p>';
-
-  document.getElementById('insCards').innerHTML=lista.map(i=>
-    `<div class="ins-card ${i.nivel}"><div class="head"><span class="tema">${i.tema}</span><span class="nvl">${rotulo[i.nivel]||i.nivel}</span></div><h3>${i.titulo}</h3><p>${i.leitura}</p><div class="num">${i.numero}</div><div class="rec"><b>Faça:</b> ${i.acao}</div><div class="habit"><b>Rotina:</b> ${i.comportamento}</div></div>`
-  ).join('')||'<p class="muted">Sem insights no momento.</p>';
-
-  const saz=ins.sazonalidade||[];
-  const viewIns=document.querySelector('.view[data-view="insights"]');
-  if(viewIns&&viewIns.classList.contains('active')){
-    charts.saz&&charts.saz.destroy();
-    charts.saz=new Chart(document.getElementById('gSazonalidade'),{type:'bar',data:{labels:saz.map(x=>x.nome),datasets:[{label:'Resultado médio',data:saz.map(x=>x.resultado),backgroundColor:saz.map(x=>x.resultado>=0?css('--brand'):css('--neg')),borderRadius:4}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>brl(c.raw)}}},scales:{y:{ticks:{callback:x=>k$(x)},grid:{color:'#f0eee6'}},x:{grid:{display:false}}}}});
+function lancQuery(comPagina=true){
+  const p=new URLSearchParams(),get=id=>document.getElementById(id)?.value||'';
+  [['tipo','lancTipo'],['status','lancStatus'],['categoria','lancCategoria'],['base','lancBase'],['de','lancDe'],['ate','lancAte'],['q','lancBusca']].forEach(([k,id])=>{const v=get(id);if(v)p.set(k,v)});
+  if(comPagina){p.set('pagina',lancPaginaAtual);p.set('limite','100')}
+  return p;
+}
+async function carregarLancamentos(pagina=1){
+  if(pagina)lancPaginaAtual=pagina;
+  const box=document.getElementById('tLancamentos');
+  box.innerHTML='<tr><td class="muted">Carregando lançamentos…</td></tr>';
+  try{
+    const r=await fetch('/api/lancamentos?'+lancQuery(true).toString());
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.erro||'falha ao consultar');
+    lancPaginaAtual=j.pagina;lancTotalPaginas=Math.max(1,Math.ceil(j.total/j.limite));
+    const catSel=document.getElementById('lancCategoria'),catAtual=catSel.value;
+    if(catSel.options.length<=1){catSel.innerHTML='<option value="">Todas</option>'+j.categorias.map(c=>`<option value="${simEsc(c)}">${simEsc(c)}</option>`).join('');catSel.value=catAtual}
+    const stSel=document.getElementById('lancStatus'),stAtual=stSel.value;
+    if(stSel.options.length<=1){stSel.innerHTML='<option value="">Todos</option>'+j.status.map(c=>`<option value="${simEsc(c)}">${simEsc(c)}</option>`).join('');stSel.value=stAtual}
+    const dtbr=s=>s?s.split('-').reverse().join('/'):'—';
+    const st=s=>s?s.toLowerCase().replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()):'—';
+    document.getElementById('lancTotal').textContent=`${j.total.toLocaleString('pt-BR')} lançamentos`;
+    document.getElementById('lancResumo').innerHTML=`<b>${brl2(j.resumo.receita)}</b> em receitas · <b>${brl2(j.resumo.despesa)}</b> em despesas · <b>${brl2(j.resumo.saldo)}</b> de saldo no filtro`;
+    document.getElementById('lancPage').textContent=`Página ${j.pagina} de ${lancTotalPaginas}`;
+    document.getElementById('lancPrev').disabled=j.pagina<=1;
+    document.getElementById('lancNext').disabled=j.pagina>=lancTotalPaginas;
+    box.innerHTML='<tr><th>Vencimento</th><th>Pagamento</th><th>Tipo</th><th>Descrição</th><th>Parceiro</th><th>Categoria</th><th>Status</th><th class="n">Valor</th></tr>'+
+      (j.itens.map(l=>`<tr><td>${dtbr(l.vencimento)}</td><td>${dtbr(l.pagamento)}</td><td><span class="badge ${l.tipo==='receita'?'rec':'one'}">${l.tipo}</span></td><td title="${simEsc(l.descricao)}">${simEsc(l.descricao)}</td><td>${simEsc(l.parceiro)}</td><td>${simEsc(l.categoria)}</td><td>${st(l.status)}</td><td class="n"><span class="${l.tipo==='receita'?'pos':'neg'}">${l.tipo==='receita'?'+':'−'} ${brl2(l.valor)}</span></td></tr>`).join('')||'<tr><td class="muted">Nenhum lançamento com esses filtros.</td></tr>');
+  }catch(e){
+    box.innerHTML=`<tr><td class="muted">Erro ao carregar: ${simEsc(e.message)}</td></tr>`;
   }
+}
+function lancFiltrar(){carregarLancamentos(1)}
+function lancBuscaTimer(){clearTimeout(lancBuscaTimerId);lancBuscaTimerId=setTimeout(lancFiltrar,350)}
+function lancLimpar(){
+  ['lancTipo','lancStatus','lancCategoria','lancDe','lancAte','lancBusca'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  document.getElementById('lancBase').value='vencimento';lancFiltrar();
+}
+function lancPagina(delta){const p=lancPaginaAtual+delta;if(p<1||p>lancTotalPaginas)return;carregarLancamentos(p)}
+function exportarLancamentos(){const p=lancQuery(false);const qs=p.toString();window.location.href='/api/lancamentos.csv'+(qs?'?'+qs:'')}
 
-  const ca=ins.clientesAtraso||[];
-  document.getElementById('tInsAtraso').innerHTML=ca.length
-    ?'<tr><th>Cliente</th><th class="n">Títulos</th><th class="n">Maior atraso</th><th class="n">Valor</th></tr>'+ca.map(c=>`<tr><td>${c.cliente}</td><td class="n">${c.qtd}</td><td class="n"><span class="dias ${c.maiorDias>30?'g':''}">${c.maiorDias} dias</span></td><td class="n">${brl(c.total)}</td></tr>`).join('')
-    :'<tr><td class="muted">Nenhum cliente com atraso. Carteira em dia.</td></tr>';
+function insPlay(c){
+  return `<div class="ins-action"><div class="top"><span class="pill">${simEsc(c.publico||'Carteira')}</span>${c.situacao?`<span class="muted">${simEsc(c.situacao)}</span>`:''}</div><h3>${simEsc(c.estrategia)}</h3><p>${simEsc(c.abordagem)}</p>${c.porque?`<div class="impact"><b>Por quê:</b> ${simEsc(c.porque)}</div>`:''}${c.impacto?`<div class="impact"><b>Impacto:</b> ${simEsc(c.impacto)}</div>`:''}</div>`;
+}
+function renderInsightsLoading(){
+  document.getElementById('insResumo').textContent='Lendo caixa, receita, despesas e carteira para montar a leitura da semana…';
+  document.getElementById('insChips').innerHTML='<span class="chip">IA trabalhando</span>';
+  document.getElementById('insStats').innerHTML='';
+  document.getElementById('insFocoCard').style.display='none';
+  document.getElementById('insCards').innerHTML='<div class="ins-card"><p class="muted">Gerando leitura estratégica…</p></div>';
+  document.getElementById('insCobranca').innerHTML='';
+  const atr=document.getElementById('atrPlays');if(atr)atr.innerHTML='<p class="muted">Gerando plano de recebimento…</p>';
+}
+function renderInsightsErro(msg){
+  document.getElementById('insResumo').textContent='Não foi possível carregar a leitura estratégica agora.';
+  document.getElementById('insChips').innerHTML=`<span class="chip alto">${simEsc(msg||'erro')}</span>`;
+  document.getElementById('insStats').innerHTML='';
+  document.getElementById('insFocoCard').style.display='none';
+  document.getElementById('insCards').innerHTML='<div class="ins-card"><p class="muted">Tente novamente em instantes.</p></div>';
+  document.getElementById('insCobranca').innerHTML='';
+}
+function renderInsightsIA(){
+  const x=insightsIAState.data;if(!x)return;
+  const ins=x.insights||[],cob=x.cobranca||[];
+  const cls=p=>p==='alta'?'alto':p==='media'?'medio':'ok';
+  const nvl=p=>p==='alta'?'Prioridade alta':p==='media'?'Média':'Baixa';
+  const fmt=s=>s?new Date(s).toLocaleString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
+  const fmtD=s=>s?new Date(s).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):'—';
+  document.getElementById('insResumo').textContent=x.resumo||'Sem leitura disponível.';
+  document.getElementById('insChips').innerHTML=
+    (ins.slice(0,4).map(i=>`<span class="chip ${cls(i.prioridade)}">${simEsc(i.area)}</span>`).join('')||'<span class="chip">Sem dados</span>')+
+    (x.fonte!=='ia'?`<span class="chip alto" title="${simEsc(x.aviso||'')}">Fallback por regras</span>`:'');
+  const altas=ins.filter(i=>i.prioridade==='alta').length;
+  document.getElementById('insStats').innerHTML=
+    `<div class="ins-stat"><span>Prioridade alta</span><b>${altas}</b><small>movimentos com urgência</small></div>`+
+    `<div class="ins-stat"><span>Fonte</span><b style="font-size:15px;line-height:1.3">${x.fonte==='ia'?'IA · '+simEsc(x.modelo||''):'Regras'}</b><small>${x.fonte==='ia'?'leitura proprietária':'fallback'}</small></div>`+
+    `<div class="ins-stat"><span>Foco da semana</span><b style="font-size:15px;line-height:1.3">${simEsc(x.focoSemana?.titulo||'—')}</b><small>prioridade do CEO</small></div>`+
+    `<div class="ins-stat"><span>Próxima leitura</span><b style="font-size:15px;line-height:1.3">${fmtD(x.proximaEm)}</b><small>renovação automática</small></div>`;
+  document.getElementById('insNota').textContent=`Gerado em ${fmt(x.geradoEm)}`+(x.aviso?` · ${x.aviso}`:'');
+  const foco=x.focoSemana;
+  if(foco&&foco.titulo){
+    const card=document.getElementById('insFocoCard');card.style.display='block';
+    card.innerHTML=`<p class="eyebrow">Foco da semana</p><h2>${simEsc(foco.titulo)}</h2><p>${simEsc(foco.porque||'')}</p><div class="rec"><b>Faça agora:</b> ${simEsc(foco.acao||'')}</div>`;
+  }else document.getElementById('insFocoCard').style.display='none';
+  document.getElementById('insCards').innerHTML=ins.map(i=>
+    `<div class="ins-card ${cls(i.prioridade)}"><div class="head"><span class="tema">${simEsc(i.area)}</span><span class="nvl">${nvl(i.prioridade)}</span></div><h3>${simEsc(i.titulo)}</h3><p>${simEsc(i.diagnostico)}</p>${i.implicacao?`<div class="num">${simEsc(i.implicacao)}</div>`:''}<div class="rec"><b>Movimento:</b> ${simEsc(i.acao)}</div>${i.impacto?`<div class="habit"><b>Impacto:</b> ${simEsc(i.impacto)}${i.prazo?' · '+simEsc(i.prazo):''}</div>`:''}</div>`
+  ).join('')||'<p class="muted">Sem insights no momento.</p>';
+  const plays=cob.map(insPlay).join('')||'<p class="muted">Sem plano de recebimento no momento.</p>';
+  document.getElementById('insCobranca').innerHTML=plays;
+  const atr=document.getElementById('atrPlays');if(atr)atr.innerHTML=plays;
+}
+async function carregarInsightsIA(force=0){
+  if(insightsIAState.loading)return;
+  if(!force&&insightsIAState.data){renderInsightsIA();return;}
+  insightsIAState.loading=true;
+  if(!insightsIAState.data)renderInsightsLoading();
+  else document.getElementById('insNota').textContent='Atualizando leitura…';
+  try{
+    const r=await fetch('/api/insights'+(force?'?atualizar=1':''));
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.erro||'falha ao gerar leitura');
+    insightsIAState.data=j;insightsIAState.erro=null;
+  }catch(e){
+    insightsIAState.erro=e.message;
+  }finally{
+    insightsIAState.loading=false;
+    if(insightsIAState.data)renderInsightsIA();
+    else renderInsightsErro(insightsIAState.erro);
+  }
+}
+function renderInsights(d){
+  if(insightsIAState.data)renderInsightsIA();
+  else carregarInsightsIA();
 }
 
 function renderReceita(d){
@@ -1019,6 +1125,7 @@ function renderReceita(d){
 function renderCaixa(d){
   const k=d.kpis, ult=d.semanas[d.semanas.length-1]||{}, reg=d.regimes||{}, cx=reg.caixa||{}, cp=reg.competencia||{}, dif=reg.diferenca||{};
   document.getElementById('kpisRegimes').innerHTML=
+    kpi('Caixa total',k$(d.saldo||0),d.caixaAplicado?`Omie ${k$(d.saldoOmie||0)} + aplicado ${k$(d.caixaAplicado)}`:'Saldo das contas no Omie')+
     kpi('Receita no caixa',k$(cx.receita||0),'Recebida nos últimos 12 meses')+
     kpi('Receita na competência',k$(cp.receita||0),'Emitida nos últimos 12 meses')+
     kpi('Resultado no caixa',k$(cx.resultado||0),'Recebido menos pago',((cx.resultado||0)>=0?'pos':'neg'))+
@@ -1039,7 +1146,7 @@ function renderCaixa(d){
     `<tr class="tot"><td>Total 12 meses</td><td class="n ${(cx.resultado||0)>=0?'pos':'neg'}">${k$(cx.resultado||0)}</td><td class="n ${(cp.resultado||0)>=0?'pos':'neg'}">${k$(cp.resultado||0)}</td><td class="n ${(dif.resultado||0)>=0?'pos':'neg'}">${(dif.resultado||0)>=0?'+':''}${k$(dif.resultado||0)}</td></tr>`;
 
   document.getElementById('kpisCaixa').innerHTML=
-    (d.saldoDisponivel?kpi('Caixa hoje',k$(d.saldo),'Saldo das contas no Omie'):kpi('Caixa hoje','—','Saldo bancário não disponível'))+
+    (d.saldoDisponivel?kpi('Caixa hoje (total)',k$(d.saldo),d.caixaAplicado?`Omie ${k$(d.saldoOmie||0)} + aplicado ${k$(d.caixaAplicado)}`:'Saldo das contas no Omie'):kpi('Caixa hoje (total)','—','Saldo bancário não disponível'))+
     kpi('A receber em 30 dias',k$(k.receber30),'Já lançado no Omie')+
     kpi('A pagar em 30 dias',k$(k.pagar30),'Já lançado no Omie',k.pagar30>k.receber30?'neg':'')+
     kpi('Saldo projetado',d.saldoDisponivel?k$(ult.saldo||0):'—','Em 12 semanas, no ritmo lançado',(ult.saldo||0)<0?'neg':'');
