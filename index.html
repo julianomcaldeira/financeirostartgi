@@ -212,6 +212,46 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 @media(max-width:1100px){.ins-hero{grid-template-columns:1fr}.ins-stats{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:560px){.ins-stats,.ins-habits{grid-template-columns:1fr}}
 
+/* ---------- Simulação ---------- */
+.sim-intro{display:grid;grid-template-columns:1.4fr .6fr;gap:24px;align-items:center;background:linear-gradient(135deg,#fffdf8 0%,#f2f8f3 100%);border-color:#d7e6de;margin-bottom:18px}
+.sim-intro h2{font:600 32px/1.15 Fraunces,Georgia,serif;letter-spacing:-.02em;margin:8px 0 10px}
+.sim-intro .lead{font-size:15px;color:var(--ink2);max-width:800px}
+.sim-ref{display:grid;gap:8px}
+.sim-ref .row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:10px 13px}
+.sim-ref .row span{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sim-ref .row b{font:600 17px/1.1 Fraunces,serif;white-space:nowrap}
+.sim-inputs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.sim-inputs label,.sim-form label{display:flex;flex-direction:column;gap:5px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sim-inputs input,.sim-form input,.sim-form select{border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:13px Inter;background:#fff;color:var(--ink);width:100%;min-width:0}
+.sim-inputs input:focus,.sim-form input:focus,.sim-form select:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
+.sim-scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.sim-scenario{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:#fcfbf7;cursor:pointer;text-align:left;transition:.18s;color:var(--ink)}
+.sim-scenario:hover{border-color:var(--brand)}
+.sim-scenario.active{border-color:var(--brand);background:var(--brand-soft);box-shadow:inset 0 0 0 1px var(--brand)}
+.sim-scenario span{display:block;font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sim-scenario b{display:block;font:600 18px/1.1 Fraunces,serif;margin:5px 0 3px}
+.sim-scenario small{display:block;font-size:10.5px;color:var(--ink2);line-height:1.35}
+.sim-tools{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+.sim-tools .btn{padding:7px 10px;font-size:11px}
+.sim-form{display:grid;grid-template-columns:1.35fr .8fr 1fr .95fr;gap:9px;align-items:end}
+.sim-form .wide{grid-column:1/-1}
+.sim-form .btn{grid-column:1/-1;justify-self:start;margin-top:2px}
+.sim-status{font-size:11px;color:var(--brand);min-height:16px;margin-top:6px}
+.sim-entries{display:flex;flex-direction:column;gap:7px;margin-top:14px;max-height:300px;overflow:auto;padding-right:2px}
+.sim-entry{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:#fcfbf7}
+.sim-entry .info{flex:1;min-width:0}
+.sim-entry b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sim-entry small{display:block;font-size:10.5px;color:var(--muted);margin-top:1px}
+.sim-entry .val{font-size:12.5px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sim-entry .del{border:0;background:transparent;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:2px 4px}
+.sim-entry .del:hover{color:var(--neg)}
+.sim-leitura{display:flex;flex-direction:column;gap:9px}
+.sim-note{border-left:3px solid var(--brand);background:#fcfbf7;border-radius:0 10px 10px 0;padding:10px 13px}
+.sim-note b{display:block;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--brand);margin-bottom:3px}
+.sim-note span{font-size:12.5px;color:var(--ink2);line-height:1.5}
+@media(max-width:1100px){.sim-intro{grid-template-columns:1fr}.sim-inputs{grid-template-columns:1fr 1fr}.sim-form{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.sim-inputs,.sim-form,.sim-scenarios{grid-template-columns:1fr}.sim-form .wide{grid-column:auto}.sim-scenario b{font-size:16px}}
+
 /* ---------- CFO ---------- */
 .cfo{display:grid;grid-template-columns:300px 1fr;padding:0;overflow:hidden;min-height:590px}
 .cfo aside{background:linear-gradient(180deg,#0d4f42,#0a3a30);color:#fff;padding:28px 24px}
@@ -269,6 +309,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
   <nav class="nav" id="nav">
     <button class="active" data-view="visao"><span class="dot"></span>Visão geral</button>
     <button data-view="insights"><span class="dot"></span>Insights e ações</button>
+    <button data-view="simulacao"><span class="dot"></span>Simulação</button>
     <button data-view="receita"><span class="dot"></span>Receita</button>
     <button data-view="caixa"><span class="dot"></span>Caixa e competência</button>
     <button data-view="atrasados"><span class="dot"></span>Atrasados<span class="nav-badge" id="badgeAtrasados">0</span></button>
@@ -365,6 +406,68 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
         <div class="card-head"><div><p class="eyebrow">Cobrança</p><h2>Clientes que mais atrasam</h2></div><button class="btn" onclick="go('atrasados')">Ver títulos</button></div>
         <table class="lst" id="tInsAtraso"></table>
       </div>
+    </div>
+  </section>
+
+  <!-- SIMULAÇÃO -->
+  <section class="view" data-view="simulacao">
+    <div class="card sim-intro">
+      <div>
+        <p class="eyebrow">Planejamento até dezembro</p>
+        <h2>Simule o faturamento e o MRR da StartGi</h2>
+        <p class="lead">Coloque as receitas previstas, separe o que é recorrente do que é pontual e veja o impacto no MRR até o fim do ano. O mês corrente fica fora para não misturar parcial com projeção.</p>
+        <div class="chips" id="simChips"></div>
+      </div>
+      <div class="sim-ref" id="simRefs"></div>
+    </div>
+
+    <div class="grid even" style="margin-bottom:18px">
+      <div class="card">
+        <div class="card-head"><div><p class="eyebrow">Premissas do cenário</p><h2>Base da recorrência</h2></div></div>
+        <div class="sim-inputs">
+          <label>MRR base (R$/mês)<input id="simMrrBase" type="number" min="0" step="100" oninput="simAtualizar()"></label>
+          <label>Crescimento mensal (%)<input id="simCrescimento" type="number" min="-20" max="20" step="0.1" oninput="simAtualizar()"></label>
+          <label>Churn mensal (%)<input id="simChurn" type="number" min="0" max="20" step="0.1" oninput="simAtualizar()"></label>
+        </div>
+        <p class="muted" id="simBaseNota" style="margin-top:10px"></p>
+        <div class="sim-scenarios" id="simCenarios"></div>
+        <div class="sim-tools">
+          <button class="btn ghost" onclick="simUsarMrr('realizado')">Usar MRR realizado</button>
+          <button class="btn ghost" onclick="simUsarMrr('contratado')">Usar MRR contratado</button>
+          <button class="btn ghost" onclick="simReset()">Limpar simulação</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><p class="eyebrow">Entradas previstas</p><h2>Adicionar receita</h2></div><button class="btn ghost" onclick="simLimparEntradas()">Limpar entradas</button></div>
+        <div class="sim-form">
+          <label class="wide">Descrição<input id="simDesc" placeholder="Ex.: novo contrato, projeto, upsell"></label>
+          <label>Valor (R$)<input id="simValor" type="number" min="0" step="0.01" placeholder="0,00"></label>
+          <label>Mês previsto<input id="simMes" type="month"></label>
+          <label>Tipo<select id="simTipo"><option value="recorrente">Recorrente mensal</option><option value="pontual">Pontual</option></select></label>
+          <button class="btn primary" onclick="simAdicionar()">Adicionar à simulação</button>
+        </div>
+        <div class="sim-status" id="simStatus"></div>
+        <p class="muted">Recorrente repete do mês escolhido até dezembro. Pontual entra só no mês escolhido.</p>
+        <div class="sim-entries" id="simEntradas"></div>
+      </div>
+    </div>
+
+    <div class="kpis" id="simKpis"></div>
+
+    <div class="grid even" style="margin-bottom:18px">
+      <div class="card">
+        <div class="card-head"><div><p class="eyebrow">Projeção mensal</p><h2>Recorrente x pontual</h2></div><span class="muted" id="simPeriodo"></span></div>
+        <div class="chart-h"><canvas id="gSimulacao"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><p class="eyebrow">Leitura do cenário</p><h2>O que a simulação mostra</h2></div></div>
+        <div class="sim-leitura" id="simLeitura"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div><p class="eyebrow">Detalhe</p><h2>Mês a mês</h2></div><span class="muted" id="simCenarioNota"></span></div>
+      <table class="lst" id="tSimulacao"></table>
     </div>
   </section>
 
@@ -518,13 +621,14 @@ const CTX_KEY='startgi.contexto';
 const TITLES={
   visao:['Visão geral','O retrato financeiro da StartGi'],
   insights:['Insights e ações','O que o histórico está pedindo da StartGi'],
+  simulacao:['Simulação','Cenários de faturamento e MRR até o fim do ano'],
   receita:['Receita','De onde vem o dinheiro, produto a produto'],
   caixa:['Caixa e competência','O que já passou pelo caixa x o que foi faturado'],
   atrasados:['Atrasados a receber','Todos os títulos vencidos em aberto'],
   clientes:['Clientes e custos','Concentração, cobrança e despesas'],
   cfo:['CFO de plantão','Conversa com o seu diretor financeiro']
 };
-let charts={},hist=[],atrasadosCache=[],autoTimer=null,ultimoD=null;
+let charts={},hist=[],atrasadosCache=[],autoTimer=null,ultimoD=null,simD=null,simEstado=null,simMsgTimer=null;
 
 function toggleSidebar(force){
   const open=typeof force==='boolean'?force:!document.body.classList.contains('side-open');
@@ -541,6 +645,7 @@ function go(view){
   const resize=()=>Object.values(charts).forEach(c=>c&&c.resize());
   requestAnimationFrame(resize);setTimeout(resize,180);
   if(view==='insights'&&ultimoD)setTimeout(()=>renderInsights(ultimoD),60);
+  if(view==='simulacao'&&simD)setTimeout(()=>simRender(),60);
 }
 
 function openContexto(){document.getElementById('drawerCtx').classList.add('open');document.getElementById('ctx').focus()}
@@ -603,7 +708,7 @@ async function carregar(force){
   document.getElementById('sideCadencia').textContent=cad>0?(prox?'Auto '+cadTxt(cad)+' · próxima '+prox.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'Auto '+cadTxt(cad)):'Atualização manual';
   document.getElementById('dataP').textContent=dt.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})+(cad>0?` · ${cadTxt(cad)}`:' · atualização manual');
   ultimoD=d;
-  renderVisao(d);renderInsights(d);renderReceita(d);renderCaixa(d);renderAtrasados(d);renderClientes(d);
+  renderVisao(d);renderInsights(d);simPreparar(d);renderReceita(d);renderCaixa(d);renderAtrasados(d);renderClientes(d);
   agendarAuto(d);
 }
 
@@ -662,6 +767,207 @@ function renderVisao(d){
     `<tr><td>Despesas pagas<span class="exp">Folha, fornecedores, impostos e demais saídas</span></td><td class="n neg">−${brl(k.despesaMedia)}</td></tr>`+
     `<tr><td>Margem<span class="exp">Quanto sobra de cada R$ 100 recebidos</span></td><td class="n">R$ ${Math.round(k.margem*100)}</td></tr>`+
     `<tr class="tot"><td>Resultado do mês</td><td class="n ${k.resultadoMedio>=0?'pos':'neg'}">${brl(k.resultadoMedio)}</td></tr>`;
+}
+
+const SIM_KEY='startgi.simulacao';
+const simEsc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const simPct1=v=>(v*100).toFixed(1).replace('.',',')+'%';
+
+function simMeses(){
+  const hoje=new Date(), ano=hoje.getFullYear(), mes=hoje.getMonth()+1;
+  const inicio=mes<12?mes+1:12;
+  const out=[];
+  for(let m=inicio;m<=12;m++)out.push({key:`${ano}-${String(m).padStart(2,'0')}`,mes:m,ano});
+  return out;
+}
+function simDefaultMrr(d){
+  const fechados=((d&&d.recorrente&&d.recorrente.serie)||[]).slice(0,-1);
+  const ultimo=fechados.length?Number(fechados[fechados.length-1].recorrente||0):0;
+  return ultimo||Number(d?.recorrente?.mensalMedia||0)||Number(d?.contratos?.mrr||0);
+}
+function simCarregarEstado(){
+  try{const o=JSON.parse(localStorage.getItem(SIM_KEY)||'null');return o&&typeof o==='object'?o:null}catch(e){return null}
+}
+function simSalvar(){try{if(simEstado)localStorage.setItem(SIM_KEY,JSON.stringify(simEstado))}catch(e){}}
+function simStatus(t){
+  const el=document.getElementById('simStatus');if(!el)return;
+  el.textContent=t;clearTimeout(simMsgTimer);
+  simMsgTimer=setTimeout(()=>{el.textContent=''},3500);
+}
+function simPreparar(d){
+  simD=d;
+  if(!simEstado)simEstado=simCarregarEstado();
+  if(!simEstado||!Number.isFinite(Number(simEstado.mrrBase))){
+    simEstado={mrrBase:simDefaultMrr(d),crescimento:0,churn:0,entradas:[],cenario:'base'};
+  }
+  const meses=simMeses(),validos=new Set(meses.map(m=>m.key));
+  simEstado.mrrBase=Math.max(0,Number(simEstado.mrrBase)||0);
+  simEstado.crescimento=Math.min(20,Math.max(-20,Number(simEstado.crescimento)||0));
+  simEstado.churn=Math.min(20,Math.max(0,Number(simEstado.churn)||0));
+  simEstado.cenario=['conservador','base','otimista'].includes(simEstado.cenario)?simEstado.cenario:'base';
+  simEstado.entradas=(Array.isArray(simEstado.entradas)?simEstado.entradas:[]).map(e=>({
+    id:String(e.id||('e'+Math.random().toString(36).slice(2,9))),
+    descricao:String(e.descricao||'Receita prevista'),
+    valor:Math.max(0,Number(e.valor)||0),
+    mes:String(e.mes||''),
+    tipo:e.tipo==='pontual'?'pontual':'recorrente',
+  })).filter(e=>e.valor>0&&validos.has(e.mes));
+  simSalvar();
+  const mrrEl=document.getElementById('simMrrBase'),gEl=document.getElementById('simCrescimento'),cEl=document.getElementById('simChurn'),mesEl=document.getElementById('simMes');
+  if(document.activeElement!==mrrEl)mrrEl.value=Math.round(simEstado.mrrBase);
+  if(document.activeElement!==gEl)gEl.value=simEstado.crescimento;
+  if(document.activeElement!==cEl)cEl.value=simEstado.churn;
+  if(meses.length){
+    mesEl.min=meses[0].key;mesEl.max=meses[meses.length-1].key;
+    if(!mesEl.value||!validos.has(mesEl.value))mesEl.value=meses[0].key;
+  }
+  simRender();
+}
+function simAtualizar(){
+  if(!simEstado)return;
+  const base=document.getElementById('simMrrBase'),g=document.getElementById('simCrescimento'),c=document.getElementById('simChurn');
+  simEstado.mrrBase=Math.max(0,Number(base.value)||0);
+  simEstado.crescimento=Math.min(20,Math.max(-20,Number(g.value)||0));
+  simEstado.churn=Math.min(20,Math.max(0,Number(c.value)||0));
+  simSalvar();simRender();
+}
+function simUsarMrr(tipo){
+  if(!simD||!simEstado)return;
+  const v=tipo==='contratado'?Number(simD?.contratos?.mrr||0):simDefaultMrr(simD);
+  simEstado.mrrBase=Math.round(v*100)/100;
+  const el=document.getElementById('simMrrBase');if(el)el.value=Math.round(v);
+  simSalvar();simRender();
+  simStatus(tipo==='contratado'?'MRR contratado no Omie aplicado.':'MRR do último mês fechado aplicado.');
+}
+function simReset(){
+  if(!simD)return;
+  if(!confirm('Limpar a simulação e voltar ao MRR realizado?'))return;
+  simEstado={mrrBase:simDefaultMrr(simD),crescimento:0,churn:0,entradas:[],cenario:'base'};
+  simSalvar();simPreparar(simD);simStatus('Simulação reiniciada.');
+}
+function simLimparEntradas(){
+  if(!simEstado||!simEstado.entradas.length)return simStatus('Não há entradas para limpar.');
+  if(!confirm('Remover todas as receitas previstas?'))return;
+  simEstado.entradas=[];simSalvar();simRender();simStatus('Entradas removidas.');
+}
+function simAdicionar(){
+  if(!simEstado)return;
+  const desc=document.getElementById('simDesc'),val=document.getElementById('simValor'),mes=document.getElementById('simMes'),tipo=document.getElementById('simTipo');
+  const valor=Number(val.value)||0,mesEscolhido=mes.value;
+  if(!(valor>0))return simStatus('Informe um valor maior que zero.');
+  if(!simMeses().some(m=>m.key===mesEscolhido))return simStatus('Escolha um mês dentro do período da simulação.');
+  simEstado.entradas.push({
+    id:'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    descricao:desc.value.trim()||'Receita prevista',
+    valor,mes:mesEscolhido,tipo:tipo.value==='pontual'?'pontual':'recorrente',
+  });
+  simSalvar();simRender();
+  desc.value='';val.value='';desc.focus();
+  simStatus(tipo.value==='recorrente'?'Receita recorrente adicionada. Ela se repete até dezembro.':'Receita pontual adicionada ao mês escolhido.');
+}
+function simRemover(id){
+  if(!simEstado)return;
+  simEstado.entradas=simEstado.entradas.filter(e=>e.id!==id);
+  simSalvar();simRender();
+}
+function simCenario(c){
+  if(!simEstado)return;
+  simEstado.cenario=['conservador','base','otimista'].includes(c)?c:'base';
+  simSalvar();simRender();
+}
+function simParams(){
+  const g=Math.min(20,Math.max(-20,Number(simEstado?.crescimento)||0))/100;
+  const c=Math.min(20,Math.max(0,Number(simEstado?.churn)||0))/100;
+  const lim=(v,a,b)=>Math.min(b,Math.max(a,v));
+  return {
+    conservador:{nome:'Conservador',crescimento:lim(g-.01,-.2,.2),churn:lim(c+.01,0,.5)},
+    base:{nome:'Base',crescimento:lim(g,-.2,.2),churn:lim(c,0,.5)},
+    otimista:{nome:'Otimista',crescimento:lim(g+.01,-.2,.2),churn:lim(c-.01,0,.5)},
+  };
+}
+function simProjetar(chave){
+  const pr=simParams()[chave]||simParams().base;
+  const meses=simMeses();
+  let mrr=Math.max(0,Number(simEstado?.mrrBase)||0);
+  const entradas=simEstado?.entradas||[];
+  const linhas=meses.map((m,i)=>{
+    if(i>0)mrr*=(1+pr.crescimento)*(1-pr.churn);
+    let novas=0,pontual=0;
+    entradas.forEach(e=>{
+      if(e.mes!==m.key)return;
+      if(e.tipo==='recorrente')novas+=Number(e.valor)||0;
+      else pontual+=Number(e.valor)||0;
+    });
+    mrr+=novas;
+    const total=mrr+pontual;
+    return {...m,mrr,novas,pontual,total,pct:total?mrr/total:0};
+  });
+  const recAcum=linhas.reduce((s,l)=>s+l.mrr,0);
+  const pontual=linhas.reduce((s,l)=>s+l.pontual,0);
+  const novas=linhas.reduce((s,l)=>s+l.novas,0);
+  const total=recAcum+pontual;
+  return {chave,nome:pr.nome,crescimento:pr.crescimento,churn:pr.churn,linhas,recAcum,pontual,novas,total,mrrDez:linhas.length?linhas[linhas.length-1].mrr:0,pct:total?recAcum/total:0};
+}
+function simSensibilidade(){
+  if(!simEstado)return 0;
+  const chave=simEstado.cenario||'base',antigo=simEstado.mrrBase;
+  const base=simProjetar(chave);
+  simEstado.mrrBase=Number(antigo)+10000;
+  const bump=simProjetar(chave);
+  simEstado.mrrBase=antigo;
+  return bump.recAcum-base.recAcum;
+}
+function simRender(){
+  if(!simD||!simEstado)return;
+  const meses=simMeses(),ultimo=meses[meses.length-1]||{key:'',mes:12,ano:new Date().getFullYear()};
+  const projs={};['conservador','base','otimista'].forEach(k=>projs[k]=simProjetar(k));
+  const ativo=projs[simEstado.cenario]||projs.base;
+  const periodo=meses.length?`${nomeMes(meses[0].key)} a ${nomeMes(ultimo.key)}`:'—';
+  const lastClosed=simDefaultMrr(simD),contratado=Number(simD?.contratos?.mrr||0),ytd=Number(simD?.ano?.atual?.receita||0);
+  document.getElementById('simChips').innerHTML=`<span class="chip">${periodo}</span><span class="chip ok">MRR separado do pontual</span>`;
+  document.getElementById('simRefs').innerHTML=
+    `<div class="row"><span>MRR contratado</span><b>${k$(contratado)}</b></div>`+
+    `<div class="row"><span>MRR último mês fechado</span><b>${k$(lastClosed)}</b></div>`+
+    `<div class="row"><span>Realizado no ano (YTD)</span><b>${k$(ytd)}</b></div>`;
+  document.getElementById('simBaseNota').textContent=`Base editável. Último mês fechado: ${k$(lastClosed)} · Contratado no Omie: ${k$(contratado)}.`;
+  document.getElementById('simPeriodo').textContent=periodo;
+  document.getElementById('simCenarioNota').textContent=`Cenário ${ativo.nome.toLowerCase()} · crescimento ${simPct1(ativo.crescimento)} ao mês · churn ${simPct1(ativo.churn)} ao mês`;
+  document.getElementById('simCenarios').innerHTML=['conservador','base','otimista'].map(k=>{
+    const p=projs[k],on=simEstado.cenario===k;
+    return `<button type="button" class="sim-scenario ${on?'active':''}" onclick="simCenario('${k}')"><span>${p.nome}</span><b>${k$(p.total)}</b><small>MRR ${nomeMes(ultimo.key)}: ${k$(p.mrrDez)}</small><small>${pct(p.pct)} recorrente · ${simPct1(p.crescimento)} cresc. · ${simPct1(p.churn)} churn</small></button>`;
+  }).join('');
+  document.getElementById('simKpis').innerHTML=
+    kpi('Receita projetada',k$(ativo.total),periodo+' · recorrente + pontual')+
+    kpi('MRR em '+nomeMes(ultimo.key),k$(ativo.mrrDez),'Receita recorrente no último mês do período','',[pct(ativo.pct)+' recorrente','pos'])+
+    kpi('Receita recorrente',k$(ativo.recAcum),pct(ativo.pct)+' do total do período','',['MRR protegido','pos'])+
+    kpi('Receita pontual',k$(ativo.pontual),(ativo.total?pct(1-ativo.pct):'0%')+' do total do período','',[ativo.pontual?'Não se repete':'Sem pontual','warn']);
+  const entradas=(simEstado.entradas||[]).slice().sort((a,b)=>a.mes.localeCompare(b.mes)||b.valor-a.valor);
+  document.getElementById('simEntradas').innerHTML=entradas.length?entradas.map(e=>{
+    const fim=e.tipo==='recorrente'?(e.mes===ultimo.key?nomeMes(e.mes):nomeMes(e.mes)+' até '+nomeMes(ultimo.key)):nomeMes(e.mes);
+    return `<div class="sim-entry"><span class="badge ${e.tipo==='recorrente'?'rec':'one'}">${e.tipo==='recorrente'?'MRR':'pontual'}</span><div class="info"><b>${simEsc(e.descricao)}</b><small>${fim}</small></div><div class="val">${k$(e.valor)}${e.tipo==='recorrente'?'/mês':''}</div><button class="del" onclick="simRemover('${e.id}')" aria-label="Remover">×</button></div>`;
+  }).join(''):'<p class="muted">Nenhuma receita prevista. Adicione acima para montar o cenário.</p>';
+  const sens=simSensibilidade();
+  const notas=[
+    ['MRR no fim do período',`No cenário ${ativo.nome.toLowerCase()}, o MRR chega a ${k$(ativo.mrrDez)} em ${nomeMes(ultimo.key)}.`],
+    ['Peso da recorrência',`A receita recorrente soma ${k$(ativo.recAcum)} e representa ${pct(ativo.pct)} do período.`],
+    ['O valor de um MRR novo',`R$ 10 mil de MRR novo adicionam ${k$(sens)} de receita recorrente até ${nomeMes(ultimo.key)}. O mesmo valor pontual entra uma vez e não se repete.`],
+  ];
+  notas.push(ativo.novas?['Novos recorrentes',`As entradas recorrentes cadastradas somam ${k$(ativo.novas)}/mês de MRR novo.`]:['Novos recorrentes','Nenhuma entrada recorrente cadastrada; a projeção usa apenas a base de MRR.']);
+  if(ativo.pct<.6)notas.push(['Atenção à previsibilidade',`A recorrência fica em ${pct(ativo.pct)} do período. Priorizar contratos mensais aumenta o valor de cada venda ao longo do tempo.`]);
+  document.getElementById('simLeitura').innerHTML=notas.map(n=>`<div class="sim-note"><b>${n[0]}</b><span>${n[1]}</span></div>`).join('');
+  const viewSim=document.querySelector('.view[data-view="simulacao"]');
+  if(viewSim&&viewSim.classList.contains('active')){
+    charts.sim&&charts.sim.destroy();
+    charts.sim=new Chart(document.getElementById('gSimulacao'),{data:{labels:ativo.linhas.map(l=>nomeMes(l.key)),datasets:[
+      {type:'bar',label:'Recorrente',data:ativo.linhas.map(l=>l.mrr),backgroundColor:css('--brand'),borderRadius:4,stack:'s'},
+      {type:'bar',label:'Pontual',data:ativo.linhas.map(l=>l.pontual),backgroundColor:css('--sand'),borderRadius:4,stack:'s'},
+      {type:'line',label:'Total',data:ativo.linhas.map(l=>l.total),borderColor:css('--ink'),backgroundColor:css('--ink'),tension:.3,pointRadius:3,order:0}]},
+      options:{maintainAspectRatio:false,animation:{duration:350},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:x=>k$(x)},grid:{color:'#f0eee6'}}}}});
+  }
+  document.getElementById('tSimulacao').innerHTML=
+    '<tr><th>Mês</th><th class="n">Receita recorrente</th><th class="n">Novos MRR</th><th class="n">Pontual</th><th class="n">Total</th><th class="n">% rec.</th></tr>'+
+    ativo.linhas.map(l=>`<tr><td>${nomeMes(l.key)}</td><td class="n">${k$(l.mrr)}</td><td class="n">${l.novas?k$(l.novas):'—'}</td><td class="n">${l.pontual?k$(l.pontual):'—'}</td><td class="n">${k$(l.total)}</td><td class="n">${pct(l.pct)}</td></tr>`).join('')+
+    `<tr class="tot"><td>Total do período</td><td class="n">${k$(ativo.recAcum)}</td><td class="n">${k$(ativo.novas)}</td><td class="n">${k$(ativo.pontual)}</td><td class="n">${k$(ativo.total)}</td><td class="n">${pct(ativo.pct)}</td></tr>`;
 }
 
 function renderInsights(d){
