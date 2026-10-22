@@ -203,4 +203,20 @@ app.post('/api/guru', async (req, res) => {
   } catch (e) { res.status(500).json({ resposta: 'Erro: ' + e.message }); }
 });
 
+// TEMPORÁRIO: diagnóstico da integração de IA
+app.post('/api/ai-test', async (req, res) => {
+  try {
+    const { model = AI_MODEL, max_tokens = 1200, thinking, prompt = 'Diga em uma frase se está funcionando.' } = req.body || {};
+    const body = { model, max_tokens, messages: [{ role: 'user', content: prompt }] };
+    if (thinking) body.thinking = thinking;
+    const r = await fetch(`${AI_BASE}/messages`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}`, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify(body),
+    });
+    const raw = await r.text();
+    res.json({ status: r.status, raw });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 app.listen(PORT, () => console.log(`Painel financeiro StartGi na porta ${PORT}`));
