@@ -19,6 +19,11 @@ app.use((req, res, next) => {
   res.set('WWW-Authenticate', 'Basic realm="Painel StartGi"').status(401).send('Acesso restrito');
 });
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', (req, res) => {
+  const fs = require('fs');
+  const a = path.join(__dirname, 'public', 'index.html'), b = path.join(__dirname, 'index.html');
+  res.sendFile(fs.existsSync(a) ? a : b);
+});
 
 // ---------- Omie ----------
 async function omie(endpoint, call, param) {
