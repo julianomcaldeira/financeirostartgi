@@ -589,7 +589,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
         <div>
           <p class="eyebrow">Carteira de clientes</p>
           <h2>Receita e pagamentos por cliente</h2>
-          <p class="muted" style="margin:6px 0 0">Pago usa a data de pagamento. Receita usa a emissão/competência. Em aberto são títulos de receita ainda sem pagamento.</p>
+          <p class="muted" style="margin:6px 0 0">Pago usa a data de pagamento. Receita usa a emissão/competência. Em aberto é o saldo de títulos de receita ainda não quitados.</p>
         </div>
         <div class="cli-filters">
           <label>Mês<input type="month" id="cliMes" onchange="carregarClientesReceita()"></label>
@@ -1269,7 +1269,7 @@ async function carregarClientesReceita(){
     document.getElementById('kpisCliMes').innerHTML=
       kpi('Pago no mês',brl2(t.pago||0),'Recebimentos com data de pagamento no mês',(t.pago||0)>0?'pos':'')+
       kpi('Receita no mês',brl2(t.receitaMes||0),'Emitida no mês (competência)')+
-      kpi('Em aberto',brl2(t.aberto||0),'Títulos de receita sem pagamento',(t.aberto||0)>0?'neg':'')+
+      kpi('Em aberto',brl2(t.aberto||0),'Saldo de títulos ainda em aberto',(t.aberto||0)>0?'neg':'')+
       kpi('Clientes com pagamento',`${t.comPagamento||0} de ${t.clientes||0}`,'Base de clientes com receita');
     const prods=c=>{
       const p=c.produtos||[];
