@@ -375,10 +375,12 @@ async function montarDados() {
     tipo,
     valor: Number(t.valor_documento || 0),
     venc: dt(t.data_vencimento),
+    pagamento: dt(t.data_pagamento) || dt(t.data_baixa),
     emissao: dt(t.data_emissao) || dt(t.data_previsao) || dt(t.data_registro) || dt(t.data_vencimento),
     status: (t.status_titulo || '').toUpperCase(),
     categoria: nomeCat[t.codigo_categoria] || t.codigo_categoria || 'Sem categoria',
     parceiro: nomeCli[t.codigo_cliente_fornecedor] || 'Não identificado',
+    descricao: [t.descricao, t.observacao].filter(Boolean).map(x => String(x).trim()).filter(Boolean).join(' · '),
   });
   const R = receber.map(t => norm(t, 'R')).filter(t => t.status !== 'CANCELADO' && t.venc);
   const P = pagar.map(t => norm(t, 'P')).filter(t => t.status !== 'CANCELADO' && t.venc);
@@ -421,6 +423,15 @@ async function montarDados() {
     return { ano, meses, receita, despesa, resultado: receita - despesa, margem: receita ? (receita - despesa) / receita : null };
   };
   const anoCompetencia = { atual: panoramaComp(hoje.getFullYear(), mesesYTD), anterior: panoramaComp(hoje.getFullYear() - 1, mesesYTD) };
+  // Caixa efetivo: usa a data de pagamento/recebimento quando o Omie informa.
+  const pagoEm = t => t.pagamento || t.venc;
+  const panoramaCaixa = (ano, meses) => {
+    const noPeriodo = lista => lista.filter(t => quitado(t) && pagoEm(t) && pagoEm(t).getFullYear() === ano && pagoEm(t).getMonth() < meses);
+    const receita = soma(noPeriodo(R).map(t => t.valor));
+    const despesa = soma(noPeriodo(P).map(t => t.valor));
+    return { ano, meses, receita, despesa, resultado: receita - despesa, margem: receita ? (receita - despesa) / receita : null };
+  };
+  const anoCaixa = { atual: panoramaCaixa(hoje.getFullYear(), mesesYTD), anterior: panoramaCaixa(hoje.getFullYear() - 1, mesesYTD) };
 
   // Médias dos últimos 3 meses fechados
   const ult3 = a => soma(a.slice(-4, -1)) / 3;
@@ -457,6 +468,52 @@ async function montarDados() {
   const clientesRank = agrupa(R, 'parceiro');
   const despesasCat = agrupa(P, 'categoria');
   const receita12 = soma(entradas);
+
+  // Composição completa das despesas do ano (caixa) e leitura específica de rescisões.
+  const agrupaDetalhado = (lista, campo) => {
+    const m = {};
+    lista.forEach(t => {
+      const nome = t[campo] || 'Sem categoria';
+      if (!m[nome]) m[nome] = { valor: 0, qtd: 0 };
+      m[nome].valor += t.valor;
+      m[nome].qtd++;
+    });
+    return Object.entries(m).map(([nome, v]) => ({ nome, valor: v.valor, qtd: v.qtd })).sort((a, b) => b.valor - a.valor);
+  };
+  const anoAtual = hoje.getFullYear();
+  const pagosAnoP = P.filter(t => quitado(t) && pagoEm(t) && pagoEm(t).getFullYear() === anoAtual);
+  const despesasAno = {
+    ano: anoAtual,
+    base: 'data de pagamento; quando ausente, data de vencimento',
+    total: soma(pagosAnoP.map(t => t.valor)),
+    categorias: agrupaDetalhado(pagosAnoP, 'categoria'),
+  };
+  const RE_RESCISAO = /rescis|verbas rescis|multa.*fgts|fgts.*multa|aviso pr[eé]vio|indeniza|desligamento|demiss/i;
+  const ehDespesaRescisoria = t => RE_RESCISAO.test(t.categoria || '') || RE_RESCISAO.test(t.descricao || '');
+  const rescisoesP = pagosAnoP.filter(ehDespesaRescisoria);
+  const fgtsP = pagosAnoP.filter(t => /fgts/i.test(t.categoria || ''));
+  const rescisoes = {
+    ano: anoAtual,
+    total: soma(rescisoesP.map(t => t.valor)),
+    quantidade: rescisoesP.length,
+    porMes: Array.from({ length: mesesYTD }, (_, i) => {
+      const mes = `${anoAtual}-${String(i + 1).padStart(2, '0')}`;
+      return { mes, valor: soma(rescisoesP.filter(t => mesKey(pagoEm(t)) === mes).map(t => t.valor)) };
+    }).filter(x => x.valor > 0),
+    categorias: agrupaDetalhado(rescisoesP, 'categoria'),
+    itens: rescisoesP.slice().sort((a, b) => pagoEm(b) - pagoEm(a)).slice(0, 40).map(t => ({
+      fornecedor: t.parceiro,
+      descricao: t.descricao || '(sem descrição)',
+      categoria: t.categoria,
+      valor: t.valor,
+      data: pagoEm(t).toLocaleDateString('pt-BR'),
+    })),
+    fgtsTotal: soma(fgtsP.map(t => t.valor)),
+    fgtsCategorias: agrupaDetalhado(fgtsP, 'categoria'),
+    observacao: rescisoesP.length
+      ? 'Valores localizados por categoria ou descrição contendo rescisão, verbas rescisórias, multa de FGTS, aviso prévio, indenização ou desligamento.'
+      : 'Nenhum título pago no ano teve categoria ou descrição com palavras-chave de rescisão. O total pode estar diluído em Salários ou FGTS e não é separável pelos dados atuais.',
+  };
   const somaSerie = s => ({ receita: soma(s.map(x => x.receita)), despesa: soma(s.map(x => x.despesa)), resultado: soma(s.map(x => x.resultado)) });
   const caixa12 = somaSerie(ult12);
   const comp12 = somaSerie(competencia);
@@ -516,9 +573,12 @@ async function montarDados() {
       atrasadoReceber: totAtrasoR, atrasadoPagar: soma(atrasadoP.map(t => t.valor)),
       top1, top3, receita12,
     },
-    meses, entradas, saidas, resultado, semanas, serieMensal, ano,
+    meses, entradas, saidas, resultado, semanas, serieMensal, ano, anoCaixa,
     clientes: clientesRank.slice(0, 8),
     despesas: despesasCat.slice(0, 8),
+    despesas12m: despesasCat,
+    despesasAno,
+    rescisoes,
     produtosReceita: produtosReceita.slice(0, 12),
     contratos: { total: contratosOmie.length, ativos: ctrAtivos.length, mrr: mrrContratado, arr: mrrContratado * 12 },
     recorrente: {
@@ -592,7 +652,7 @@ app.post('/api/guru', async (req, res) => {
   if (!AI_KEY) return res.json({ resposta: 'O chat do guru precisa da variável COMMANDCODE_API_KEY configurada no servidor.' });
   try {
     const d = await dados();
-    const contexto = JSON.stringify({ saldo: d.saldo, saldoDisponivel: d.saldoDisponivel, kpis: d.kpis, serieMensal: d.serieMensal, competencia: d.competencia, regimes: d.regimes, ano: d.ano, mesAtual: d.meses[d.meses.length - 1], fluxo12semanas: d.semanas, clientes: d.clientes, despesas: d.despesas, atrasados: d.atrasados, atrasadosResumo: d.atrasadosResumo, produtosReceita: d.produtosReceita, recorrente: d.recorrente, contratos: d.contratos });
+    const contexto = JSON.stringify({ saldo: d.saldo, saldoDisponivel: d.saldoDisponivel, kpis: d.kpis, serieMensal: d.serieMensal, competencia: d.competencia, regimes: d.regimes, ano: d.ano, anoCaixa: d.anoCaixa, mesAtual: d.meses[d.meses.length - 1], fluxo12semanas: d.semanas, clientes: d.clientes, despesas: d.despesas, despesas12m: d.despesas12m, despesasAno: d.despesasAno, rescisoes: d.rescisoes, atrasados: d.atrasados, atrasadosResumo: d.atrasadosResumo, produtosReceita: d.produtosReceita, recorrente: d.recorrente, contratos: d.contratos });
     const ctx = (typeof req.body.contexto === 'string' && req.body.contexto.trim()) ? req.body.contexto.trim().slice(0, 12000) : contextoEmpresa();
     const r = await fetch(`${AI_BASE}/messages`, {
       method: 'POST',
@@ -613,6 +673,8 @@ Regras de resposta:
 - Explique um termo técnico apenas se ele for indispensável.
 - Feche com "Esta semana: " e uma única ação concreta.
 - Use apenas os dados e o contexto abaixo; se faltar dado, diga qual e como obtê-lo.
+- Para perguntas sobre um tipo de despesa (ex.: rescisão, FGTS, salários), verifique primeiro despesasAno.categorias e o bloco rescisoes. Não afirme que o dado não existe sem antes olhar todas as categorias e as descrições/itens de rescisão.
+- Se rescisoes.total for zero, diga isso e informe o que existe em categorias relacionadas (FGTS, Salários), deixando claro que o Omie não separa o valor. Se houver itens em rescisoes, some e responda o total do ano pedido.
 
 CONTEXTO DA EMPRESA:
 ${ctx || '(não informado)'}

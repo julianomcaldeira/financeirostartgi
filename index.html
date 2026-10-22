@@ -573,6 +573,11 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
       <div class="card"><div class="card-head"><div><p class="eyebrow">Despesas</p><h2>Para onde vai o dinheiro</h2></div><span class="muted">12 meses</span></div><ul class="rank" id="rDesp"></ul></div>
     </div>
     <div class="card" style="margin-top:18px">
+      <div class="card-head"><div><p class="eyebrow">Pessoal</p><h2 id="rescTitulo">Rescisões em 2026</h2></div><span class="muted" id="rescBase"></span></div>
+      <div class="kpis" id="kpisResc"></div>
+      <p class="muted" id="rescObs" style="margin-top:2px"></p>
+    </div>
+    <div class="card" style="margin-top:18px">
       <div class="card-head"><div><p class="eyebrow">Cobrança</p><h2>10 maiores vencidos</h2></div><div style="display:flex;align-items:center;gap:10px"><span class="muted" id="atrTotal"></span><button class="btn" onclick="go('atrasados')">Ver todos</button></div></div>
       <table class="lst" id="tAtr"></table>
     </div>
@@ -1095,7 +1100,15 @@ function renderAtrasados(d){
 }
 
 function renderClientes(d){
-  const k=d.kpis;
+  const k=d.kpis,resc=d.rescisoes||{},pico=(resc.porMes||[]).slice().sort((a,b)=>b.valor-a.valor)[0];
+  document.getElementById('rescTitulo').textContent='Rescisões em '+(resc.ano||new Date().getFullYear());
+  document.getElementById('rescBase').textContent='Caixa por data de pagamento';
+  document.getElementById('kpisResc').innerHTML=
+    kpi('Total de rescisões',k$(resc.total||0),'Títulos pagos com categoria ou descrição de rescisão',(resc.total||0)>0?'neg':'')+
+    kpi('Lançamentos',String(resc.quantidade||0),'Títulos identificados no ano')+
+    kpi('FGTS pago',k$(resc.fgtsTotal||0),'Categoria FGTS no ano, sem separar multa')+
+    kpi('Mês de pico',pico?nomeMes(pico.mes):'—',pico?k$(pico.valor):'Nenhuma rescisão identificada');
+  document.getElementById('rescObs').textContent=resc.observacao||'O Omie não retornou um resumo de rescisões.';
   document.getElementById('kpisClientes').innerHTML=
     kpi('Receita 12 meses',k$(k.receita12),'Total recebido de clientes')+
     kpi('Maior cliente',pct(k.top1),'Participação na receita de 12 meses',k.top1>.5?'neg':'',[k.top1>.3?'Concentrado':'Diluído',k.top1>.3?'warn':'pos'])+
