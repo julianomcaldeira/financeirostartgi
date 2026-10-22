@@ -242,6 +242,23 @@ app.get('/api/diagnostico', async (req, res) => {
     const servicos = await cru('servicos/servico/', 'ListarServicos', { pagina: 1, registros_por_pagina: 2 });
     const c1 = await omie('servicos/contrato/', 'ListarContratos', { pagina: 1, registros_por_pagina: 1 }).catch(() => null);
     const os1 = await omie('servicos/os/', 'ListarOS', { pagina: 1, registros_por_pagina: 1 }).catch(() => null);
+    const contratosTodos = await listarTudo('servicos/contrato/', 'ListarContratos', 'contratoCadastro').catch(() => []);
+    const limpaProduto = t => (t || '').replace(/&quot;/g, '"').replace(/&lt;[^&]*?&gt;/g, '').split('"')[0].replace(/\|.*$/, '').trim();
+    const ctrResumo = {};
+    contratosTodos.forEach(c => {
+      const cab = c.cabecalho || {}, sit = cab.cCodSit || '?';
+      const s = ctrResumo[sit] || (ctrResumo[sit] = { status: sit, qtd: 0, mensal: 0 });
+      s.qtd++; s.mensal += Number(cab.nValTotMes || 0);
+    });
+    const ativos = contratosTodos.filter(c => (c.cabecalho || {}).cCodSit === '10');
+    const mrr = ativos.reduce((s, c) => s + Number((c.cabecalho || {}).nValTotMes || 0), 0);
+    const porProduto = {};
+    ativos.forEach(c => (c.itensContrato || []).forEach(it => {
+      const nome = limpaProduto(it.itemDescrServ?.descrCompleta) || 'Sem descrição';
+      porProduto[nome] = (porProduto[nome] || 0) + Number(it.itemCabecalho?.valorTotal || 0);
+    }));
+    const hojeMs = Date.now();
+    const vencendo90 = ativos.filter(c => { const d = dt((c.cabecalho || {}).dVigFinal); return d && d.getTime() - hojeMs <= 90 * 864e5; }).map(c => ({ contrato: c.cabecalho?.cNumCtr, cliente: c.cabecalho?.nCodCli, mensal: Number(c.cabecalho?.nValTotMes || 0), fim: c.cabecalho?.dVigFinal }));
 
     res.json({
       receber: { rawKeys: Object.keys(rec || {}), keys: Object.keys(rec0), campos: { codigo_categoria: rec0.codigo_categoria, status_titulo: rec0.status_titulo }, categorias: rec0.categorias, info: rec0.info, distribuicao: rec0.distribuicao, amostra: rec0 },
@@ -251,6 +268,12 @@ app.get('/api/diagnostico', async (req, res) => {
       contratos, os, servicos,
       contratoAmostra: c1?.contratoCadastro?.[0] || null,
       osAmostra: os1?.osCadastro?.[0] || null,
+      recorrencia: {
+        qtdContratos: contratosTodos.length, qtdAtivos: ativos.length, mrr, arr: mrr * 12,
+        status: Object.values(ctrResumo).sort((a, b) => b.qtd - a.qtd),
+        produtos: Object.entries(porProduto).sort((a, b) => b[1] - a[1]).map(([nome, valor]) => ({ nome, valor })),
+        vencendo90,
+      },
     });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
