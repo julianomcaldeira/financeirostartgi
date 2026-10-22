@@ -46,7 +46,7 @@ async function chamarIA(system, mensagens, maxTokens = 4096, modelo = AI_MODEL) 
   const r = await fetch(`${AI_BASE}/messages`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}`, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: modelo, max_tokens: maxTokens, thinking: { type: 'enabled', budget_tokens: 1024 }, system, messages: mensagens }),
+    body: JSON.stringify({ model: modelo, max_tokens: maxTokens, thinking: { type: 'adaptive' }, output_config: { effort: 'low' }, system, messages: mensagens }),
     signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(90000) : undefined,
   });
   const bruto = await r.text();
