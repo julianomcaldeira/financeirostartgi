@@ -83,6 +83,7 @@ table.lst{width:100%;border-collapse:collapse;font-size:13px}
 table.lst th{text-align:left;color:var(--mut);font-weight:500;font-size:12px;padding:0 0 8px;border-bottom:1px solid var(--line)}
 table.lst td{padding:11px 0;border-bottom:1px solid var(--line)}
 table.lst .n{text-align:right;font-variant-numeric:tabular-nums}
+table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:none;padding-top:12px}
 .dias{font-weight:600;font-size:12px;padding:2px 8px;border-radius:6px;background:var(--warn-soft);color:var(--warn)}
 .dias.g{background:var(--neg-soft);color:var(--neg)}
 
@@ -146,9 +147,10 @@ table.lst .n{text-align:right;font-variant-numeric:tabular-nums}
 
 <h2 class="sec">Mês a mês e panorama do ano</h2>
 <section class="g two">
-  <div class="card"><p class="eyebrow">Resultado mês a mês · últimos 12 meses</p><table class="lst" id="tMeses"></table></div>
+  <div class="card"><p class="eyebrow">Resultado mês a mês · últimos 12 meses</p><div class="chart-h"><canvas id="gResultado"></canvas></div><div class="legend-note">Verde = lucro no mês. Vermelho = prejuízo. O mês corrente é parcial.</div></div>
   <div class="card"><p class="eyebrow">Panorama do ano</p><table class="dre" id="tAno"></table><div class="legend-note" id="anoNota"></div></div>
 </section>
+<section class="card" style="margin-top:18px"><p class="eyebrow">Detalhe mês a mês · entradas, saídas e margem</p><table class="lst" id="tMeses"></table></section>
 
 <h2 class="sec">Clientes e custos</h2>
 <section class="g half">
@@ -278,6 +280,12 @@ async function carregar(force){
     {type:'bar',label:'Saídas',data:d.semanas.map(s=>-s.saidas),backgroundColor:'#e8b4a8',borderRadius:4,order:1}]},
     options:{maintainAspectRatio:false,plugins:{legend:leg,tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},scales:{y:yfmt,x:xfmt}}});
 
+  const res12=d.serieMensal.slice(-12);
+  charts.r&&charts.r.destroy();
+  charts.r=new Chart(gResultado,{type:'bar',data:{labels:res12.map(x=>nomeMes(x.mes)),datasets:[
+    {label:'Resultado',data:res12.map(x=>x.resultado),backgroundColor:res12.map(x=>x.resultado>=0?css('--pos'):css('--neg')),borderRadius:4}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>brl(c.raw)}}},scales:{y:yfmt,x:xfmt}}});
+
   // DRE simplificada
   document.getElementById('dre').innerHTML=
     `<tr><td>Receita recebida<span class="exp">Dinheiro que entrou de clientes</span></td><td class="n pos">${brl(k.receitaMedia)}</td></tr>`+
@@ -286,10 +294,13 @@ async function carregar(force){
     `<tr class="tot"><td>Resultado do mês</td><td class="n ${k.resultadoMedio>=0?'pos':'neg'}">${brl(k.resultadoMedio)}</td></tr>`;
 
   // Mês a mês e panorama do ano
+  const s12=d.serieMensal.slice(-12);
+  const tr12=s12.reduce((a,x)=>({receita:a.receita+x.receita,despesa:a.despesa+x.despesa,resultado:a.resultado+x.resultado}),{receita:0,despesa:0,resultado:0});
   document.getElementById('tMeses').innerHTML=
     '<tr><th>Mês</th><th class="n">Entradas</th><th class="n">Saídas</th><th class="n">Resultado</th><th class="n">Margem</th></tr>'+
-    d.serieMensal.slice(-12).reverse().map(x=>
-      `<tr><td>${nomeMes(x.mes)}</td><td class="n">${k$(x.receita)}</td><td class="n">${k$(x.despesa)}</td><td class="n ${x.resultado>=0?'pos':'neg'}">${k$(x.resultado)}</td><td class="n">${x.margem===null?'—':pct(x.margem)}</td></tr>`).join('');
+    s12.map(x=>
+      `<tr><td>${nomeMes(x.mes)}</td><td class="n">${k$(x.receita)}</td><td class="n">${k$(x.despesa)}</td><td class="n ${x.resultado>=0?'pos':'neg'}">${k$(x.resultado)}</td><td class="n">${x.margem===null?'—':pct(x.margem)}</td></tr>`).join('')+
+    `<tr class="tot"><td>Total 12 meses</td><td class="n">${k$(tr12.receita)}</td><td class="n">${k$(tr12.despesa)}</td><td class="n ${tr12.resultado>=0?'pos':'neg'}">${k$(tr12.resultado)}</td><td class="n">${tr12.receita?pct(tr12.resultado/tr12.receita):'—'}</td></tr>`;
 
   const a=d.ano.atual, p=d.ano.anterior;
   document.getElementById('tAno').innerHTML=
