@@ -254,6 +254,16 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 @media(max-width:1100px){.sim-intro{grid-template-columns:1fr}.sim-result-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.sim-form{grid-template-columns:1fr}.sim-form .wide{grid-column:auto}.sim-entry .val{font-size:12px}}
 
+/* ---------- Receita por cliente ---------- */
+.cli-filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.cli-filters label{display:flex;flex-direction:column;gap:5px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cli-filters input,.cli-filters select{border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:13px Inter;background:#fff;color:var(--ink)}
+.cli-filters input:focus,.cli-filters select:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
+.cli-prod{display:flex;flex-wrap:wrap;gap:4px;max-width:330px}
+.cli-prod span{background:#f0eee6;border-radius:999px;padding:2px 7px;font-size:10.5px;color:var(--ink2)}
+.cli-name{font-weight:600;color:var(--ink)}
+.cli-sub{font-size:11px;color:var(--muted)}
+
 /* ---------- Lançamentos ---------- */
 .lanc-filters{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0 12px}
 .lanc-filters label{display:flex;flex-direction:column;gap:5px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
@@ -328,6 +338,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     <button data-view="caixa"><span class="dot"></span>Caixa e competência</button>
     <button data-view="lancamentos"><span class="dot"></span>Lançamentos</button>
     <button data-view="atrasados"><span class="dot"></span>Atrasados<span class="nav-badge" id="badgeAtrasados">0</span></button>
+    <button data-view="clientes-receita"><span class="dot"></span>Receita por cliente</button>
     <button data-view="clientes"><span class="dot"></span>Clientes e custos</button>
     <button data-view="cfo"><span class="dot"></span>CFO de plantão</button>
     <button onclick="openContexto()"><span class="dot"></span>Contexto</button>
@@ -571,6 +582,38 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     </div>
   </section>
 
+  <!-- RECEITA POR CLIENTE -->
+  <section class="view" data-view="clientes-receita">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">Carteira de clientes</p>
+          <h2>Receita e pagamentos por cliente</h2>
+          <p class="muted" style="margin:6px 0 0">Pago usa a data de pagamento. Receita usa a emissão/competência. Em aberto são títulos de receita ainda sem pagamento.</p>
+        </div>
+        <div class="cli-filters">
+          <label>Mês<input type="month" id="cliMes" onchange="carregarClientesReceita()"></label>
+          <label>Ordenar<select id="cliOrdem" onchange="carregarClientesReceita()">
+            <option value="pago_desc">Maior pago no mês</option>
+            <option value="pago_asc">Menor pago no mês</option>
+            <option value="receita_desc">Maior receita no mês</option>
+            <option value="receita_asc">Menor receita no mês</option>
+            <option value="nome_asc">Nome A-Z</option>
+            <option value="aberto_desc">Maior em aberto</option>
+            <option value="ultimo_desc">Último pagamento</option>
+            <option value="produto_asc">Produto A-Z</option>
+          </select></label>
+          <button class="btn ghost" onclick="carregarClientesReceita()">Atualizar</button>
+        </div>
+      </div>
+      <div class="kpis" id="kpisCliMes"></div>
+      <div class="table-scroll" style="max-height:640px">
+        <table class="lst" id="tClientesMes"></table>
+      </div>
+      <p class="muted" id="cliNota" style="margin-top:10px"></p>
+    </div>
+  </section>
+
   <!-- CLIENTES -->
   <section class="view" data-view="clientes">
     <div class="kpis" id="kpisClientes"></div>
@@ -665,6 +708,7 @@ const TITLES={
   caixa:['Caixa e competência','O que já passou pelo caixa x o que foi faturado'],
   lancamentos:['Lançamentos','Todas as receitas e despesas do Omie, com filtros e exportação'],
   atrasados:['Atrasados a receber','Todos os títulos vencidos em aberto'],
+  'clientes-receita':['Receita por cliente','Quanto cada cliente pagou, receita do mês e produto'],
   clientes:['Clientes e custos','Concentração, cobrança e despesas'],
   cfo:['CFO de plantão','Conversa com o seu diretor financeiro']
 };
@@ -687,6 +731,7 @@ function go(view){
   if(view==='insights')setTimeout(()=>renderInsights(ultimoD||{}),60);
   if(view==='simulacao'&&simD)setTimeout(()=>simRender(),60);
   if(view==='lancamentos')setTimeout(()=>carregarLancamentos(lancPaginaAtual||1),60);
+  if(view==='clientes-receita')setTimeout(()=>carregarClientesReceita(),60);
 }
 
 function openContexto(){document.getElementById('drawerCtx').classList.add('open');document.getElementById('ctx').focus()}
@@ -1204,6 +1249,41 @@ function renderAtrasados(d){
     kpi('Atraso médio',(r.mediaDias||0)+' dias','Média simples por título');
   document.getElementById('aging').innerHTML=(r.buckets||[]).map(b=>`<div class="box ${b.qtd?'hot':''}"><div class="faixa">${b.faixa}</div><div class="valor">${k$(b.valor)}</div><div class="qtd">${b.qtd} títulos</div></div>`).join('');
   filtrarAtrasados();
+}
+
+async function carregarClientesReceita(){
+  const mesEl=document.getElementById('cliMes');
+  if(!mesEl.value)mesEl.value=new Date().toISOString().slice(0,7);
+  const mes=mesEl.value,ordem=document.getElementById('cliOrdem').value||'pago_desc';
+  const tabela=document.getElementById('tClientesMes');
+  tabela.innerHTML='<tr><td class="muted">Carregando clientes…</td></tr>';
+  try{
+    const r=await fetch(`/api/clientes-receita?mes=${encodeURIComponent(mes)}&ordem=${encodeURIComponent(ordem)}`);
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.erro||'falha ao consultar');
+    if(j.mes)mesEl.value=j.mes;
+    const t=j.totais||{},itens=j.itens||[];
+    const dtbr=s=>s?s.split('-').reverse().join('/'):'—';
+    const nomeOrd={pago_desc:'maior pago no mês',pago_asc:'menor pago no mês',receita_desc:'maior receita no mês',receita_asc:'menor receita no mês',nome_asc:'nome A-Z',aberto_desc:'maior em aberto',ultimo_desc:'último pagamento',produto_asc:'produto A-Z'}[j.ordem]||j.ordem;
+    const mesTxt=new Date(j.mes+'-01T12:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    document.getElementById('kpisCliMes').innerHTML=
+      kpi('Pago no mês',brl2(t.pago||0),'Recebimentos com data de pagamento no mês',(t.pago||0)>0?'pos':'')+
+      kpi('Receita no mês',brl2(t.receitaMes||0),'Emitida no mês (competência)')+
+      kpi('Em aberto',brl2(t.aberto||0),'Títulos de receita sem pagamento',(t.aberto||0)>0?'neg':'')+
+      kpi('Clientes com pagamento',`${t.comPagamento||0} de ${t.clientes||0}`,'Base de clientes com receita');
+    const prods=c=>{
+      const p=c.produtos||[];
+      return p.length?`<div class="cli-prod">${p.slice(0,3).map(x=>`<span title="${simEsc(x)}">${simEsc(x)}</span>`).join('')}${p.length>3?`<span>+${p.length-3}</span>`:''}</div>`:'<span class="muted">—</span>';
+    };
+    tabela.innerHTML='<thead><tr><th>Cliente</th><th>Produto(s)</th><th class="n">Pago no mês</th><th class="n">Receita no mês</th><th class="n">Em aberto</th><th class="n">Receita 12m</th><th>Último pagamento</th></tr></thead><tbody>'+
+      (itens.map(c=>`<tr><td><span class="cli-name">${simEsc(c.cliente)}</span><div class="cli-sub">${c.qtdTitulos} títulos · ${c.qtdPagos} pagos</div></td><td>${prods(c)}</td><td class="n ${c.pago>0?'pos':''}">${brl2(c.pago)}</td><td class="n">${brl2(c.receitaMes)}</td><td class="n ${c.aberto>0?'neg':''}">${brl2(c.aberto)}</td><td class="n">${brl2(c.receita12m)}</td><td>${dtbr(c.ultimoPagamento)}</td></tr>`).join('')||'<tr><td colspan="7" class="muted">Nenhum cliente com receita neste mês.</td></tr>')+
+      `</tbody><tfoot><tr class="tot"><td>Total (${itens.length} clientes)</td><td></td><td class="n">${brl2(t.pago||0)}</td><td class="n">${brl2(t.receitaMes||0)}</td><td class="n">${brl2(t.aberto||0)}</td><td class="n">${brl2(t.receita12m||0)}</td><td></td></tr></tfoot>`;
+    document.getElementById('cliNota').textContent=`Mês de referência: ${mesTxt} · ${itens.length} clientes · ordenado por ${nomeOrd}.`;
+  }catch(e){
+    document.getElementById('kpisCliMes').innerHTML='';
+    tabela.innerHTML=`<tr><td class="muted">Erro ao carregar clientes: ${simEsc(e.message)}</td></tr>`;
+    document.getElementById('cliNota').textContent='';
+  }
 }
 
 function renderClientes(d){

@@ -952,6 +952,71 @@ app.get('/api/lancamentos', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+function clientesReceita(d, mes, ordem = 'pago_desc') {
+  const hoje = new Date().toISOString().slice(0, 7);
+  const ref = /^\d{4}-\d{2}$/.test(mes || '') ? mes : hoje;
+  const [ano, m] = ref.split('-').map(Number);
+  const inicio12 = new Date(Date.UTC(ano, m - 12, 1)).toISOString().slice(0, 10);
+  const fim = `${ref}-31`;
+  const mapa = new Map();
+  const mesesSet = new Set();
+  const ignorarCategoria = /receita financeira|rendimento|juros|aporte|empr[eé]stimo|tarifa|estorno|transfer[eê]ncia/i;
+  for (const l of d.lancamentos || []) {
+    if (l.tipo !== 'receita') continue;
+    const nome = String(l.parceiro || l.descricao || '').trim();
+    if (!nome) continue;
+    const cat = String(l.categoria || '').trim();
+    if (ignorarCategoria.test(cat)) continue;
+    const chave = nome.toLowerCase();
+    let c = mapa.get(chave);
+    if (!c) {
+      c = { cliente: nome, pago: 0, receitaMes: 0, aberto: 0, receita12m: 0, ultimoPagamento: '', qtdTitulos: 0, qtdPagos: 0, produtosMap: new Map() };
+      mapa.set(chave, c);
+    }
+    const valor = Number(l.valor || 0);
+    const emissao = String(l.emissao || l.vencimento || '');
+    const pagamento = String(l.pagamento || '');
+    if (pagamento) mesesSet.add(pagamento.slice(0, 7));
+    if (emissao) mesesSet.add(emissao.slice(0, 7));
+    if (pagamento.slice(0, 7) === ref) { c.pago += valor; c.qtdPagos++; }
+    if (emissao.slice(0, 7) === ref) c.receitaMes += valor;
+    if (!pagamento) c.aberto += valor;
+    if (emissao >= inicio12 && emissao <= fim) c.receita12m += valor;
+    if (pagamento && pagamento > c.ultimoPagamento) c.ultimoPagamento = pagamento;
+    c.qtdTitulos++;
+    if (cat) c.produtosMap.set(cat, (c.produtosMap.get(cat) || 0) + valor);
+  }
+  const cmp = {
+    pago_desc: (a, b) => b.pago - a.pago || b.receitaMes - a.receitaMes || a.cliente.localeCompare(b.cliente, 'pt-BR'),
+    pago_asc: (a, b) => a.pago - b.pago || a.cliente.localeCompare(b.cliente, 'pt-BR'),
+    receita_desc: (a, b) => b.receitaMes - a.receitaMes || a.cliente.localeCompare(b.cliente, 'pt-BR'),
+    receita_asc: (a, b) => a.receitaMes - b.receitaMes || a.cliente.localeCompare(b.cliente, 'pt-BR'),
+    nome_asc: (a, b) => a.cliente.localeCompare(b.cliente, 'pt-BR'),
+    aberto_desc: (a, b) => b.aberto - a.aberto || b.receitaMes - a.receitaMes,
+    ultimo_desc: (a, b) => String(b.ultimoPagamento).localeCompare(String(a.ultimoPagamento)) || b.pago - a.pago,
+    produto_asc: (a, b) => String(a.produtos[0] || '').localeCompare(String(b.produtos[0] || ''), 'pt-BR') || a.cliente.localeCompare(b.cliente, 'pt-BR'),
+  };
+  const itens = [...mapa.values()].map(c => {
+    const produtos = [...c.produtosMap.entries()].sort((a, b) => b[1] - a[1]).map(([nome]) => nome).slice(0, 6);
+    return { cliente: c.cliente, produtos, pago: c.pago, receitaMes: c.receitaMes, aberto: c.aberto, receita12m: c.receita12m, ultimoPagamento: c.ultimoPagamento, qtdTitulos: c.qtdTitulos, qtdPagos: c.qtdPagos };
+  }).sort(cmp[ordem] || cmp.pago_desc);
+  const totais = itens.reduce((a, c) => {
+    a.pago += c.pago; a.receitaMes += c.receitaMes; a.aberto += c.aberto; a.receita12m += c.receita12m;
+    if (c.pago > 0) a.comPagamento++; a.clientes++;
+    return a;
+  }, { pago: 0, receitaMes: 0, aberto: 0, receita12m: 0, clientes: 0, comPagamento: 0 });
+  const meses = [...mesesSet].sort().reverse().slice(0, 36);
+  return { mes: ref, ordem, itens, totais, meses };
+}
+
+app.get('/api/clientes-receita', async (req, res) => {
+  if (!OMIE_APP_KEY || !OMIE_APP_SECRET) return res.status(500).json({ erro: 'Configure OMIE_APP_KEY e OMIE_APP_SECRET nas variáveis de ambiente.' });
+  try {
+    const d = await dados();
+    res.json(clientesReceita(d, req.query.mes, req.query.ordem));
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 app.get('/api/lancamentos.csv', async (req, res) => {
   if (!OMIE_APP_KEY || !OMIE_APP_SECRET) return res.status(500).send('Configure OMIE_APP_KEY e OMIE_APP_SECRET.');
   try {
