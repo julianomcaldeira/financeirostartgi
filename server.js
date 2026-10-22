@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 const REFRESH_MIN = Number(process.env.ATUALIZACAO_MINUTOS || 120);
 const CACHE_MIN = Number(process.env.CACHE_MINUTOS || REFRESH_MIN);
 const INSIGHTS_MIN = Number(process.env.INSIGHTS_MINUTOS || 10080); // 7 dias
-const INSIGHTS_MODEL = process.env.INSIGHTS_MODELO || 'claude-haiku-5-5';
+const INSIGHTS_MODEL = process.env.INSIGHTS_MODELO || 'google/gemini-3.5-flash';
 
 // Command Code Provider API (compatível com Anthropic Messages)
 const AI_KEY = process.env.COMMAND_IA || process.env.COMMANDCODE_API_KEY || process.env.CMD_API_KEY || process.env.ANTHROPIC_API_KEY;
@@ -58,6 +58,23 @@ async function chamarIA(system, mensagens, maxTokens = 4096, modelo = AI_MODEL) 
     const tipos = Array.isArray(j.content) ? j.content.map(b => b.type || 'sem-tipo').join(',') : typeof j.content;
     throw new Error(`IA sem texto (blocos: ${tipos}; stop: ${j.stop_reason || '—'}; tokens: ${j.usage?.output_tokens ?? '—'})`);
   }
+  return texto;
+}
+
+async function chamarIAOpenAI(system, mensagens, maxTokens = 4096, modelo = INSIGHTS_MODEL) {
+  const r = await fetch(`${AI_BASE}/chat/completions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}` },
+    body: JSON.stringify({ model: modelo, max_tokens: maxTokens, temperature: 0.3, messages: [{ role: 'system', content: system }, ...mensagens] }),
+    signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(90000) : undefined,
+  });
+  const bruto = await r.text();
+  let j;
+  try { j = JSON.parse(bruto); } catch { throw new Error(`IA ${r.status} respondeu HTML/texto em vez de JSON: ${bruto.slice(0, 180)}`); }
+  if (!r.ok) throw new Error(`IA ${r.status}: ${j.error?.message || j.message || 'falha na chamada'}`);
+  const msg = j.choices?.[0]?.message || {};
+  const texto = typeof msg.content === 'string' ? msg.content : Array.isArray(msg.content) ? msg.content.map(b => b.text || b.content || '').join('\n') : (j.output_text || '');
+  if (!texto) throw new Error(`IA sem texto (finish: ${j.choices?.[0]?.finish_reason || '—'}; tokens: ${j.usage?.completion_tokens ?? '—'})`);
   return texto;
 }
 
@@ -797,7 +814,7 @@ DADOS: ${JSON.stringify(dadosIA)}`;
   let texto = '';
   let j = null;
   for (let tentativa = 1; tentativa <= 2; tentativa++) {
-    texto = await chamarIA(
+    texto = await chamarIAOpenAI(
       system + (tentativa > 1 ? '\n\nATENÇÃO: a tentativa anterior não veio em JSON. Responda agora SOMENTE com o objeto JSON, começando por { e terminando em }.' : ''),
       [{ role: 'user', content: 'Gere a leitura estratégica desta semana no JSON pedido. Responda somente com JSON.' }],
       4096,
