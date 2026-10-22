@@ -73,12 +73,13 @@ const soma = arr => arr.reduce((s, x) => s + x, 0);
 
 // ---------- Cálculo dos indicadores ----------
 async function montarDados() {
-  const [receber, pagar, clientes, categorias, contas] = await Promise.all([
+  const [receber, pagar, clientes, categorias, contas, contratosOmie] = await Promise.all([
     listarTudo('financas/contareceber/', 'ListarContasReceber', 'conta_receber_cadastro'),
     listarTudo('financas/contapagar/', 'ListarContasPagar', 'conta_pagar_cadastro'),
     listarTudo('geral/clientes/', 'ListarClientesResumido', 'clientes_cadastro_resumido'),
     listarTudo('geral/categorias/', 'ListarCategorias', 'categoria_cadastro'),
     listarTudo('geral/contacorrente/', 'ListarResumoContasCorrentes', 'conta_corrente_lista').catch(() => []),
+    listarTudo('servicos/contrato/', 'ListarContratos', 'contratoCadastro').catch(() => []),
   ]);
 
   const nomeCli = Object.fromEntries(clientes.map(c => [c.codigo_cliente, c.nome_fantasia || c.razao_social]));
@@ -155,6 +156,26 @@ async function montarDados() {
   const clientesRank = agrupa(R, 'parceiro');
   const despesasCat = agrupa(P, 'categoria');
   const receita12 = soma(entradas);
+
+  // Receita por produto (categorias do Omie) e recorrência (categorias de mensalidade)
+  const ehRecorrente = nome => /mensalidade/i.test(nome || '');
+  const produtosRank = agrupa(R, 'categoria');
+  const produtosReceita = produtosRank.map(p => ({
+    nome: p.nome, valor: p.valor, participacao: p.valor / (receita12 || 1),
+    recorrente: ehRecorrente(p.nome), mediaMensal: p.valor / 12,
+  }));
+  const recProdutos = produtosReceita.filter(p => p.recorrente);
+  const receitaRecorrente12 = soma(recProdutos.map(p => p.valor));
+  const serieRecorrente = ult12.map(x => {
+    const [ano, mes] = x.mes.split('-').map(Number);
+    const ini = new Date(ano, mes - 1, 1), fim = new Date(ano, mes, 1);
+    const rec = soma(R.filter(t => quitado(t) && t.venc >= ini && t.venc < fim && ehRecorrente(t.categoria)).map(t => t.valor));
+    return { mes: x.mes, recorrente: rec, naoRecorrente: x.receita - rec };
+  });
+  const recUltimo = serieRecorrente[serieRecorrente.length - 1]?.recorrente || 0;
+  const recAnterior = serieRecorrente[serieRecorrente.length - 2]?.recorrente || 0;
+  const ctrAtivos = contratosOmie.filter(c => (c.cabecalho || {}).cCodSit === '10');
+  const mrrContratado = soma(ctrAtivos.map(c => Number((c.cabecalho || {}).nValTotMes || 0)));
   const top1 = clientesRank[0] ? clientesRank[0].valor / receita12 : 0;
   const top3 = soma(clientesRank.slice(0, 3).map(c => c.valor)) / (receita12 || 1);
 
@@ -186,6 +207,19 @@ async function montarDados() {
     meses, entradas, saidas, resultado, semanas, serieMensal, ano,
     clientes: clientesRank.slice(0, 8),
     despesas: despesasCat.slice(0, 8),
+    produtosReceita: produtosReceita.slice(0, 12),
+    contratos: { total: contratosOmie.length, ativos: ctrAtivos.length, mrr: mrrContratado, arr: mrrContratado * 12 },
+    recorrente: {
+      receita12: receitaRecorrente12,
+      participacao: receitaRecorrente12 / (receita12 || 1),
+      mensalMedia: receitaRecorrente12 / 12,
+      ultimoMes: recUltimo,
+      mesAnterior: recAnterior,
+      variacaoMes: recAnterior ? (recUltimo - recAnterior) / recAnterior : null,
+      naoRecorrente12: receita12 - receitaRecorrente12,
+      serie: serieRecorrente,
+      produtos: recProdutos.slice(0, 8),
+    },
     atrasados: atrasadoR.sort((a, b) => b.valor - a.valor).slice(0, 10).map(t => ({ cliente: t.parceiro, valor: t.valor, venc: t.venc.toLocaleDateString('pt-BR'), dias: Math.round((hoje - t.venc) / 864e5) })),
     alertas,
   };
@@ -289,7 +323,7 @@ app.post('/api/guru', async (req, res) => {
   if (!AI_KEY) return res.json({ resposta: 'O chat do guru precisa da variável COMMANDCODE_API_KEY configurada no servidor.' });
   try {
     const d = await dados();
-    const contexto = JSON.stringify({ saldo: d.saldo, saldoDisponivel: d.saldoDisponivel, kpis: d.kpis, serieMensal: d.serieMensal, ano: d.ano, mesAtual: d.meses[d.meses.length - 1], fluxo12semanas: d.semanas, clientes: d.clientes, despesas: d.despesas, atrasados: d.atrasados });
+    const contexto = JSON.stringify({ saldo: d.saldo, saldoDisponivel: d.saldoDisponivel, kpis: d.kpis, serieMensal: d.serieMensal, ano: d.ano, mesAtual: d.meses[d.meses.length - 1], fluxo12semanas: d.semanas, clientes: d.clientes, despesas: d.despesas, atrasados: d.atrasados, produtosReceita: d.produtosReceita, recorrente: d.recorrente, contratos: d.contratos });
     const ctx = (typeof req.body.contexto === 'string' && req.body.contexto.trim()) ? req.body.contexto.trim().slice(0, 12000) : contextoEmpresa();
     const r = await fetch(`${AI_BASE}/messages`, {
       method: 'POST',
