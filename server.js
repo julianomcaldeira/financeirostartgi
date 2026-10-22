@@ -47,7 +47,7 @@ async function chamarIA(system, mensagens, maxTokens = 4096, modelo = AI_MODEL) 
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}`, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({ model: modelo, max_tokens: maxTokens, thinking: { type: 'adaptive' }, output_config: { effort: 'low' }, system, messages: mensagens }),
-    signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(90000) : undefined,
+    signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(120000) : undefined,
   });
   const bruto = await r.text();
   let j;
@@ -66,7 +66,7 @@ async function chamarIAOpenAI(system, mensagens, maxTokens = 4096, modelo = INSI
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}` },
     body: JSON.stringify({ model: modelo, max_tokens: maxTokens, temperature: 0.3, messages: [{ role: 'system', content: system }, ...mensagens] }),
-    signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(90000) : undefined,
+    signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(120000) : undefined,
   });
   const bruto = await r.text();
   let j;
@@ -817,7 +817,7 @@ DADOS: ${JSON.stringify(dadosIA)}`;
     texto = await chamarIA(
       system + (tentativa > 1 ? '\n\nATENÇÃO: a tentativa anterior não veio em JSON. Responda agora SOMENTE com o objeto JSON, começando por { e terminando em }.' : ''),
       [{ role: 'user', content: 'Gere a leitura estratégica desta semana no JSON pedido. Responda somente com JSON.' }],
-      4096,
+      8000,
       INSIGHTS_MODEL
     );
     const m = String(texto || '').match(/\{[\s\S]*\}/);
