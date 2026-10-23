@@ -1437,6 +1437,7 @@ async function carregarClientesReceita(){
     const nomeOrd={pago_desc:'maior pago no período',pago_asc:'menor pago no período',receita_desc:'maior receita no período',receita_asc:'menor receita no período',nome_asc:'nome A-Z',aberto_desc:'maior em aberto',ultimo_desc:'último pagamento',produto_asc:'produto A-Z'}[j.ordem]||j.ordem;
     const periodoTxt=`${dtbr(j.inicio)} a ${dtbr(j.fim)}`;
     const cliTxt=j.cliente?` · cliente: ${j.cliente}`:'';
+    const notaSep=cliTxt&&/\.$/.test(cliTxt)?' ':' . ';
     document.getElementById('kpisCliMes').innerHTML=
       kpi('Pago no período',brl2(t.pago||0),`Recebimentos entre ${periodoTxt}`,(t.pago||0)>0?'pos':'')+
       kpi('Receita no período',brl2(t.receitaPeriodo||0),'Emitida no período (competência)')+
@@ -1448,8 +1449,10 @@ async function carregarClientesReceita(){
     };
     tabela.innerHTML='<thead><tr><th>Cliente</th><th>Produto(s)</th><th class="n">Pago no período</th><th class="n">Receita no período</th><th class="n">Em aberto atual</th><th class="n">Receita 12m</th><th>Último pagamento</th></tr></thead><tbody>'+
       (itens.map(c=>`<tr><td><span class="cli-name">${simEsc(c.cliente)}</span><div class="cli-sub">${c.qtdTitulos} ${c.qtdTitulos===1?'título':'títulos'} no período · ${c.qtdPagos} ${c.qtdPagos===1?'pago':'pagos'}</div></td><td>${prods(c)}</td><td class="n ${c.pago>0?'pos':''}">${brl2(c.pago)}</td><td class="n">${brl2(c.receitaPeriodo)}</td><td class="n ${c.aberto>0?'neg':''}">${brl2(c.aberto)}</td><td class="n">${brl2(c.receita12m)}</td><td>${dtbr(c.ultimoPagamento)}</td></tr>`).join('')||`<tr><td colspan="7" class="muted">${j.cliente?`Nenhum título para ${simEsc(j.cliente)} no período.`:'Nenhum cliente com movimento no período.'}</td></tr>`)+
-      `</tbody><tfoot><tr class="tot"><td>Total (${itens.length} clientes)</td><td></td><td class="n">${brl2(t.pago||0)}</td><td class="n">${brl2(t.receitaPeriodo||0)}</td><td class="n">${brl2(t.aberto||0)}</td><td class="n">${brl2(t.receita12m||0)}</td><td></td></tr></tfoot>`;
-    document.getElementById('cliNota').textContent=`Período: ${periodoTxt} · ${itens.length} clientes · ordenado por ${nomeOrd}${cliTxt}. Receita 12m: 12 meses até ${dtbr(j.fim)}.`;
+      `</tbody><tfoot><tr class="tot"><td>Total (${itens.length} ${itens.length===1?'cliente':'clientes'})</td><td></td><td class="n">${brl2(t.pago||0)}</td><td class="n">${brl2(t.receitaPeriodo||0)}</td><td class="n">${brl2(t.aberto||0)}</td><td class="n">${brl2(t.receita12m||0)}</td><td></td></tr></tfoot>`;
+    const qtdTxt=`${itens.length} ${itens.length===1?'cliente':'clientes'}`;
+    const nota=`Período: ${periodoTxt} · ${qtdTxt} · ordenado por ${nomeOrd}${cliTxt}${notaSep}Receita 12m: 12 meses até ${dtbr(j.fim)}.`;
+    document.getElementById('cliNota').textContent=nota;
   }catch(e){
     document.getElementById('kpisCliMes').innerHTML='';
     tabela.innerHTML=`<tr><td class="muted">Erro ao carregar clientes: ${simEsc(e.message)}</td></tr>`;
