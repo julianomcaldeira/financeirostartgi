@@ -533,8 +533,22 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
             <option value="competencia">Por competência</option>
             <option value="caixa">Por caixa</option>
           </select></label>
+          <button class="btn ghost" onclick="toggleOrcImport()">Importar planilha</button>
           <button class="btn ghost" onclick="carregarOrcamento()">Atualizar</button>
         </div>
+      </div>
+      <div id="orcImportBox" style="display:none;margin:0 0 18px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:#fbfaf6">
+        <p class="eyebrow" style="margin-bottom:10px">Importar do Google Sheets</p>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <label style="flex:1;min-width:260px;display:flex;flex-direction:column;gap:5px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Link da planilha
+            <input id="orcLink" type="url" placeholder="https://docs.google.com/spreadsheets/d/..." style="border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:13px Inter;background:#fff;color:var(--ink);min-width:0">
+          </label>
+          <label style="width:100px;display:flex;flex-direction:column;gap:5px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Ano
+            <input id="orcImportAno" type="number" min="2020" max="2100" value="2027" style="border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:13px Inter;background:#fff;color:var(--ink);width:100%">
+          </label>
+          <button class="btn" onclick="importarOrcamento()">Importar</button>
+        </div>
+        <p class="muted" id="orcImportStatus" style="margin:10px 0 0;font-size:12px">Compartilhe a planilha como “Qualquer pessoa com o link · Leitor”. Se a aba do orçamento não for a primeira, use o link com #gid=...</p>
       </div>
       <div class="kpis" id="kpisOrcamento"></div>
       <div class="grid even" style="margin-top:18px">
@@ -1328,6 +1342,34 @@ async function carregarClientesReceita(){
     tabela.innerHTML=`<tr><td class="muted">Erro ao carregar clientes: ${simEsc(e.message)}</td></tr>`;
     document.getElementById('cliNota').textContent='';
   }
+}
+
+function toggleOrcImport(){
+  const box=document.getElementById('orcImportBox');
+  const abrir=box.style.display==='none'||!box.style.display;
+  box.style.display=abrir?'block':'none';
+  if(abrir){
+    const ano=document.getElementById('orcImportAno');
+    if(!ano.value)ano.value=orcD?.ano||(new Date().getFullYear()+1);
+    document.getElementById('orcLink').focus();
+  }
+}
+
+async function importarOrcamento(){
+  const link=document.getElementById('orcLink').value.trim();
+  const ano=Number(document.getElementById('orcImportAno').value)||undefined;
+  const st=document.getElementById('orcImportStatus');
+  if(!link){st.textContent='Cole o link da planilha do Google Sheets.';st.style.color='var(--neg)';return}
+  st.style.color='';st.textContent='Importando do Google Sheets…';
+  try{
+    const r=await fetch('/api/orcamento/importar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:link,ano})});
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.erro||'Falha ao importar a planilha.');
+    st.textContent=`Orçamento ${j.ano} importado: ${j.linhas} linhas, cenário ${j.cenario}.`;
+    document.getElementById('orcImportBox').style.display='none';
+    orcD=null;
+    await carregarOrcamento();
+  }catch(e){st.style.color='var(--neg)';st.textContent=e.message}
 }
 
 async function carregarOrcamento(){

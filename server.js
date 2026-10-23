@@ -2,6 +2,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { googleSheetExportUrl, parseOrcamentoCSV } = require('./lib/orcamento');
 
 const { OMIE_APP_KEY, OMIE_APP_SECRET, PAINEL_SENHA } = process.env;
 const PORT = process.env.PORT || 3000;
@@ -1117,6 +1118,29 @@ app.get('/api/orcamento', async (req, res) => {
     }));
     res.json({ ...orc, competencia, caixa, atualizadoEm: new Date().toISOString() });
   } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+app.post('/api/orcamento/importar', async (req, res) => {
+  try {
+    const link = String(req.body?.url || '').trim();
+    const ano = Number(req.body?.ano) || undefined;
+    const url = googleSheetExportUrl(link);
+    const r = await fetch(url, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(20000),
+      headers: { 'user-agent': 'Mozilla/5.0 (compatible; StartGiPainel/1.0)', accept: 'text/csv,*/*' },
+    });
+    if (!r.ok) throw new Error(`Google Sheets retornou ${r.status}. Verifique o compartilhamento.`);
+    const texto = await r.text();
+    if (/^\s*<(!doctype|html)/i.test(texto)) {
+      throw new Error('A planilha não está pública. Compartilhe como "Qualquer pessoa com o link · Leitor".');
+    }
+    const dados = parseOrcamentoCSV(texto, { ano, origem: 'Google Sheets', url: link });
+    fs.mkdirSync(ORCAMENTO_DIR, { recursive: true });
+    fs.writeFileSync(path.join(ORCAMENTO_DIR, `orcamento-${dados.ano}.json`), JSON.stringify(dados, null, 2) + '\n');
+    delete orcamentoCache[dados.ano];
+    res.json({ ok: true, ano: dados.ano, linhas: dados.linhas.length, cenario: dados.cenario });
+  } catch (e) { res.status(400).json({ erro: e.message }); }
 });
 
 app.get('/api/clientes-receita', async (req, res) => {
