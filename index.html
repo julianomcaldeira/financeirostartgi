@@ -342,7 +342,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     <button data-view="lancamentos"><span class="dot"></span>Lançamentos</button>
     <button data-view="atrasados"><span class="dot"></span>Atrasados<span class="nav-badge" id="badgeAtrasados">0</span></button>
     <button data-view="clientes-receita"><span class="dot"></span>Receita por cliente</button>
-    <button data-view="clientes"><span class="dot"></span>Clientes e custos</button>
+    <button data-view="clientes"><span class="dot"></span>Despesas</button>
     <button data-view="cfo"><span class="dot"></span>CFO de plantão</button>
     <button onclick="openContexto()"><span class="dot"></span>Contexto</button>
   </nav>
@@ -670,21 +670,54 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     </div>
   </section>
 
-  <!-- CLIENTES -->
+  <!-- DESPESAS -->
   <section class="view" data-view="clientes">
-    <div class="kpis" id="kpisClientes"></div>
-    <div class="grid even">
-      <div class="card"><div class="card-head"><div><p class="eyebrow">Receita</p><h2>Concentração por cliente</h2></div><span class="muted">12 meses</span></div><ul class="rank" id="rCli"></ul></div>
-      <div class="card"><div class="card-head"><div><p class="eyebrow">Despesas</p><h2>Para onde vai o dinheiro</h2></div><span class="muted">12 meses</span></div><ul class="rank" id="rDesp"></ul></div>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">Gestão de despesas</p>
+          <h2>Despesas</h2>
+          <p class="muted" style="margin:6px 0 0">Visão de caixa: títulos pagos pela data de pagamento; quando ausente, pelo vencimento.</p>
+        </div>
+        <div class="cli-filters">
+          <label>Período<select id="despPeriodo" onchange="renderDespesas(despD)">
+            <option value="12">Últimos 12 meses</option>
+            <option value="6">Últimos 6 meses</option>
+            <option value="3">Últimos 3 meses</option>
+          </select></label>
+          <button class="btn ghost" onclick="carregarDespesas()">Atualizar</button>
+        </div>
+      </div>
+      <div class="kpis" id="kpisDespesas"></div>
+    </div>
+    <div class="grid even" style="margin-top:18px">
+      <div class="card">
+        <div class="card-head"><div><p class="eyebrow">Evolução</p><h2>Despesa mensal</h2></div><span class="muted" id="despMensalNota"></span></div>
+        <div class="chart-h"><canvas id="gDespMensal"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><p class="eyebrow">Composição</p><h2>Para onde vai o dinheiro</h2></div><span class="muted" id="despCatNota"></span></div>
+        <div class="chart-h"><canvas id="gDespCategorias"></canvas></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="card-head"><div><p class="eyebrow">Mix ao longo do tempo</p><h2>Despesa por categoria</h2></div><span class="muted">Top 6 categorias + outras</span></div>
+      <div class="chart-h" style="height:330px"><canvas id="gDespEvolucao"></canvas></div>
+    </div>
+    <div class="grid even" style="margin-top:18px">
+      <div class="card">
+        <div class="card-head"><div><p class="eyebrow">Prioridades</p><h2>Categorias que mais pesam</h2></div><span class="muted" id="despTabNota"></span></div>
+        <div class="table-scroll" style="max-height:390px"><table class="lst" id="tDespCategorias"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><p class="eyebrow">Negociação</p><h2>Maiores fornecedores</h2></div><span class="muted">Por valor pago</span></div>
+        <div class="table-scroll" style="max-height:390px"><table class="lst" id="tDespFornecedores"></table></div>
+      </div>
     </div>
     <div class="card" style="margin-top:18px">
       <div class="card-head"><div><p class="eyebrow">Pessoal</p><h2 id="rescTitulo">Rescisões em 2026</h2></div><span class="muted" id="rescBase"></span></div>
       <div class="kpis" id="kpisResc"></div>
       <p class="muted" id="rescObs" style="margin-top:2px"></p>
-    </div>
-    <div class="card" style="margin-top:18px">
-      <div class="card-head"><div><p class="eyebrow">Cobrança</p><h2>10 maiores vencidos</h2></div><div style="display:flex;align-items:center;gap:10px"><span class="muted" id="atrTotal"></span><button class="btn" onclick="go('atrasados')">Ver todos</button></div></div>
-      <table class="lst" id="tAtr"></table>
     </div>
   </section>
 
@@ -766,10 +799,10 @@ const TITLES={
   lancamentos:['Lançamentos','Todas as receitas e despesas do Omie, com filtros e exportação'],
   atrasados:['Atrasados a receber','Todos os títulos vencidos em aberto'],
   'clientes-receita':['Receita por cliente','Quanto cada cliente pagou, receita do mês e produto'],
-  clientes:['Clientes e custos','Concentração, cobrança e despesas'],
+  clientes:['Despesas','Composição, tendência e fornecedores'],
   cfo:['CFO de plantão','Conversa com o seu diretor financeiro']
 };
-let charts={},hist=[],atrasadosCache=[],autoTimer=null,ultimoD=null,simD=null,simEstado=null,simMsgTimer=null,lancPaginaAtual=1,lancTotalPaginas=1,lancBuscaTimerId=null,insightsIAState={data:null,loading:false,erro:null},orcD=null,orcLoading=false;
+let charts={},hist=[],atrasadosCache=[],autoTimer=null,ultimoD=null,simD=null,simEstado=null,simMsgTimer=null,lancPaginaAtual=1,lancTotalPaginas=1,lancBuscaTimerId=null,insightsIAState={data:null,loading:false,erro:null},orcD=null,orcLoading=false,despD=null,despLoading=false;
 
 function toggleSidebar(force){
   const open=typeof force==='boolean'?force:!document.body.classList.contains('side-open');
@@ -789,6 +822,7 @@ function go(view){
   if(view==='simulacao'&&simD)setTimeout(()=>simRender(),60);
   if(view==='lancamentos')setTimeout(()=>carregarLancamentos(lancPaginaAtual||1),60);
   if(view==='clientes-receita')setTimeout(()=>carregarClientesReceita(),60);
+  if(view==='clientes')setTimeout(()=>despD?renderDespesas(despD):carregarDespesas(),60);
   if(view==='orcamento')setTimeout(()=>orcD?renderOrcamento():carregarOrcamento(),60);
 }
 
@@ -852,7 +886,8 @@ async function carregar(force){
   document.getElementById('sideCadencia').textContent=cad>0?(prox?'Auto '+cadTxt(cad)+' · próxima '+prox.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'Auto '+cadTxt(cad)):'Atualização manual';
   document.getElementById('dataP').textContent=dt.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})+(cad>0?` · ${cadTxt(cad)}`:' · atualização manual');
   ultimoD=d;
-  renderVisao(d);renderInsights(d);simPreparar(d);renderReceita(d);renderCaixa(d);renderAtrasados(d);renderClientes(d);
+  renderVisao(d);renderInsights(d);simPreparar(d);renderReceita(d);renderCaixa(d);renderAtrasados(d);
+  if(document.querySelector('.view[data-view="clientes"]').classList.contains('active'))carregarDespesas();
   agendarAuto(d);
 }
 
@@ -1467,8 +1502,87 @@ function renderOrcamento(){
     }).join('')+'</tbody>';
 }
 
-function renderClientes(d){
-  const k=d.kpis,resc=d.rescisoes||{},pico=(resc.porMes||[]).slice().sort((a,b)=>b.valor-a.valor)[0];
+async function carregarDespesas(){
+  if(despLoading)return;
+  despLoading=true;
+  const kpis=document.getElementById('kpisDespesas');
+  if(kpis)kpis.innerHTML=kpi('Carregando','…','Analisando as despesas do Omie');
+  try{
+    const r=await fetch('/api/despesas');
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.erro||'Não foi possível carregar as despesas.');
+    despD=j;
+    renderDespesas(j);
+  }catch(e){
+    if(kpis)kpis.innerHTML=kpi('Erro', '—', e.message);
+    document.getElementById('tDespCategorias').innerHTML=`<tr><td class="muted">${simEsc(e.message)}</td></tr>`;
+    document.getElementById('tDespFornecedores').innerHTML='';
+  }finally{despLoading=false}
+}
+
+function renderDespesas(d){
+  if(!d)return;
+  const periodo=Number(document.getElementById('despPeriodo')?.value||12);
+  const todos=d.meses||[];
+  const meses=todos.slice(-periodo),anteriores=todos.slice(-periodo*2,-periodo);
+  const somaMeses=(obj,ms)=>ms.reduce((a,m)=>a+Number(obj?.[m]||0),0);
+  const total=somaMeses(d.totalPorMes,meses),totalAnterior=somaMeses(d.totalPorMes,anteriores);
+  const receitaPeriodo=somaMeses(d.receitaPorMes,meses);
+  const catList=(d.categorias||[]).map(c=>({...c,totalPeriodo:somaMeses(c.meses,meses),anterior:somaMeses(c.meses,anteriores)})).filter(c=>c.totalPeriodo>0).sort((a,b)=>b.totalPeriodo-a.totalPeriodo);
+  const fornList=(d.fornecedores||[]).map(f=>({...f,totalPeriodo:somaMeses(f.meses,meses)})).filter(f=>f.totalPeriodo>0).sort((a,b)=>b.totalPeriodo-a.totalPeriodo);
+  const maior=catList[0],top5=catList.slice(0,5).reduce((a,c)=>a+c.totalPeriodo,0);
+  const varPeriodo=totalAnterior?total/totalAnterior-1:null;
+  const anoAtual=d.anoAtual||{},anoAnterior=d.anoAnterior||{};
+  const varAno=anoAnterior.despesa?anoAtual.despesa/anoAnterior.despesa-1:null;
+  const ratio=receitaPeriodo?total/receitaPeriodo:null;
+  const pl=periodo===12?'12 meses':periodo+' meses';
+  document.getElementById('kpisDespesas').innerHTML=
+    kpi('Despesa no período',k$(total),`Últimos ${pl} · caixa · mês atual parcial`)+
+    kpi('Média mensal',k$(total/periodo),`Média dos últimos ${pl}`)+
+    kpi('Despesa no ano',k$(anoAtual.despesa||0),`vs mesmo período de ${anoAnterior.ano||''}: ${varAno===null?'—':(varAno>0?'+':'')+pct(varAno)}`,varAno>0?'neg':varAno<0?'pos':'')+
+    kpi('Maior categoria',k$(maior?.totalPeriodo||0),maior?`${maior.nome} · ${pct(maior.totalPeriodo/(total||1))}`:'Sem despesas')+
+    kpi('Top 5 categorias',pct(top5/(total||1)),'Concentração do gasto no período',top5/(total||1)>.7?'warn':'')+
+    kpi('Despesa / receita',ratio===null?'—':pct(ratio),ratio===null?'Sem receita no período':`${k$(total)} de despesa para ${k$(receitaPeriodo)} de receita`,ratio>1?'neg':'');
+
+  const valoresMes=meses.map(m=>Number(d.totalPorMes?.[m]||0));
+  const mm=valoresMes.map((_,i)=>valoresMes.slice(Math.max(0,i-2),i+1).reduce((a,v)=>a+v,0)/Math.min(3,i+1));
+  document.getElementById('despMensalNota').textContent=`${pl} · média ${k$(total/periodo)} · mês atual parcial`;
+  charts.despMensal&&charts.despMensal.destroy();
+  charts.despMensal=new Chart(document.getElementById('gDespMensal'),{data:{labels:meses.map(nomeMes),datasets:[
+    {type:'bar',label:'Despesa paga',data:valoresMes,backgroundColor:css('--sand'),borderRadius:5},
+    {type:'line',label:'Média móvel 3m',data:mm,borderColor:css('--brand'),backgroundColor:'transparent',borderWidth:2,tension:.35,pointRadius:0}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},scales:{y:{ticks:{callback:x=>k$(x)},grid:{color:'#f0eee6'}},x:{grid:{display:false}}}}});
+
+  const paleta=['#1f4d3f','#c8a96e','#9cc7b8','#e8b4a8','#7c8983','#d9cbb3','#8aa9a0','#c9857a','#b9c7a3','#a99ac9'];
+  const topCat=catList.slice(0,7),outrasCat=catList.slice(7).reduce((a,c)=>a+c.totalPeriodo,0);
+  const catData=topCat.map(c=>c.totalPeriodo).concat(outrasCat?[outrasCat]:[]);
+  const catLabels=topCat.map(c=>c.nome).concat(outrasCat?['Outras']:[]);
+  document.getElementById('despCatNota').textContent=`Top 7 + outras · ${pl}`;
+  charts.despCat&&charts.despCat.destroy();
+  charts.despCat=new Chart(document.getElementById('gDespCategorias'),{type:'doughnut',data:{labels:catLabels,datasets:[{data:catData,backgroundColor:catLabels.map((_,i)=>paleta[i%paleta.length]),borderWidth:2,borderColor:'#fff'}]},options:{maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8,font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.label}: ${brl(c.raw)} (${pct(c.raw/(total||1))})`}}}}});
+
+  const top6=catList.slice(0,6),topNomes=new Set(top6.map(c=>c.nome));
+  const datasets=top6.map((c,i)=>({label:c.nome,data:meses.map(m=>Number(c.meses?.[m]||0)),backgroundColor:paleta[i%paleta.length],stack:'s',borderRadius:2}));
+  const outrosMes=meses.map(m=>Math.max(0,Number(d.totalPorMes?.[m]||0)-top6.reduce((a,c)=>a+Number(c.meses?.[m]||0),0)));
+  if(outrosMes.some(v=>v>0))datasets.push({label:'Outras',data:outrosMes,backgroundColor:'#d8d3c5',stack:'s',borderRadius:2});
+  charts.despEvol&&charts.despEvol.destroy();
+  charts.despEvol=new Chart(document.getElementById('gDespEvolucao'),{type:'bar',data:{labels:meses.map(nomeMes),datasets},options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8,font:{size:11}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:x=>k$(x)},grid:{color:'#f0eee6'}}}}});
+
+  document.getElementById('despTabNota').textContent=`${pl} · vs ${pl} anteriores`;
+  document.getElementById('tDespCategorias').innerHTML=
+    '<thead><tr><th>Categoria</th><th class="n">Total</th><th class="n">% total</th><th class="n">Média/mês</th><th class="n">Variação</th></tr></thead><tbody>'+
+    (catList.length?catList.slice(0,12).map(c=>{
+      const v=c.anterior?c.totalPeriodo/c.anterior-1:null;
+      return `<tr><td title="${simEsc(c.nome)}">${simEsc(c.nome)}</td><td class="n">${brl2(c.totalPeriodo)}</td><td class="n">${pct(c.totalPeriodo/(total||1))}</td><td class="n">${brl2(c.totalPeriodo/periodo)}</td><td class="n ${v>0?'neg':v<0?'pos':''}">${v===null?'—':(v>0?'+':'')+pct(v)}</td></tr>`;
+    }).join(''):'<tr><td class="muted" colspan="5">Sem despesas pagas no período.</td></tr>')+
+    `<tr class="tot"><td>Total</td><td class="n">${brl2(total)}</td><td class="n">100%</td><td class="n">${brl2(total/periodo)}</td><td class="n ${varPeriodo>0?'neg':varPeriodo<0?'pos':''}">${varPeriodo===null?'—':(varPeriodo>0?'+':'')+pct(varPeriodo)}</td></tr></tbody>`;
+
+  document.getElementById('tDespFornecedores').innerHTML=
+    '<thead><tr><th>Fornecedor</th><th class="n">Total</th><th class="n">% total</th><th class="n">Média/mês</th></tr></thead><tbody>'+
+    (fornList.length?fornList.slice(0,12).map(f=>`<tr><td title="${simEsc(f.nome)}">${simEsc(f.nome)}</td><td class="n">${brl2(f.totalPeriodo)}</td><td class="n">${pct(f.totalPeriodo/(total||1))}</td><td class="n">${brl2(f.totalPeriodo/periodo)}</td></tr>`).join(''):'<tr><td class="muted" colspan="4">Sem despesas pagas no período.</td></tr>')+
+    `<tr class="tot"><td>${fornList.length} fornecedores</td><td class="n">${brl2(total)}</td><td class="n">100%</td><td class="n">${brl2(total/periodo)}</td></tr></tbody>`;
+
+  const resc=d.rescisoes||{},pico=(resc.porMes||[]).slice().sort((a,b)=>b.valor-a.valor)[0];
   document.getElementById('rescTitulo').textContent='Rescisões em '+(resc.ano||new Date().getFullYear());
   document.getElementById('rescBase').textContent='Caixa por data de pagamento';
   document.getElementById('kpisResc').innerHTML=
@@ -1477,18 +1591,6 @@ function renderClientes(d){
     kpi('FGTS pago',k$(resc.fgtsTotal||0),'Categoria FGTS no ano, sem separar multa')+
     kpi('Mês de pico',pico?nomeMes(pico.mes):'—',pico?k$(pico.valor):'Nenhuma rescisão identificada');
   document.getElementById('rescObs').textContent=resc.observacao||'O Omie não retornou um resumo de rescisões.';
-  document.getElementById('kpisClientes').innerHTML=
-    kpi('Receita 12 meses',k$(k.receita12),'Total recebido de clientes')+
-    kpi('Maior cliente',pct(k.top1),'Participação na receita de 12 meses',k.top1>.5?'neg':'',[k.top1>.3?'Concentrado':'Diluído',k.top1>.3?'warn':'pos'])+
-    kpi('Top 3 clientes',pct(k.top3),'Participação na receita de 12 meses')+
-    kpi('Em atraso',k$(k.atrasadoReceber),'Recebimentos vencidos em aberto',k.atrasadoReceber>0?'neg':'');
-  const rk=(id,l,tot,c)=>document.getElementById(id).innerHTML=l.map(x=>`<li><div class="top"><b>${x.nome}</b><span>${k$(x.valor)} · ${pct(x.valor/tot)}</span></div><div class="bar"><i style="width:${Math.max(2,x.valor/l[0].valor*100)}%;background:${c}"></i></div></li>`).join('')||'<li class="muted">Sem dados no período.</li>';
-  rk('rCli',d.clientes,k.receita12||1,css('--brand'));
-  rk('rDesp',d.despesas,d.despesas.reduce((s,x)=>s+x.valor,0)||1,css('--sand'));
-  document.getElementById('atrTotal').textContent=(d.atrasadosResumo?.qtd||0)+' títulos no total';
-  document.getElementById('tAtr').innerHTML=d.atrasados.length
-    ?'<tr><th>Cliente</th><th>Venceu em</th><th>Atraso</th><th class="n">Valor</th></tr>'+d.atrasados.map(a=>`<tr><td>${a.cliente}</td><td>${a.venc}</td><td><span class="dias ${a.dias>30?'g':''}">${a.dias} dias</span></td><td class="n">${brl(a.valor)}</td></tr>`).join('')
-    :'<tr><td class="muted">Nenhum recebimento vencido. Carteira em dia.</td></tr>';
 }
 
 ['Como está a saúde financeira da StartGi?','Posso contratar mais uma pessoa?','Onde devo cortar custos primeiro?','Quanto preciso faturar para não queimar caixa?','O que levo para o board do FIP?'].forEach(s=>{

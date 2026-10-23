@@ -1080,6 +1080,49 @@ function clientesReceita(d, mes, ordem = 'pago_desc') {
   return { mes: ref, ordem, itens, totais, meses };
 }
 
+function analiseDespesas(d) {
+  const hoje = new Date();
+  const meses = [];
+  for (let i = 23; i >= 0; i--) meses.push(mesKey(new Date(hoje.getFullYear(), hoje.getMonth() - i, 1)));
+  const dentro = new Set(meses);
+  const totalPorMes = Object.fromEntries(meses.map(m => [m, 0]));
+  const receitaPorMes = Object.fromEntries(meses.map(m => [m, 0]));
+  const categorias = new Map(), fornecedores = new Map();
+  const valorDe = l => Number(l.valorPago) > 0 ? Number(l.valorPago) : Number(l.valor || 0);
+  const registro = (mapa, nome, mes, valor) => {
+    if (!mapa.has(nome)) mapa.set(nome, { nome, total: 0, qtd: 0, meses: {} });
+    const item = mapa.get(nome);
+    item.total += valor; item.qtd++;
+    item.meses[mes] = (item.meses[mes] || 0) + valor;
+  };
+  for (const l of d.lancamentos || []) {
+    const data = l.pagamento || l.vencimento;
+    if (!data) continue;
+    const mes = String(data).slice(0, 7);
+    if (!dentro.has(mes)) continue;
+    const valor = valorDe(l);
+    if (l.tipo === 'receita') {
+      if (l.status !== 'RECEBIDO' && l.status !== 'LIQUIDADO' && !(Number(l.valorPago) > 0)) continue;
+      receitaPorMes[mes] += valor;
+    } else if (l.tipo === 'despesa') {
+      if (l.status !== 'PAGO' && l.status !== 'LIQUIDADO' && !(Number(l.valorPago) > 0)) continue;
+      totalPorMes[mes] += valor;
+      registro(categorias, l.categoria || 'Sem categoria', mes, valor);
+      registro(fornecedores, l.parceiro || l.descricao || 'Sem fornecedor', mes, valor);
+    }
+  }
+  return {
+    base: 'Data de pagamento; quando ausente, vencimento.',
+    atualizadoEm: d.atualizadoEm,
+    meses, totalPorMes, receitaPorMes,
+    categorias: [...categorias.values()].sort((a, b) => b.total - a.total),
+    fornecedores: [...fornecedores.values()].sort((a, b) => b.total - a.total),
+    rescisoes: d.rescisoes,
+    anoAtual: d.anoCaixa?.atual || d.ano?.atual,
+    anoAnterior: d.anoCaixa?.anterior || d.ano?.anterior,
+  };
+}
+
 const ORCAMENTO_DIR = path.join(__dirname, 'data');
 const orcamentoCache = {};
 function lerOrcamento(ano) {
@@ -1141,6 +1184,13 @@ app.post('/api/orcamento/importar', async (req, res) => {
     delete orcamentoCache[dados.ano];
     res.json({ ok: true, ano: dados.ano, linhas: dados.linhas.length, cenario: dados.cenario });
   } catch (e) { res.status(400).json({ erro: e.message }); }
+});
+
+app.get('/api/despesas', async (req, res) => {
+  try {
+    const d = await dados();
+    res.json(analiseDespesas(d));
+  } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
 app.get('/api/clientes-receita', async (req, res) => {
