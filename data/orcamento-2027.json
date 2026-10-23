@@ -3,7 +3,7 @@
   "cenario": "Plano base",
   "origem": "Google Sheets",
   "fonteUrl": "https://docs.google.com/spreadsheets/d/1ADjxJmdffoQviVrhoB5MUIcw0Uub1X3KEdOEiB3qrOc/edit?usp=sharing",
-  "importadoEm": "2026-10-23T01:44:28.000Z",
+  "importadoEm": "2026-10-23T02:04:11.186Z",
   "meses": [
     "2027-01",
     "2027-02",
@@ -1982,7 +1982,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Receita",
@@ -2001,7 +2002,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Receita",
@@ -2020,7 +2022,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Receita",
@@ -2039,7 +2042,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Receita",
@@ -2058,7 +2062,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "receitaBruta"
     },
     {
       "area": "Impostos",
@@ -2077,7 +2082,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Receita",
@@ -2096,7 +2102,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "receitaLiquida"
     },
     {
       "area": "Infraestrutura",
@@ -2115,7 +2122,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Infraestrutura",
@@ -2134,7 +2142,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Resultado",
@@ -2153,7 +2162,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "lucroBruto"
     },
     {
       "area": "Diretoria",
@@ -2172,7 +2182,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Diretoria",
@@ -2191,7 +2202,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Diretoria",
@@ -2210,7 +2222,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "totalArea"
     },
     {
       "area": "Administrativo",
@@ -2229,7 +2242,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Administrativo",
@@ -2248,7 +2262,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Administrativo",
@@ -2267,7 +2282,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Administrativo",
@@ -2286,7 +2302,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Administrativo",
@@ -2305,7 +2322,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Administrativo",
@@ -2324,7 +2342,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Administrativo",
@@ -2343,7 +2362,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Administrativo",
@@ -2362,7 +2382,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Administrativo",
@@ -2381,7 +2402,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Administrativo",
@@ -2400,7 +2422,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Administrativo",
@@ -2419,7 +2442,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "totalArea"
     },
     {
       "area": "Tecnologia",
@@ -2438,7 +2462,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Tecnologia",
@@ -2457,7 +2482,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Tecnologia",
@@ -2476,7 +2502,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Tecnologia",
@@ -2495,7 +2522,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Tecnologia",
@@ -2514,7 +2542,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Tecnologia",
@@ -2533,7 +2562,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "totalArea"
     },
     {
       "area": "Operação / CS",
@@ -2552,7 +2582,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Operação / CS",
@@ -2571,7 +2602,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Operação / CS",
@@ -2590,7 +2622,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Operação / CS",
@@ -2609,7 +2642,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Operação / CS",
@@ -2628,7 +2662,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Operação / CS",
@@ -2647,7 +2682,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "totalArea"
     },
     {
       "area": "Comercial",
@@ -2666,7 +2702,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Comercial",
@@ -2685,7 +2722,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Comercial",
@@ -2704,7 +2742,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Comercial",
@@ -2723,7 +2762,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Comercial",
@@ -2742,7 +2782,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Comercial",
@@ -2761,7 +2802,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Comercial",
@@ -2780,7 +2822,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Comercial",
@@ -2799,7 +2842,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Comercial",
@@ -2818,7 +2862,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "linha"
     },
     {
       "area": "Comercial",
@@ -2837,7 +2882,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "totalArea"
     },
     {
       "area": "Resultado",
@@ -2856,7 +2902,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "despesasOperacionais"
     },
     {
       "area": "Resultado",
@@ -2875,7 +2922,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "ebitda"
     },
     {
       "area": "Resultado",
@@ -2894,7 +2942,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "margemEbitda"
     },
     {
       "area": "Financeiro",
@@ -2913,7 +2962,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "resultadoFinanceiro"
     },
     {
       "area": "Resultado",
@@ -2932,7 +2982,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "resultadoMes"
     },
     {
       "area": "Caixa",
@@ -2951,7 +3002,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "caixaFinal"
     },
     {
       "area": "Indicador",
@@ -2970,7 +3022,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "mrrTotal"
     },
     {
       "area": "Indicador",
@@ -2989,7 +3042,8 @@
         0,
         0
       ],
-      "total": 0
+      "total": 0,
+      "tipo": "headcount"
     }
   ],
   "realizadoDisponivel": false,
@@ -3173,6 +3227,188 @@
       "caixaFinal": 692251,
       "mrrTotal": 335078,
       "headcount": 16
+    }
+  ],
+  "resumoRealizado": [
+    {
+      "mes": "2027-01",
+      "receita": 0,
+      "receitaLiquida": 0,
+      "custos": 0,
+      "despesasOperacionais": 0,
+      "despesa": 0,
+      "ebitda": 0,
+      "margemEbitda": 0,
+      "resultadoFinanceiro": 0,
+      "resultadoMes": 0,
+      "caixaFinal": 0,
+      "mrrTotal": 0,
+      "headcount": 0
+    },
+    {
+      "mes": "2027-02",
+      "receita": 0,
+      "receitaLiquida": 0,
+      "custos": 0,
+      "despesasOperacionais": 0,
+      "despesa": 0,
+      "ebitda": 0,
+      "margemEbitda": 0,
+      "resultadoFinanceiro": 0,
+      "resultadoMes": 0,
+      "caixaFinal": 0,
+      "mrrTotal": 0,
+      "headcount": 0
+    },
+    {
+      "mes": "2027-03",
+      "receita": 0,
+      "receitaLiquida": 0,
+      "custos": 0,
+      "despesasOperacionais": 0,
+      "despesa": 0,
+      "ebitda": 0,
+      "margemEbitda": 0,
+      "resultadoFinanceiro": 0,
+      "resultadoMes": 0,
+      "caixaFinal": 0,
+      "mrrTotal": 0,
+      "headcount": 0
+    },
+    {
+      "mes": "2027-04",
+      "receita": 0,
+      "receitaLiquida": 0,
+      "custos": 0,
+      "despesasOperacionais": 0,
+      "despesa": 0,
+      "ebitda": 0,
+      "margemEbitda": 0,
+      "resultadoFinanceiro": 0,
+      "resultadoMes": 0,
+      "caixaFinal": 0,
+      "mrrTotal": 0,
+      "headcount": 0
+    },
+    {
+      "mes": "2027-05",
+      "receita": 0,
+      "receitaLiquida": 0,
+      "custos": 0,
+      "despesasOperacionais": 0,
+      "despesa": 0,
+      "ebitda": 0,
+      "margemEbitda": 0,
+      "resultadoFinanceiro": 0,
+      "resultadoMes": 0,
+      "caixaFinal": 0,
+      "mrrTotal": 0,
+      "headcount": 0
+    },
+    {
+      "mes": "2027-06",
+      "receita": 0,
+      "receitaLiquida": 0,
+      "custos": 0,
+      "despesasOperacionais": 0,
+      "despesa": 0,
+      "ebitda": 0,
+      "margemEbitda": 0,
+      "resultadoFinanceiro": 0,
+      "resultadoMes": 0,
+      "caixaFinal": 0,
+      "mrrTotal": 0,
+      "headcount": 0
+    },
+    {
+      "mes": "2027-07",
+      "receita": 0,
+      "receitaLiquida": 0,
+      "custos": 0,
+      "despesasOperacionais": 0,
+      "despesa": 0,
+      "ebitda": 0,
+      "margemEbitda": 0,
+      "resultadoFinanceiro": 0,
+      "resultadoMes": 0,
+      "caixaFinal": 0,
+      "mrrTotal": 0,
+      "headcount": 0
+    },
+    {
+      "mes": "2027-08",
+      "receita": 0,
+      "receitaLiquida": 0,
+      "custos": 0,
+      "despesasOperacionais": 0,
+      "despesa": 0,
+      "ebitda": 0,
+      "margemEbitda": 0,
+      "resultadoFinanceiro": 0,
+      "resultadoMes": 0,
+      "caixaFinal": 0,
+      "mrrTotal": 0,
+      "headcount": 0
+    },
+    {
+      "mes": "2027-09",
+      "receita": 0,
+      "receitaLiquida": 0,
+      "custos": 0,
+      "despesasOperacionais": 0,
+      "despesa": 0,
+      "ebitda": 0,
+      "margemEbitda": 0,
+      "resultadoFinanceiro": 0,
+      "resultadoMes": 0,
+      "caixaFinal": 0,
+      "mrrTotal": 0,
+      "headcount": 0
+    },
+    {
+      "mes": "2027-10",
+      "receita": 0,
+      "receitaLiquida": 0,
+      "custos": 0,
+      "despesasOperacionais": 0,
+      "despesa": 0,
+      "ebitda": 0,
+      "margemEbitda": 0,
+      "resultadoFinanceiro": 0,
+      "resultadoMes": 0,
+      "caixaFinal": 0,
+      "mrrTotal": 0,
+      "headcount": 0
+    },
+    {
+      "mes": "2027-11",
+      "receita": 0,
+      "receitaLiquida": 0,
+      "custos": 0,
+      "despesasOperacionais": 0,
+      "despesa": 0,
+      "ebitda": 0,
+      "margemEbitda": 0,
+      "resultadoFinanceiro": 0,
+      "resultadoMes": 0,
+      "caixaFinal": 0,
+      "mrrTotal": 0,
+      "headcount": 0
+    },
+    {
+      "mes": "2027-12",
+      "receita": 0,
+      "receitaLiquida": 0,
+      "custos": 0,
+      "despesasOperacionais": 0,
+      "despesa": 0,
+      "ebitda": 0,
+      "margemEbitda": 0,
+      "resultadoFinanceiro": 0,
+      "resultadoMes": 0,
+      "caixaFinal": 0,
+      "mrrTotal": 0,
+      "headcount": 0
     }
   ],
   "premissas": [

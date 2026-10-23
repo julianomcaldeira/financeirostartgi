@@ -158,6 +158,16 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 #tClientesMes .cli-prod{max-width:280px}
 #tOrcamentoLinhas tr.orc-total td{font-weight:700;background:#fcfbf7;border-top:1px solid var(--ink)}
 #tOrcamentoLinhas tr.grp td{position:static}
+#tOrcamentoPV{min-width:1120px}
+#tOrcamentoPV th,#tOrcamentoPV td{padding-left:8px;padding-right:8px}
+#tOrcamentoPV th:first-child,#tOrcamentoPV td:first-child{position:sticky;left:0;background:#fff;z-index:1;box-shadow:1px 0 0 var(--line);min-width:82px}
+#tOrcamentoPV thead th:first-child{z-index:3}
+#tOrcamentoPV th.grp{text-align:center;color:var(--brand);background:#f7f3e7;border-bottom:1px solid var(--line);padding-top:8px;padding-bottom:8px}
+#tOrcamentoPV td.n,#tOrcamentoPV th.n{white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+#tOrcamentoPV td.status{white-space:nowrap;font-size:11px;color:var(--muted)}
+#tOrcamentoPV tr.tot td{font-weight:700;background:#fcfbf7;border-top:1px solid var(--ink)}
+#tOrcamentoPV .sub{display:block;font-size:9px;color:var(--muted);font-weight:500;letter-spacing:0;text-transform:none}
+
 .orc-det summary{cursor:pointer;font-weight:700;color:var(--brand);font-size:13px}
 .orc-prem-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
 .orc-prem{background:#fcfbf7;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
@@ -630,6 +640,18 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     <div class="card" style="margin-top:18px">
       <div class="card-head"><div><p class="eyebrow">Visão mensal</p><h2>Receita, despesa e EBITDA</h2></div><span class="muted" id="orcChartNota"></span></div>
       <div class="chart-h"><canvas id="gOrcamento"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">Plano x realizado</p>
+          <h2>Acompanhamento mês a mês</h2>
+          <p class="muted" style="margin:6px 0 0" id="orcPVNota">Comparando o orçamento com o realizado de cada mês.</p>
+        </div>
+        <span class="muted" id="orcPVFonte"></span>
+      </div>
+      <div class="table-scroll"><table class="lst" id="tOrcamentoPV"></table></div>
+      <p class="muted" id="orcPVLegenda" style="margin-top:10px">A variação mostra o desvio do realizado contra o orçado. Em despesas, ficar acima do plano é desfavorável.</p>
     </div>
     <div class="card" style="margin-top:18px">
       <div class="card-head">
@@ -1614,6 +1636,7 @@ async function carregarOrcamento(){
   }catch(e){
     kpis.innerHTML='';
     document.getElementById('tOrcamentoLinhas').innerHTML=`<tr><td class="muted">Erro ao carregar orçamento: ${simEsc(e.message)}</td></tr>`;
+    document.getElementById('tOrcamentoPV').innerHTML='';
     document.getElementById('orcNota').textContent='Não foi possível carregar o orçamento.';
     document.getElementById('orcPeriodoNota').textContent='';
     document.getElementById('orcPremissasCard').style.display='none';
@@ -1655,13 +1678,63 @@ function renderOrcamento(){
     kpi('Caixa final',brl2(ultimo?.caixaFinal||0),escopo==='ano'?`Dez/${String(orcD.ano).slice(-2)} estimado`:'Final do período')+
     kpi('MRR total',brl2(ultimo?.mrrTotal||0),`${Number(ultimo?.headcount||0)} CLTs previstos`);
 
+  const manualReal=!!orcD.realizadoDisponivel&&Array.isArray(orcD.resumoRealizado)&&orcD.resumoRealizado.some(m=>Number(m?.receita||0)!==0||Number(m?.despesa||0)!==0||Number(m?.ebitda||0)!==0);
+  const realResumo=manualReal?orcD.resumoRealizado:(Array.isArray(orcD.competencia)?orcD.competencia:[]);
+  const realAt=i=>{
+    const m=realResumo.find(x=>String(x?.mes||'').slice(0,7)===resumo[i].mes)||realResumo[i]||{};
+    const r=Number(m.receita||0),d=Number(m.despesa||0);
+    return {receita:r,despesa:d,ebitda:m.ebitda!==undefined?Number(m.ebitda):r-d};
+  };
+  const realTemDados=realResumo.some(m=>Number(m?.receita||0)!==0||Number(m?.despesa||0)!==0);
+  document.getElementById('orcChartNota').textContent=realTemDados?'Orçado x realizado · 12 meses':'Plano mensal · sem realizado lançado';
   const labels=resumo.map(x=>nomeMes(x.mes));
+  const act=resumo.map((_,i)=>realAt(i));
+  const datasets=[
+    {label:'Receita orçada',data:resumo.map(x=>x.receita),backgroundColor:css('--brand'),borderRadius:4},
+    {label:'Despesa orçada',data:resumo.map(x=>x.despesa),backgroundColor:css('--sand'),borderRadius:4},
+    {label:'EBITDA orçado',data:resumo.map(x=>x.ebitda),type:'line',borderColor:'#0d4f42',backgroundColor:'#0d4f42',borderWidth:2,tension:.25,pointRadius:2}];
+  if(realTemDados)datasets.push(
+    {label:'Receita realizada',data:act.map(x=>x.receita),backgroundColor:'#9cc7b8',borderRadius:4},
+    {label:'Despesa realizada',data:act.map(x=>x.despesa),backgroundColor:'#e8b4a8',borderRadius:4},
+    {label:'EBITDA realizado',data:act.map(x=>x.ebitda),type:'line',borderColor:'#7c8983',backgroundColor:'#7c8983',borderWidth:2,borderDash:[5,4],tension:.25,pointRadius:2});
   charts.orc&&charts.orc.destroy();
-  charts.orc=new Chart(document.getElementById('gOrcamento'),{type:'bar',data:{labels,datasets:[
-    {label:'Receita bruta',data:resumo.map(x=>x.receita),backgroundColor:css('--brand'),borderRadius:4},
-    {label:'Despesa total',data:resumo.map(x=>x.despesa),backgroundColor:css('--sand'),borderRadius:4},
-    {label:'EBITDA',data:resumo.map(x=>x.ebitda),type:'line',borderColor:'#0d4f42',backgroundColor:'#0d4f42',borderWidth:2,tension:.25,pointRadius:2}]},
+  charts.orc=new Chart(document.getElementById('gOrcamento'),{type:'bar',data:{labels,datasets},
     options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},scales:{y:{ticks:{callback:x=>k$(x)},grid:{color:'#f0eee6'}},x:{grid:{display:false}}}}});
+
+  const hojeMes=new Date().toISOString().slice(0,7);
+  const fvar=v=>v===null?'—':(v>0?'+':'')+pct(v);
+  const clsVar=(v,goodWhenPositive)=>v===null?'':((goodWhenPositive?v>=0:v<=0)?'pos':'neg');
+  const actualRows=resumo.map((_,i)=>realAt(i));
+  const totalReal=campo=>actualRows.reduce((a,x)=>a+Number(x[campo]||0),0);
+  const totalPlan=campo=>resumo.reduce((a,x)=>a+Number(x[campo]||0),0);
+  const pvVar=(p,r,goodWhenPositive)=>{
+    if(!realTemDados||!p)return null;
+    const v=(r-p)/Math.abs(p);
+    return {v,cls:clsVar(v,goodWhenPositive)};
+  };
+  let pv='<thead><tr><th rowspan="2">Mês</th><th colspan="3" class="grp">Receita</th><th colspan="3" class="grp">Despesa</th><th colspan="3" class="grp">EBITDA</th><th rowspan="2">Status</th></tr><tr><th class="n">Orçado</th><th class="n">Realizado</th><th class="n">Var.</th><th class="n">Orçado</th><th class="n">Realizado</th><th class="n">Var.</th><th class="n">Orçado</th><th class="n">Realizado</th><th class="n">Var.</th></tr></thead><tbody>';
+  resumo.forEach((p,i)=>{
+    const a=actualRows[i];
+    const has=realTemDados&&(a.receita!==0||a.despesa!==0);
+    const rv=pvVar(p.receita,a.receita,true),dv=pvVar(p.despesa,a.despesa,false),ev=pvVar(p.ebitda,a.ebitda,true);
+    const status=has?((a.receita>=p.receita*0.95&&a.despesa<=p.despesa*1.05)?'No plano':'Atenção'):(p.mes>hojeMes?'Aguardando':'Sem realizado');
+    const num=(v,full)=>has?`<span title="${full}">${k$(v)}</span>`:'—';
+    pv+=`<tr><td>${nomeMes(p.mes)}<span class="sub">${p.mes.slice(0,4)}</span></td>`+
+      `<td class="n">${k$(p.receita)}</td><td class="n">${num(a.receita,brl2(a.receita))}</td><td class="n ${rv?rv.cls:''}">${fvar(rv?rv.v:null)}</td>`+
+      `<td class="n">${k$(p.despesa)}</td><td class="n">${num(a.despesa,brl2(a.despesa))}</td><td class="n ${dv?dv.cls:''}">${fvar(dv?dv.v:null)}</td>`+
+      `<td class="n ${p.ebitda>=0?'pos':'neg'}">${k$(p.ebitda)}</td><td class="n ${has?(a.ebitda>=0?'pos':'neg'):''}">${num(a.ebitda,brl2(a.ebitda))}</td><td class="n ${ev?ev.cls:''}">${fvar(ev?ev.v:null)}</td>`+
+      `<td class="status ${status==='Atenção'?'neg':status==='No plano'?'pos':''}">${status}</td></tr>`;
+  });
+  const trR=totalPlan('receita'),tdR=totalPlan('despesa'),teR=totalPlan('ebitda');
+  const arR=totalReal('receita'),adR=totalReal('despesa'),aeR=totalReal('ebitda');
+  const rvT=pvVar(trR,arR,true),dvT=pvVar(tdR,adR,false),evT=pvVar(teR,aeR,true);
+  pv+=`</tbody><tfoot><tr class="tot"><td>Total</td><td class="n">${k$(trR)}</td><td class="n">${realTemDados?k$(arR):'—'}</td><td class="n ${rvT?rvT.cls:''}">${fvar(rvT?rvT.v:null)}</td><td class="n">${k$(tdR)}</td><td class="n">${realTemDados?k$(adR):'—'}</td><td class="n ${dvT?dvT.cls:''}">${fvar(dvT?dvT.v:null)}</td><td class="n ${teR>=0?'pos':'neg'}">${k$(teR)}</td><td class="n ${realTemDados?(aeR>=0?'pos':'neg'):''}">${realTemDados?k$(aeR):'—'}</td><td class="n ${evT?evT.cls:''}">${fvar(evT?evT.v:null)}</td><td class="status">${realTemDados?'Acumulado':'—'}</td></tr></tfoot>`;
+  document.getElementById('tOrcamentoPV').innerHTML=pv;
+  document.getElementById('orcPVFonte').textContent=manualReal?'Realizado: aba Realizado':realTemDados?'Realizado: Omie por competência':'Sem realizado lançado';
+  document.getElementById('orcPVNota').textContent=manualReal
+    ?'Comparação mês a mês com o realizado lançado na aba Realizado da planilha.'
+    :realTemDados?'Comparação mês a mês com os lançamentos do Omie por competência.'
+    :'A estrutura está pronta: quando houver realizado na planilha ou lançamentos no Omie, a comparação aparece mês a mês.';
 
   const rbEscopo=receita;
   const linhas=(orcD.linhas||[]).filter(l=>!['caixaFinal','mrrTotal','headcount'].includes(l.tipo));
