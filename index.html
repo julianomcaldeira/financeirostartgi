@@ -142,8 +142,10 @@ table.lst td{padding:11px 0;border-bottom:1px solid var(--line);vertical-align:m
 table.lst tr:last-child td{border-bottom:0}
 table.lst .n{text-align:right;font-variant-numeric:tabular-nums}
 table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0;padding-top:13px}
-#tOrcamentoLinhas td:first-child,#tOrcamentoLinhas th:first-child{position:sticky;left:0;background:#fff;z-index:1;box-shadow:1px 0 0 var(--line)}
-#tOrcamentoLinhas tr.grp td{background:#f7f3e7;color:var(--brand);font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--line);position:sticky;left:0}
+#tOrcamentoLinhas th,#tOrcamentoLinhas td,#tOrcamentoMensal th,#tOrcamentoMensal td{padding-left:10px;padding-right:10px}
+#tOrcamentoLinhas td:first-child,#tOrcamentoLinhas th:first-child{position:sticky;left:0;background:#fff;z-index:1;box-shadow:1px 0 0 var(--line);padding-left:14px}
+#tOrcamentoLinhas td.n,#tOrcamentoLinhas th.n,#tOrcamentoMensal td.n,#tOrcamentoMensal th.n{white-space:nowrap}
+#tOrcamentoLinhas tr.grp td{background:#f7f3e7;color:var(--brand);font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:8px 14px;border-bottom:1px solid var(--line)}
 .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:5px;margin-right:7px;background:#f0eee8;color:var(--ink2)}
 .badge.rec{background:var(--brand-soft);color:var(--brand)}
 .badge.one{background:#fbf1de;color:var(--warn)}
@@ -566,8 +568,22 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
         <div class="table-scroll" style="max-height:460px"><table class="lst" id="tOrcamentoMensal" style="min-width:940px"></table></div>
       </div>
       <div class="card" style="margin-top:18px;box-shadow:none">
-        <div class="card-head"><div><p class="eyebrow">Plano detalhado</p><h3>Categorias do orçamento</h3></div><span class="muted">Valores mensais previstos · R$</span></div>
-        <div class="table-scroll" style="max-height:580px"><table class="lst" id="tOrcamentoLinhas" style="min-width:1180px"></table></div>
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Plano detalhado</p>
+            <h3>Categorias do orçamento</h3>
+            <p class="muted" style="margin:6px 0 0">Veja o total do ano e a média mensal. No detalhe por mês, compare cada categoria com a média do ano.</p>
+          </div>
+          <div class="cli-filters">
+            <label>Visão<select id="orcVisao" onchange="renderOrcamentoCategorias()">
+              <option value="ano">Resumo anual</option>
+              <option value="mes">Detalhe por mês</option>
+            </select></label>
+            <label id="orcMesWrap" style="display:none">Mês<select id="orcMesSel" onchange="renderOrcamentoCategorias()"></select></label>
+          </div>
+        </div>
+        <div class="table-scroll" style="max-height:580px"><table class="lst" id="tOrcamentoLinhas"></table></div>
+        <p class="muted" id="orcCatNota" style="margin-top:10px"></p>
       </div>
     </div>
   </section>
@@ -1491,15 +1507,58 @@ function renderOrcamento(){
     }).join('')+
     `<tr class="tot"><td>Total</td><td class="n">${k$(pRec)}</td><td class="n">${k$(rRec)}</td><td class="n ${adrCls(adrRec,false)}">${adrTxt(adrRec)}</td><td class="n">${k$(pDesp)}</td><td class="n">${k$(rDesp)}</td><td class="n ${adrCls(adrDesp,true)}">${adrTxt(adrDesp)}</td><td class="n ${pEb>=0?'pos':'neg'}">${k$(pEb)}</td><td class="n ${rEb>=0?'pos':'neg'}">${k$(rEb)}</td></tr></tbody>`;
 
-  let grupoAnterior='';
-  document.getElementById('tOrcamentoLinhas').innerHTML=
-    '<thead><tr><th>Categoria</th>'+orcD.meses.map(m=>`<th class="n">${nomeMes(m)}</th>`).join('')+'<th class="n">Total</th></tr></thead><tbody>'+
-    (orcD.linhas||[]).map(l=>{
+  renderOrcamentoCategorias();
+}
+
+function renderOrcamentoCategorias(){
+  if(!orcD)return;
+  const visao=document.getElementById('orcVisao')?.value||'ano';
+  const wrap=document.getElementById('orcMesWrap');
+  if(wrap)wrap.style.display=visao==='mes'?'flex':'none';
+  const sel=document.getElementById('orcMesSel');
+  if(sel&&sel.options.length!==(orcD.meses||[]).length){
+    sel.innerHTML=(orcD.meses||[]).map((m,i)=>`<option value="${i}">${nomeMes(m)}</option>`).join('');
+  }
+  const receitaBruta=(orcD.linhas||[]).find(l=>/^Receita bruta/i.test(l.nome));
+  const rbTotal=Number(receitaBruta?.total||0)||1;
+  const fmt=(l,v)=>l.percentual?pct(v):brl2(v);
+  const mediaDe=l=>{
+    if(!l.percentual)return Number(l.total||0)/12;
+    const vals=(l.valores||[]).map(Number);
+    return vals.length?vals.reduce((a,v)=>a+v,0)/vals.length:0;
+  };
+  const nota=document.getElementById('orcCatNota');
+  let html='';
+  if(visao==='mes'){
+    const mes=Number(sel?.value||0);
+    const rbMes=Number(receitaBruta?.valores?.[mes]||0)||1;
+    if(nota)nota.textContent=`Valores previstos para ${nomeMes(orcD.meses[mes])}. A coluna "vs média" mostra o desvio em relação à média mensal do ano.`;
+    html='<thead><tr><th>Categoria</th><th class="n">Valor no mês</th><th class="n">% da receita bruta</th><th class="n">Média/mês</th><th class="n">vs média</th></tr></thead><tbody>';
+    let grupo='';
+    for(const l of orcD.linhas||[]){
       let prefixo='';
-      if(l.grupo!==grupoAnterior){grupoAnterior=l.grupo;prefixo=`<tr class="grp"><td colspan="${orcD.meses.length+2}">${simEsc(l.grupo)}</td></tr>`;}
-      const cel=l.percentual?v=>pct(v):v=>brl2(v);
-      return prefixo+`<tr><td>${simEsc(l.nome)}</td>${(l.valores||[]).map(v=>`<td class="n">${cel(v)}</td>`).join('')}<td class="n"><b>${cel(l.total)}</b></td></tr>`;
-    }).join('')+'</tbody>';
+      if(l.grupo!==grupo){grupo=l.grupo;prefixo=`<tr class="grp"><td colspan="5">${simEsc(l.grupo)}</td></tr>`;}
+      const valor=Number(l.valores?.[mes]||0),media=mediaDe(l);
+      const share=l.percentual?'—':pct(valor/rbMes);
+      const desvio=l.percentual||!media?'—':(valor/media-1);
+      const desvioTxt=desvio==='—'?'—':(desvio>0?'+':'')+pct(desvio);
+      const desvioCls=desvio==='—'?'':desvio>0?'neg':'pos';
+      html+=prefixo+`<tr><td>${simEsc(l.nome)}</td><td class="n">${fmt(l,valor)}</td><td class="n">${share}</td><td class="n">${fmt(l,media)}</td><td class="n ${desvioCls}">${desvioTxt}</td></tr>`;
+    }
+    html+='</tbody>';
+  } else {
+    if(nota)nota.textContent=`Resumo do plano de ${orcD.ano}. A coluna "% da receita bruta" mostra o peso de cada linha sobre a receita bruta do ano.`;
+    html='<thead><tr><th>Categoria</th><th class="n">Total do ano</th><th class="n">Média/mês</th><th class="n">% da receita bruta</th></tr></thead><tbody>';
+    let grupo='';
+    for(const l of orcD.linhas||[]){
+      let prefixo='';
+      if(l.grupo!==grupo){grupo=l.grupo;prefixo=`<tr class="grp"><td colspan="4">${simEsc(l.grupo)}</td></tr>`;}
+      const share=l.percentual?'—':pct(Number(l.total||0)/rbTotal);
+      html+=prefixo+`<tr><td>${simEsc(l.nome)}</td><td class="n"><b>${fmt(l,l.total)}</b></td><td class="n">${fmt(l,mediaDe(l))}</td><td class="n">${share}</td></tr>`;
+    }
+    html+='</tbody>';
+  }
+  document.getElementById('tOrcamentoLinhas').innerHTML=html;
 }
 
 async function carregarDespesas(){
