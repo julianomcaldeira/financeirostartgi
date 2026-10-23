@@ -2,7 +2,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { googleSheetExportUrl, parseOrcamentoCSV } = require('./lib/orcamento');
+const { googleSheetExportUrl, googleSheetGvizUrl, parseOrcamentoCSV, montarOrcamento } = require('./lib/orcamento');
 
 const { OMIE_APP_KEY, OMIE_APP_SECRET, PAINEL_SENHA } = process.env;
 const PORT = process.env.PORT || 3000;
@@ -856,8 +856,12 @@ async function gerarInsightsIA(d) {
 Gere uma leitura semanal ESTRATÉGICA, não uma repetição de alertas operacionais. Conecte dois ou mais fatos e proponha movimentos de alocação de capital, pricing, contratação, retenção, mix de receita, garantias, eficiência comercial ou gestão de caixa.
 
 Regras:
+- Pense como CFO de uma empresa que precisa crescer sem perder o controle do caixa. Vender é necessário, mas antes avalie retenção, expansão na base, pricing, mix de receita, produtividade comercial, custo de servir, capital de giro e alocação de capital.
 - Use sempre o caixa total (contas Omie + valor aplicado) para falar de fôlego e capacidade de investimento.
 - Não invente números. Use apenas os dados fornecidos.
+- Cada insight deve ter uma tese, o trade-off e uma implicação prática. Evite alerta operacional sem consequência estratégica.
+- Em "acao", escreva de 2 a 4 passos concretos, em ordem, separados por ponto e vírgula. Diga o que fazer, não apenas o que observar.
+- Prefira 3 apostas fortes e distintas a 4 insights genéricos.
 - Não diga "cobre o cliente" nem proponha cobrança óbvia. Em cobranca, entregue engenharia de recebimento: novação com garantia, entrada, cessão de crédito, antecipação, escrow, seguro de crédito, retenção de marcos, quebra de escopo, desconto condicionado à vista, mediação ou proteção contratual.
 - Se rescisões forem relevantes, use rescisoes.total, rescisoes.porMes e rescisoes.itens.
 - Sempre inclua 4 estratégias em cobranca, mesmo que precise ser mais enxuto nos insights.
@@ -1210,26 +1214,74 @@ app.get('/api/orcamento', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+async function baixarCSVGoogle(url) {
+  const r = await fetch(url, {
+    redirect: 'follow',
+    signal: AbortSignal.timeout(20000),
+    headers: { 'user-agent': 'Mozilla/5.0 (compatible; StartGiPainel/1.0)', accept: 'text/csv,*/*' },
+  });
+  if (!r.ok) throw new Error(`Google Sheets retornou ${r.status}. Verifique o compartilhamento.`);
+  const texto = await r.text();
+  if (/^\s*<(!doctype|html)/i.test(texto)) {
+    throw new Error('A planilha não está pública. Compartilhe como "Qualquer pessoa com o link · Leitor".');
+  }
+  return texto;
+}
+
+async function abasGoogleSheet(link) {
+  const m = String(link || '').match(/docs\.google\.com\/spreadsheets\/d\/([A-Za-z0-9_-]+)/);
+  if (!m) return [];
+  try {
+    const r = await fetch(`https://docs.google.com/spreadsheets/d/${m[1]}/edit`, {
+      signal: AbortSignal.timeout(20000),
+      headers: { 'user-agent': 'Mozilla/5.0 (compatible; StartGiPainel/1.0)' },
+    });
+    if (!r.ok) return [];
+    const html = await r.text();
+    return [...new Set([...html.matchAll(/docs-sheet-tab-caption">([^<]+)</g)].map(x => x[1]
+      .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')))];
+  } catch (e) { return []; }
+}
+
 app.post('/api/orcamento/importar', async (req, res) => {
   try {
     const link = String(req.body?.url || '').trim();
     const ano = Number(req.body?.ano) || undefined;
-    const url = googleSheetExportUrl(link);
-    const r = await fetch(url, {
-      redirect: 'follow',
-      signal: AbortSignal.timeout(20000),
-      headers: { 'user-agent': 'Mozilla/5.0 (compatible; StartGiPainel/1.0)', accept: 'text/csv,*/*' },
-    });
-    if (!r.ok) throw new Error(`Google Sheets retornou ${r.status}. Verifique o compartilhamento.`);
-    const texto = await r.text();
-    if (/^\s*<(!doctype|html)/i.test(texto)) {
-      throw new Error('A planilha não está pública. Compartilhe como "Qualquer pessoa com o link · Leitor".');
+    if (!link) throw new Error('Informe o link da planilha.');
+    const abas = await abasGoogleSheet(link);
+    const nomes = [...abas, 'Orçado', 'Realizado', 'Premissas', 'Pessoas', 'Controle'];
+    const achar = re => [...new Set(nomes)].find(n => re.test(n));
+    const tentarAba = async re => {
+      const nome = achar(re);
+      if (!nome) return null;
+      try { return { nome, texto: await baixarCSVGoogle(googleSheetGvizUrl(link, nome)) }; } catch (e) { return null; }
+    };
+    const orcado = await tentarAba(/^or[çc]ado/i);
+    let dados;
+    const usadas = [];
+    if (orcado) {
+      const realizado = await tentarAba(/^realizado/i);
+      const premissas = await tentarAba(/^premissas/i);
+      const pessoas = await tentarAba(/^pessoas/i);
+      dados = montarOrcamento({
+        orcado: orcado.texto,
+        realizado: realizado?.texto,
+        premissas: premissas?.texto,
+        pessoas: pessoas?.texto,
+      }, { ano, origem: 'Google Sheets', url: link });
+      usadas.push(orcado.nome);
+      if (realizado) usadas.push(realizado.nome);
+      if (premissas) usadas.push(premissas.nome);
+      if (pessoas) usadas.push(pessoas.nome);
+    } else {
+      const texto = await baixarCSVGoogle(googleSheetExportUrl(link));
+      dados = parseOrcamentoCSV(texto, { ano, origem: 'Google Sheets', url: link });
+      usadas.push('primeira aba');
     }
-    const dados = parseOrcamentoCSV(texto, { ano, origem: 'Google Sheets', url: link });
     fs.mkdirSync(ORCAMENTO_DIR, { recursive: true });
     fs.writeFileSync(path.join(ORCAMENTO_DIR, `orcamento-${dados.ano}.json`), JSON.stringify(dados, null, 2) + '\n');
     delete orcamentoCache[dados.ano];
-    res.json({ ok: true, ano: dados.ano, linhas: dados.linhas.length, cenario: dados.cenario });
+    res.json({ ok: true, ano: dados.ano, linhas: dados.linhas.length, cenario: dados.cenario, abas: usadas, realizado: !!dados.realizadoDisponivel });
   } catch (e) { res.status(400).json({ erro: e.message }); }
 });
 

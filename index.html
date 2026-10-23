@@ -144,10 +144,28 @@ table.lst td{padding:11px 0;border-bottom:1px solid var(--line);vertical-align:m
 table.lst tr:last-child td{border-bottom:0}
 table.lst .n{text-align:right;font-variant-numeric:tabular-nums}
 table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0;padding-top:13px}
-#tOrcamentoLinhas th,#tOrcamentoLinhas td,#tOrcamentoMensal th,#tOrcamentoMensal td{padding-left:10px;padding-right:10px}
+#tOrcamentoLinhas th,#tOrcamentoLinhas td{padding-left:10px;padding-right:10px}
 #tOrcamentoLinhas td:first-child,#tOrcamentoLinhas th:first-child{position:sticky;left:0;background:#fff;z-index:1;box-shadow:1px 0 0 var(--line);padding-left:14px}
-#tOrcamentoLinhas td.n,#tOrcamentoLinhas th.n,#tOrcamentoMensal td.n,#tOrcamentoMensal th.n{white-space:nowrap}
+#tOrcamentoLinhas td.n,#tOrcamentoLinhas th.n{white-space:nowrap}
 #tOrcamentoLinhas tr.grp td{background:#f7f3e7;color:var(--brand);font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:8px 14px;border-bottom:1px solid var(--line)}
+#tClientesMes{min-width:1080px}
+#tClientesMes th,#tClientesMes td{padding-left:9px;padding-right:9px}
+#tClientesMes th:first-child,#tClientesMes td:first-child{position:sticky;left:0;background:#fff;z-index:1;box-shadow:1px 0 0 var(--line);min-width:250px;max-width:340px}
+#tClientesMes thead th:first-child{z-index:3}
+#tClientesMes td.n,#tClientesMes th.n{white-space:nowrap}
+#tClientesMes .cli-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tClientesMes .cli-sub{white-space:nowrap}
+#tClientesMes .cli-prod{max-width:280px}
+#tOrcamentoLinhas tr.orc-total td{font-weight:700;background:#fcfbf7;border-top:1px solid var(--ink)}
+#tOrcamentoLinhas tr.grp td{position:static}
+.orc-det summary{cursor:pointer;font-weight:700;color:var(--brand);font-size:13px}
+.orc-prem-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.orc-prem{background:#fcfbf7;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.orc-prem span{display:block;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.orc-prem b{display:block;font-size:13px;margin-top:3px}
+@media(max-width:900px){.orc-prem-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.orc-prem-grid{grid-template-columns:1fr}}
+
 .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:5px;margin-right:7px;background:#f0eee8;color:var(--ink2)}
 .badge.rec{background:var(--brand-soft);color:var(--brand)}
 .badge.one{background:#fbf1de;color:var(--warn)}
@@ -167,61 +185,80 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 .dias.g{background:var(--neg-soft);color:var(--neg)}
 
 /* ---------- Insights ---------- */
-.ins-hero{display:grid;grid-template-columns:1.45fr .55fr;gap:26px;align-items:center;background:linear-gradient(135deg,#fffdf8 0%,#edf6f1 100%);border-color:#d7e6de;margin-bottom:18px}
-.ins-hero h2{font:600 33px/1.15 Fraunces,Georgia,serif;letter-spacing:-.02em;margin:8px 0 10px}
-.ins-hero .lead{font-size:15px;color:var(--ink2);max-width:780px;margin-bottom:16px}
-.ins-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.ins-stat{background:#fff;border:1px solid var(--line);border-radius:13px;padding:14px 15px}
-.ins-stat span{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800}
-.ins-stat b{display:block;font:600 28px/1 Fraunces,serif;margin:7px 0 4px}
-.ins-stat small{font-size:11px;color:var(--ink2)}
-.ins-focus{border-left:4px solid var(--brand);background:linear-gradient(120deg,#fffdf8,#f4faf7)}
-.ins-focus h2{font:600 28px/1.15 Fraunces,Georgia,serif;letter-spacing:-.02em;margin:7px 0 8px}
-.ins-focus p{font-size:14px;color:var(--ink2);max-width:920px;line-height:1.55}
-.ins-focus .rec{margin-top:12px;padding-top:11px;border-top:1px dashed var(--line);font-size:13px;color:var(--ink2)}
-.ins-focus .rec b{color:var(--brand)}
-.ins-actions{display:flex;flex-direction:column;gap:10px}
-.ins-action{border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:12px;padding:14px 16px;background:#fff}
-.ins-action.agora{border-left-color:var(--neg)}
-.ins-action.mes{border-left-color:var(--warn)}
-.ins-action.tri{border-left-color:var(--brand)}
-.ins-action.continuo{border-left-color:var(--pos)}
-.ins-action .top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:5px}
-.ins-action h3{font:600 17px/1.2 Fraunces,serif}
-.ins-action p{font-size:12.5px;color:var(--ink2);margin:4px 0 8px}
-.ins-action .impact{font-size:12px;color:var(--ink2);padding-top:7px;border-top:1px dashed var(--line)}
-.ins-action .impact b{color:var(--brand)}
-.pill{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 8px;background:#f0eee8;color:var(--ink2)}
-.pill.agora{background:var(--neg-soft);color:var(--neg)}
-.pill.mes{background:var(--warn-soft);color:var(--warn)}
-.pill.tri{background:var(--brand-soft);color:var(--brand)}
-.pill.continuo{background:var(--pos-soft);color:var(--pos)}
-.ins-habits{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.ins-habit{border:1px solid var(--line);border-radius:12px;padding:13px 14px;background:#fcfbf7}
-.ins-habit .freq{font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand)}
-.ins-habit h3{font:600 15px/1.2 Fraunces,serif;margin:5px 0}
-.ins-habit p{font-size:12px;color:var(--ink2);line-height:1.45}
-.ins-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
-.ins-card{border:1px solid var(--line);border-top:3px solid var(--line);border-radius:13px;padding:16px 17px;background:#fff;display:flex;flex-direction:column}
-.ins-card.alto{border-top-color:var(--neg)}
-.ins-card.medio{border-top-color:var(--warn)}
-.ins-card.oportunidade{border-top-color:var(--brand)}
-.ins-card.ok{border-top-color:var(--pos)}
-.ins-card .head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:7px}
-.ins-card .tema{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
-.ins-card .nvl{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:#f0eee8;color:var(--ink2)}
-.ins-card.alto .nvl{background:var(--neg-soft);color:var(--neg)}
-.ins-card.medio .nvl{background:var(--warn-soft);color:var(--warn)}
-.ins-card.oportunidade .nvl{background:var(--brand-soft);color:var(--brand)}
-.ins-card.ok .nvl{background:var(--pos-soft);color:var(--pos)}
-.ins-card h3{font:600 18px/1.22 Fraunces,serif;margin-bottom:6px}
-.ins-card p{font-size:12.5px;color:var(--ink2);line-height:1.5}
-.ins-card .num{font-size:12px;font-weight:700;color:var(--ink);background:#f7f5ee;border-radius:8px;padding:7px 9px;margin:11px 0}
-.ins-card .rec,.ins-card .habit{font-size:12px;color:var(--ink2);line-height:1.45;padding-top:8px;border-top:1px dashed var(--line)}
-.ins-card .rec b,.ins-card .habit b{color:var(--brand)}
-.ins-card .habit{margin-top:8px}
-@media(max-width:1100px){.ins-hero{grid-template-columns:1fr}.ins-stats{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:560px){.ins-stats,.ins-habits{grid-template-columns:1fr}}
+.ins-week{display:grid;grid-template-columns:1.55fr .45fr;gap:28px;align-items:stretch;background:linear-gradient(135deg,#fffdf8 0%,#edf6f1 100%);border:1px solid #d7e6de;border-radius:18px;padding:26px 28px;margin-bottom:22px}
+.ins-week h2{font:600 36px/1.08 Fraunces,Georgia,serif;letter-spacing:-.025em;margin:7px 0 10px;max-width:820px}
+.ins-lead{font-size:14.5px;color:var(--ink2);max-width:820px;line-height:1.6}
+.ins-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+.ins-meta .chip{background:#fff}
+.ins-focus-line{margin-top:18px;padding-top:14px;border-top:1px dashed #cfe1d8;display:grid;grid-template-columns:122px 1fr;gap:14px;align-items:start}
+.ins-focus-line span{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);padding-top:2px}
+.ins-focus-line b{display:block;font-size:14.5px;line-height:1.45;color:var(--ink)}
+.ins-focus-line p{font-size:12.5px;color:var(--ink2);margin-top:4px}
+.ins-week-side{display:grid;gap:9px;align-content:start}
+.ins-metric{background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;min-height:74px}
+.ins-metric span{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.ins-metric b{display:block;font:600 24px/1.05 Fraunces,serif;margin:5px 0 2px;white-space:nowrap}
+.ins-metric small{font-size:10.5px;color:var(--ink2);line-height:1.3}
+.ins-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin:0 0 12px}
+.ins-head h2{font-size:24px;line-height:1.15}
+.ins-head p{margin-top:4px}
+.ins-bets{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.ins-bet{position:relative;text-align:left;font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line);border-top:4px solid var(--line);border-radius:15px;padding:18px 19px 16px;background:#fff;display:flex;flex-direction:column;gap:10px;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;min-height:220px}
+.ins-bet:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(20,35,31,.09);border-color:#c6d8ce}
+.ins-bet.alto{border-top-color:var(--neg)}
+.ins-bet.medio{border-top-color:var(--warn)}
+.ins-bet.oportunidade,.ins-bet.baixa{border-top-color:var(--brand)}
+.ins-bet-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ins-bet-num{font:600 20px/1 Fraunces,serif;color:#bbc8c1;min-width:25px}
+.ins-bet-area{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.ins-pill{font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:#f0eee8;color:var(--ink2);white-space:nowrap}
+.ins-pill.alto{background:var(--neg-soft);color:var(--neg)}
+.ins-pill.medio{background:var(--warn-soft);color:var(--warn)}
+.ins-pill.baixa{background:var(--pos-soft);color:var(--pos)}
+.ins-bet h3{font:600 21px/1.18 Fraunces,serif;letter-spacing:-.01em}
+.ins-bet .diag{font-size:12.5px;color:var(--ink2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ins-bet-move{font-size:12.5px;line-height:1.45;background:#f7f5ee;border-radius:9px;padding:9px 10px;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ins-bet-move b{color:var(--brand);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;display:block;margin-bottom:3px}
+.ins-bet-foot{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;gap:10px;padding-top:8px;border-top:1px dashed var(--line)}
+.ins-bet-foot span{font-size:11px;color:var(--muted);line-height:1.35}
+.ins-bet-foot .go{font-size:11px;font-weight:700;color:var(--brand);white-space:nowrap}
+.ins-cash{margin-top:14px;border:1px solid #cfdfd5;background:linear-gradient(120deg,#f7fbf8,#fffdf8);border-radius:15px;padding:18px 20px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;cursor:pointer;transition:box-shadow .16s ease,border-color .16s ease}
+.ins-cash:hover{box-shadow:0 12px 26px rgba(20,35,31,.07);border-color:#b9d2c4}
+.ins-cash h3{font:600 20px/1.2 Fraunces,serif;margin:4px 0 5px}
+.ins-cash p{font-size:12.5px;color:var(--ink2);max-width:900px}
+.ins-cash .next{font-size:12px;color:var(--ink2);margin-top:8px}
+.ins-cash .next b{color:var(--brand)}
+.ins-cash-side{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.ins-cash-side b{font:600 24px/1 Fraunces,serif;white-space:nowrap}
+.ins-cash-side span{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.ins-cash-side .go{font-size:12px;font-weight:700;color:var(--brand);white-space:nowrap}
+.ins-foot{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:14px;flex-wrap:wrap}
+.ins-modal{display:none;position:fixed;inset:0;z-index:90;background:rgba(7,22,18,.52);backdrop-filter:blur(2px);padding:28px 18px;overflow:auto}
+.ins-modal.open{display:flex;align-items:flex-start;justify-content:center}
+.ins-modal-box{position:relative;width:min(850px,100%);background:#fff;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.24);padding:28px 30px 26px;margin:auto;max-height:calc(100vh - 56px);overflow:auto}
+.ins-close{position:absolute;top:12px;right:14px;border:0;background:#f3f1ea;color:var(--ink2);width:32px;height:32px;border-radius:50%;font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.ins-close:hover{background:var(--neg-soft);color:var(--neg)}
+.ins-modal-head{padding-right:34px}
+.ins-modal-head h2{font:600 30px/1.12 Fraunces,serif;letter-spacing:-.02em;margin:7px 0 10px}
+.ins-modal-head .lead{font-size:14px;color:var(--ink2);line-height:1.6}
+.ins-modal-block{margin-top:18px;border-top:1px solid var(--line);padding-top:15px}
+.ins-modal-block h4{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--brand);margin:0 0 5px}
+.ins-modal-block p{font-size:13.5px;color:var(--ink2);line-height:1.6}
+.ins-modal-two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.ins-modal-move{background:#f7f5ee;border-left:4px solid var(--brand);border-radius:10px;padding:14px 16px;margin-top:16px}
+.ins-modal-move h4{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--brand);margin-bottom:5px}
+.ins-modal-move p{font-size:14px;line-height:1.6;color:var(--ink);white-space:pre-line}
+.ins-modal-note{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.ins-modal-note span{font-size:11px;background:#f3f1ea;border-radius:999px;padding:4px 9px;color:var(--ink2)}
+.ins-cash-play{border:1px solid var(--line);border-radius:13px;padding:15px 16px;margin-top:12px;background:#fcfbf7}
+.ins-cash-play .top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.ins-cash-play h3{font:600 18px/1.2 Fraunces,serif;margin:3px 0 4px}
+.ins-cash-play p{font-size:12.5px;color:var(--ink2);line-height:1.55;margin-top:4px}
+.ins-cash-play .impact{font-size:12px;color:var(--ink2);margin-top:7px;padding-top:7px;border-top:1px dashed var(--line)}
+.ins-cash-play .impact b{color:var(--brand)}
+@media(max-width:1100px){.ins-week{grid-template-columns:1fr}.ins-week-side{grid-template-columns:repeat(3,1fr)}.ins-week h2{font-size:31px}}
+@media(max-width:850px){.ins-bets{grid-template-columns:1fr}.ins-cash{grid-template-columns:1fr}.ins-cash-side{text-align:left;align-items:flex-start;flex-direction:row;flex-wrap:wrap}.ins-modal-two{grid-template-columns:1fr}}
+@media(max-width:620px){.ins-week{padding:20px}.ins-week h2{font-size:27px}.ins-week-side{grid-template-columns:1fr}.ins-metric{min-height:0}.ins-focus-line{grid-template-columns:1fr;gap:5px}.ins-modal-box{padding:24px 19px}.ins-modal-head h2{font-size:25px}.ins-head{align-items:flex-start;flex-direction:column;gap:4px}}
 
 /* ---------- Simulação ---------- */
 .sim-intro{display:grid;grid-template-columns:1.4fr .6fr;gap:24px;align-items:center;background:linear-gradient(135deg,#fffdf8 0%,#f2f8f3 100%);border-color:#d7e6de;margin-bottom:18px}
@@ -262,9 +299,10 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 
 /* ---------- Receita por cliente ---------- */
 .cli-filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
-.cli-filters label{display:flex;flex-direction:column;gap:5px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.cli-filters input,.cli-filters select{border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:13px Inter;background:#fff;color:var(--ink)}
+.cli-filters label{display:flex;flex-direction:column;gap:5px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);min-width:0}
+.cli-filters input,.cli-filters select{border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:13px Inter;background:#fff;color:var(--ink);max-width:100%;min-width:0}
 .cli-filters input:focus,.cli-filters select:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
+@media(max-width:560px){.cli-filters{width:100%}.cli-filters label{flex:1 1 100%}.cli-filters input,.cli-filters select{width:100%}}
 .cli-prod{display:flex;flex-wrap:wrap;gap:4px;max-width:330px}
 .cli-prod span{background:#f0eee6;border-radius:999px;padding:2px 7px;font-size:10.5px;color:var(--ink2)}
 .cli-name{font-weight:600;color:var(--ink)}
@@ -403,28 +441,41 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 
   <!-- INSIGHTS -->
   <section class="view" data-view="insights">
-    <div class="card ins-hero">
+    <div class="ins-week">
       <div>
-        <p class="eyebrow">Inteligência semanal · IA</p>
-        <h2>O que eu faria esta semana</h2>
-        <p class="lead" id="insResumo">Lendo caixa, receita, despesas e carteira para montar a leitura da semana.</p>
-        <div class="chips" id="insChips"></div>
+        <p class="eyebrow">Conselho executivo · leitura da semana</p>
+        <h2 id="insTese">Onde a empresa precisa vencer esta semana</h2>
+        <p class="ins-lead" id="insResumo">Lendo caixa, receita, despesas e carteira para montar a tese da semana.</p>
+        <div class="ins-meta" id="insChips"></div>
+        <div class="ins-focus-line" id="insFoco"></div>
       </div>
-      <div class="ins-stats" id="insStats"></div>
+      <div class="ins-week-side" id="insStats"></div>
     </div>
 
-    <div class="card ins-focus" id="insFocoCard" style="margin-bottom:18px;display:none"></div>
-
-    <div class="card">
-      <div class="card-head"><div><p class="eyebrow">Leitura estratégica</p><h2>Movimentos que mudam o jogo</h2></div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="muted" id="insNota"></span><button class="btn ghost" onclick="carregarInsightsIA(1)">Atualizar leitura</button></div></div>
-      <div class="ins-grid" id="insCards"></div>
+    <div class="ins-head">
+      <div>
+        <p class="eyebrow">Prioridades</p>
+        <h2>As apostas da semana</h2>
+        <p class="muted">Poucas frentes, com movimento claro e impacto esperado. Clique em um card para abrir o plano completo.</p>
+      </div>
+      <span class="muted" id="insNota"></span>
     </div>
+    <div class="ins-bets" id="insCards"></div>
 
-    <div class="card" style="margin-top:18px">
-      <div class="card-head"><div><p class="eyebrow">Recebimento</p><h2>Engenharia de caixa para a carteira</h2></div><button class="btn" onclick="go('atrasados')">Ver atrasados</button></div>
-      <div class="ins-actions" id="insCobranca"></div>
+    <div class="ins-cash" id="insCash" role="button" tabindex="0" onclick="abrirCaixaInsight()" onkeydown="if(event.key==='Enter')abrirCaixaInsight()"></div>
+
+    <div class="ins-foot">
+      <p class="muted" id="insRodape">Leitura gerada a partir do caixa, receita, despesas e carteira.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" onclick="go('atrasados')">Ver atrasados</button><button class="btn ghost" onclick="carregarInsightsIA(1)">Atualizar leitura</button></div>
     </div>
   </section>
+
+  <div class="ins-modal" id="insModal" role="dialog" aria-modal="true" aria-labelledby="insModalTitulo" onclick="if(event.target===this)fecharInsight()">
+    <div class="ins-modal-box">
+      <button class="ins-close" aria-label="Fechar" onclick="fecharInsight()">×</button>
+      <div id="insModalContent"></div>
+    </div>
+  </div>
 
   <!-- SIMULAÇÃO -->
   <section class="view" data-view="simulacao">
@@ -547,13 +598,15 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
         <div>
           <p class="eyebrow">Plano anual</p>
           <h2>Orçamento <span id="orcAno">2027</span></h2>
-          <p class="muted" style="margin:6px 0 0" id="orcNota">Importe o orçamento para acompanhar o plano mês a mês.</p>
+          <p class="muted" style="margin:6px 0 0" id="orcNota">Carregando o plano por área e linha.</p>
         </div>
         <div class="cli-filters">
-          <label>Realizado<select id="orcRegime" onchange="renderOrcamento()">
-            <option value="competencia">Por competência</option>
-            <option value="caixa">Por caixa</option>
+          <label>Visão<select id="orcEscopo" onchange="renderOrcamento()">
+            <option value="ano">Ano todo</option>
+            <option value="acumulado">Acumulado até o mês</option>
+            <option value="mes">Mês selecionado</option>
           </select></label>
+          <label id="orcMesWrap">Mês<select id="orcMesSel" onchange="renderOrcamento()"></select></label>
           <button class="btn ghost" onclick="toggleOrcImport()">Importar planilha</button>
           <button class="btn ghost" onclick="carregarOrcamento()">Atualizar</button>
         </div>
@@ -569,41 +622,32 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
           </label>
           <button class="btn" onclick="importarOrcamento()">Importar</button>
         </div>
-        <p class="muted" id="orcImportStatus" style="margin:10px 0 0;font-size:12px">Compartilhe a planilha como “Qualquer pessoa com o link · Leitor”. Se a aba do orçamento não for a primeira, use o link com #gid=...</p>
+        <p class="muted" id="orcImportStatus" style="margin:10px 0 0;font-size:12px">A planilha deve estar pública para leitura. O painel lê as abas Orçado, Realizado, Premissas e Pessoas.</p>
       </div>
       <div class="kpis" id="kpisOrcamento"></div>
-      <div class="grid even" style="margin-top:18px">
-        <div class="card" style="box-shadow:none">
-          <div class="card-head"><div><p class="eyebrow">Plano x realizado</p><h3>Aderência mês a mês</h3></div></div>
-          <div class="chart-h"><canvas id="gOrcamento"></canvas></div>
+      <p class="muted" id="orcPeriodoNota" style="margin-top:10px"></p>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="card-head"><div><p class="eyebrow">Visão mensal</p><h2>Receita, despesa e EBITDA</h2></div><span class="muted" id="orcChartNota"></span></div>
+      <div class="chart-h"><canvas id="gOrcamento"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">Plano detalhado</p>
+          <h2>Orçado por área e linha</h2>
+          <p class="muted" style="margin:6px 0 0" id="orcTabelaNota">Valores com o sinal do plano: despesas e impostos aparecem negativos.</p>
         </div>
-        <div class="card" style="box-shadow:none">
-          <div class="card-head"><div><p class="eyebrow">Acumulado</p><h3>Plano x realizado no ano</h3></div></div>
-          <table class="lst" id="tOrcamentoResumo"></table>
-        </div>
+        <span class="muted" id="orcTabelaPeriodo"></span>
       </div>
-      <div class="card" style="margin-top:18px;box-shadow:none">
-        <div class="card-head"><div><p class="eyebrow">Detalhe mensal</p><h3>Receita, despesa e EBITDA</h3></div><span class="muted" id="orcRegimeNota"></span></div>
-        <div class="table-scroll" style="max-height:460px"><table class="lst" id="tOrcamentoMensal" style="min-width:940px"></table></div>
-      </div>
-      <div class="card" style="margin-top:18px;box-shadow:none">
-        <div class="card-head">
-          <div>
-            <p class="eyebrow">Plano detalhado</p>
-            <h3>Categorias do orçamento</h3>
-            <p class="muted" style="margin:6px 0 0">Veja o total do ano e a média mensal. No detalhe por mês, compare cada categoria com a média do ano.</p>
-          </div>
-          <div class="cli-filters">
-            <label>Visão<select id="orcVisao" onchange="renderOrcamentoCategorias()">
-              <option value="ano">Resumo anual</option>
-              <option value="mes">Detalhe por mês</option>
-            </select></label>
-            <label id="orcMesWrap" style="display:none">Mês<select id="orcMesSel" onchange="renderOrcamentoCategorias()"></select></label>
-          </div>
-        </div>
-        <div class="table-scroll" style="max-height:580px"><table class="lst" id="tOrcamentoLinhas"></table></div>
-        <p class="muted" id="orcCatNota" style="margin-top:10px"></p>
-      </div>
+      <div class="table-scroll" style="max-height:620px"><table class="lst" id="tOrcamentoLinhas"></table></div>
+      <p class="muted" id="orcCatNota" style="margin-top:10px"></p>
+    </div>
+    <div class="card" style="margin-top:18px" id="orcPremissasCard">
+      <details class="orc-det">
+        <summary>Premissas e base do plano</summary>
+        <div id="orcPremissas"></div>
+      </details>
     </div>
   </section>
 
@@ -663,10 +707,6 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
       <div class="kpis" id="kpisAtrasados" style="margin-bottom:0"></div>
     </div>
     <div class="aging" id="aging"></div>
-    <div class="card">
-      <div class="card-head"><div><p class="eyebrow">Engenharia de recebimento</p><h2>Como destravar a carteira</h2></div><span class="muted">Leitura semanal da IA</span></div>
-      <div class="ins-actions" id="atrPlays"></div>
-    </div>
     <div class="card">
       <div class="card-head"><div><p class="eyebrow">Lista completa</p><h2>Títulos vencidos em aberto</h2></div><input id="filtroAtraso" oninput="filtrarAtrasados()" placeholder="Filtrar por cliente ou categoria" style="border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:13px Inter;min-width:240px"></div>
       <div class="table-scroll"><table class="lst" id="tAtrasados"></table></div>
@@ -830,10 +870,10 @@ const nomeMes=m=>{const[a,b]=m.split('-');return['jan','fev','mar','abr','mai','
 const CTX_KEY='startgi.contexto';
 const TITLES={
   visao:['Visão geral','O retrato financeiro da StartGi'],
-  insights:['Insights e ações','Leitura estratégica semanal gerada por IA'],
+  insights:['Insights e ações','Prioridades da semana, trade-offs e plano de execução'],
   simulacao:['Simulação','Simulador de faturamento e receita recorrente até dezembro'],
   receita:['Receita','De onde vem o dinheiro, produto a produto'],
-  orcamento:['Orçamento 2027','Plano anual por categoria, mês a mês, contra o realizado'],
+  orcamento:['Orçamento 2027','Plano por área e linha, com visão anual, acumulada e mensal'],
   caixa:['Caixa e competência','O que já passou pelo caixa x o que foi faturado'],
   lancamentos:['Lançamentos','Todas as receitas e despesas do Omie, com filtros e exportação'],
   atrasados:['Atrasados a receber','Todos os títulos vencidos em aberto'],
@@ -1186,56 +1226,115 @@ function lancLimpar(){
 function lancPagina(delta){const p=lancPaginaAtual+delta;if(p<1||p>lancTotalPaginas)return;carregarLancamentos(p)}
 function exportarLancamentos(){const p=lancQuery(false);const qs=p.toString();window.location.href='/api/lancamentos.csv'+(qs?'?'+qs:'')}
 
-function insPlay(c){
-  return `<div class="ins-action"><div class="top"><span class="pill">${simEsc(c.publico||'Carteira')}</span>${c.situacao?`<span class="muted">${simEsc(c.situacao)}</span>`:''}</div><h3>${simEsc(c.estrategia)}</h3><p>${simEsc(c.abordagem)}</p>${c.porque?`<div class="impact"><b>Por quê:</b> ${simEsc(c.porque)}</div>`:''}${c.impacto?`<div class="impact"><b>Impacto:</b> ${simEsc(c.impacto)}</div>`:''}</div>`;
+function insPrio(p){return p==='alta'?'Prioridade alta':p==='media'?'Média':'Baixa'}
+function insCls(p){return p==='alta'?'alto':p==='media'?'medio':'baixa'}
+function insMetricasHTML(){
+  const d=ultimoD||{};
+  const k=d.kpis||{};
+  const caixa=d.saldoDisponivel?k$(d.saldo):'—';
+  const caixaSub=d.saldoDisponivel?(d.caixaAplicado?`Omie ${k$(d.saldoOmie||0)} + aplicado ${k$(d.caixaAplicado)}`:'Saldo das contas no Omie'):'Saldo não disponível na API';
+  const folego=k.runway!==null&&k.runway!==undefined?runwayTxt(k.runway):'—';
+  const folegoSub=k.runway!==null&&k.runway!==undefined?(k.runway<6?'Abaixo do mínimo de 6 meses':'Dentro da zona de segurança'):'Sem queima calculada';
+  const atraso=Number(k.atrasadoReceber??d.atrasadosResumo?.total??0);
+  const atrasoQtd=Number(d.atrasadosResumo?.qtd??0);
+  return `<div class="ins-metric"><span>Caixa total</span><b>${caixa}</b><small>${caixaSub}</small></div>`+
+    `<div class="ins-metric"><span>Fôlego de caixa</span><b class="${k.runway!==null&&k.runway!==undefined&&k.runway<6?'neg':''}">${folego}</b><small>${folegoSub}</small></div>`+
+    `<div class="ins-metric"><span>A receber em atraso</span><b class="${atraso>0?'neg':''}">${k$(atraso)}</b><small>${atrasoQtd} ${atrasoQtd===1?'título vencido':'títulos vencidos'}</small></div>`;
 }
 function renderInsightsLoading(){
-  document.getElementById('insResumo').textContent='Lendo caixa, receita, despesas e carteira para montar a leitura da semana…';
+  document.getElementById('insTese').textContent='Onde a empresa precisa vencer esta semana';
+  document.getElementById('insResumo').textContent='Lendo caixa, receita, despesas e carteira para montar a tese da semana…';
   document.getElementById('insChips').innerHTML='<span class="chip">IA trabalhando</span>';
-  document.getElementById('insStats').innerHTML='';
-  document.getElementById('insFocoCard').style.display='none';
-  document.getElementById('insCards').innerHTML='<div class="ins-card"><p class="muted">Gerando leitura estratégica…</p></div>';
-  document.getElementById('insCobranca').innerHTML='';
-  const atr=document.getElementById('atrPlays');if(atr)atr.innerHTML='<p class="muted">Gerando plano de recebimento…</p>';
+  document.getElementById('insFoco').innerHTML='';
+  document.getElementById('insStats').innerHTML=insMetricasHTML();
+  document.getElementById('insNota').textContent='';
+  document.getElementById('insCards').innerHTML='<div class="ins-bet"><p class="muted">Gerando as prioridades da semana…</p></div>';
+  document.getElementById('insCash').style.display='none';
+  document.getElementById('insRodape').textContent='A leitura estratégica está sendo gerada.';
 }
 function renderInsightsErro(msg){
-  document.getElementById('insResumo').textContent='Não foi possível carregar a leitura estratégica agora.';
+  document.getElementById('insTese').textContent='Leitura estratégica indisponível';
+  document.getElementById('insResumo').textContent='Não foi possível carregar a leitura desta semana agora.';
   document.getElementById('insChips').innerHTML=`<span class="chip alto">${simEsc(msg||'erro')}</span>`;
-  document.getElementById('insStats').innerHTML='';
-  document.getElementById('insFocoCard').style.display='none';
-  document.getElementById('insCards').innerHTML='<div class="ins-card"><p class="muted">Tente novamente em instantes.</p></div>';
-  document.getElementById('insCobranca').innerHTML='';
+  document.getElementById('insFoco').innerHTML='';
+  document.getElementById('insStats').innerHTML=insMetricasHTML();
+  document.getElementById('insNota').textContent='';
+  document.getElementById('insCards').innerHTML='<div class="ins-bet"><p class="muted">Tente novamente em instantes.</p></div>';
+  document.getElementById('insCash').style.display='none';
+  document.getElementById('insRodape').textContent='Sem leitura disponível no momento.';
 }
 function renderInsightsIA(){
   const x=insightsIAState.data;if(!x)return;
   const ins=x.insights||[],cob=x.cobranca||[];
-  const cls=p=>p==='alta'?'alto':p==='media'?'medio':'ok';
-  const nvl=p=>p==='alta'?'Prioridade alta':p==='media'?'Média':'Baixa';
   const fmt=s=>s?new Date(s).toLocaleString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
-  const fmtD=s=>s?new Date(s).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):'—';
+  const foco=x.focoSemana||{};
+  document.getElementById('insTese').textContent=foco.titulo||(ins[0]&&ins[0].titulo)||'Onde a empresa precisa vencer esta semana';
   document.getElementById('insResumo').textContent=x.resumo||'Sem leitura disponível.';
   document.getElementById('insChips').innerHTML=
-    (ins.slice(0,4).map(i=>`<span class="chip ${cls(i.prioridade)}">${simEsc(i.area)}</span>`).join('')||'<span class="chip">Sem dados</span>')+
-    (x.fonte!=='ia'?`<span class="chip alto" title="${simEsc(x.aviso||'')}">Fallback por regras</span>`:'');
-  const altas=ins.filter(i=>i.prioridade==='alta').length;
-  document.getElementById('insStats').innerHTML=
-    `<div class="ins-stat"><span>Prioridade alta</span><b>${altas}</b><small>movimentos com urgência</small></div>`+
-    `<div class="ins-stat"><span>Fonte</span><b style="font-size:15px;line-height:1.3">${x.fonte==='ia'?'IA · '+simEsc(x.modelo||''):'Regras'}</b><small>${x.fonte==='ia'?'leitura proprietária':'fallback'}</small></div>`+
-    `<div class="ins-stat"><span>Foco da semana</span><b style="font-size:15px;line-height:1.3">${simEsc(x.focoSemana?.titulo||'—')}</b><small>prioridade do CEO</small></div>`+
-    `<div class="ins-stat"><span>Próxima leitura</span><b style="font-size:15px;line-height:1.3">${fmtD(x.proximaEm)}</b><small>renovação automática</small></div>`;
-  document.getElementById('insNota').textContent=`Gerado em ${fmt(x.geradoEm)}`+(x.aviso?` · ${x.aviso}`:'');
-  const foco=x.focoSemana;
-  if(foco&&foco.titulo){
-    const card=document.getElementById('insFocoCard');card.style.display='block';
-    card.innerHTML=`<p class="eyebrow">Foco da semana</p><h2>${simEsc(foco.titulo)}</h2><p>${simEsc(foco.porque||'')}</p><div class="rec"><b>Faça agora:</b> ${simEsc(foco.acao||'')}</div>`;
-  }else document.getElementById('insFocoCard').style.display='none';
-  document.getElementById('insCards').innerHTML=ins.map(i=>
-    `<div class="ins-card ${cls(i.prioridade)}"><div class="head"><span class="tema">${simEsc(i.area)}</span><span class="nvl">${nvl(i.prioridade)}</span></div><h3>${simEsc(i.titulo)}</h3><p>${simEsc(i.diagnostico)}</p>${i.implicacao?`<div class="num">${simEsc(i.implicacao)}</div>`:''}<div class="rec"><b>Movimento:</b> ${simEsc(i.acao)}</div>${i.impacto?`<div class="habit"><b>Impacto:</b> ${simEsc(i.impacto)}${i.prazo?' · '+simEsc(i.prazo):''}</div>`:''}</div>`
-  ).join('')||'<p class="muted">Sem insights no momento.</p>';
-  const plays=cob.map(insPlay).join('')||'<p class="muted">Sem plano de recebimento no momento.</p>';
-  document.getElementById('insCobranca').innerHTML=plays;
-  const atr=document.getElementById('atrPlays');if(atr)atr.innerHTML=plays;
+    `<span class="chip">${x.fonte==='ia'?'Leitura proprietária · IA':'Leitura por regras'}</span>`+
+    (x.fonte!=='ia'?`<span class="chip alto" title="${simEsc(x.aviso||'')}">Fallback</span>`:'');
+  document.getElementById('insFoco').innerHTML=foco.acao
+    ?`<span>Movimento prioritário</span><div><b>${simEsc(foco.acao)}</b>${foco.porque?`<p>${simEsc(foco.porque)}</p>`:''}</div>`
+    :'';
+  document.getElementById('insStats').innerHTML=insMetricasHTML();
+  document.getElementById('insNota').textContent=`Atualizado em ${fmt(x.geradoEm)}`;
+  document.getElementById('insCards').innerHTML=ins.map((i,idx)=>
+    `<article class="ins-bet ${insCls(i.prioridade)}" role="button" tabindex="0" onclick="abrirInsight(${idx})" onkeydown="if(event.key==='Enter'||event.key===' ')abrirInsight(${idx})">
+      <div class="ins-bet-top"><span class="ins-bet-num">${String(idx+1).padStart(2,'0')}</span><span class="ins-bet-area">${simEsc(i.area||'Estratégia')}</span><span class="ins-pill ${insCls(i.prioridade)}">${insPrio(i.prioridade)}</span></div>
+      <h3>${simEsc(i.titulo)}</h3>
+      <p class="diag">${simEsc(i.diagnostico||'')}</p>
+      <div class="ins-bet-move"><b>Movimento</b>${simEsc(i.acao||'')}</div>
+      <div class="ins-bet-foot"><span>${simEsc(i.impacto||i.implicacao||'Impacto a definir')}</span><span class="go">Abrir plano →</span></div>
+    </article>`
+  ).join('')||'<div class="ins-bet"><p class="muted">Sem prioridades no momento.</p></div>';
+  const cash=document.getElementById('insCash');
+  const primeiro=cob[0];
+  if(primeiro){
+    const atraso=Number(ultimoD?.kpis?.atrasadoReceber??ultimoD?.atrasadosResumo?.total??0);
+    cash.style.display='grid';
+    cash.innerHTML=`<div><p class="eyebrow">Caixa e recebíveis</p><h3>${simEsc(primeiro.estrategia||'Engenharia de recebimento')}</h3><p>${simEsc(primeiro.situacao||'')}</p><div class="next"><b>Maior alavanca:</b> ${simEsc(primeiro.abordagem||'')}</div></div><div class="ins-cash-side"><span>Em atraso</span><b>${k$(atraso)}</b><span class="go">Ver plano de caixa →</span></div>`;
+  }else{cash.style.display='none'}
+  document.getElementById('insRodape').textContent=x.aviso||'Leitura baseada em caixa, receita, despesas, carteira e contratos.';
 }
+function abrirInsightModal(){
+  const m=document.getElementById('insModal');if(!m)return;
+  m.classList.add('open');document.body.style.overflow='hidden';
+}
+function fecharInsight(){
+  const m=document.getElementById('insModal');if(!m)return;
+  m.classList.remove('open');document.body.style.overflow='';
+}
+function abrirInsight(i){
+  const x=insightsIAState.data,it=x&&x.insights&&x.insights[i];if(!it)return;
+  document.getElementById('insModalContent').innerHTML=`
+    <div class="ins-modal-head">
+      <div class="ins-bet-top"><span class="ins-bet-area">${simEsc(it.area||'Estratégia')}</span><span class="ins-pill ${insCls(it.prioridade)}">${insPrio(it.prioridade)}</span></div>
+      <h2 id="insModalTitulo">${simEsc(it.titulo)}</h2>
+      <p class="lead">${simEsc(it.diagnostico||'')}</p>
+    </div>
+    <div class="ins-modal-move"><h4>O que fazer</h4><p>${simEsc(it.acao||'')}</p></div>
+    <div class="ins-modal-two">
+      <div class="ins-modal-block"><h4>Por que agora</h4><p>${simEsc(it.implicacao||it.diagnostico||'—')}</p></div>
+      <div class="ins-modal-block"><h4>Impacto esperado</h4><p>${simEsc(it.impacto||'—')}</p></div>
+    </div>
+    <div class="ins-modal-block"><h4>Prazo e cadência</h4><p>${simEsc(it.prazo||'Definir dono e revisar na próxima reunião de gestão.')}</p></div>
+    <div class="ins-modal-note"><span>Área: ${simEsc(it.area||'—')}</span><span>Prioridade: ${insPrio(it.prioridade)}</span></div>`;
+  abrirInsightModal();
+}
+function abrirCaixaInsight(){
+  const x=insightsIAState.data,cob=x&&x.cobranca||[];if(!cob.length)return;
+  const atraso=Number(ultimoD?.kpis?.atrasadoReceber??ultimoD?.atrasadosResumo?.total??0);
+  document.getElementById('insModalContent').innerHTML=`
+    <div class="ins-modal-head">
+      <div class="ins-bet-top"><span class="ins-bet-area">Caixa e recebíveis</span><span class="ins-pill alto">${k$(atraso)} em atraso</span></div>
+      <h2 id="insModalTitulo">Engenharia de caixa para a carteira</h2>
+      <p class="lead">Transformar recebível parado em caixa sem destruir relacionamento: garantia, prazo, lastro e disciplina contratual. Estas são as frentes que eu levaria para a mesa esta semana.</p>
+    </div>
+    ${cob.map(c=>`<div class="ins-cash-play"><div class="top"><span class="ins-bet-area">${simEsc(c.publico||'Carteira')}</span><span class="muted" style="font-size:11px">${simEsc(c.situacao||'')}</span></div><h3>${simEsc(c.estrategia||'')}</h3><p>${simEsc(c.abordagem||'')}</p>${c.porque?`<p><b>Por quê:</b> ${simEsc(c.porque)}</p>`:''}${c.impacto?`<div class="impact"><b>Impacto:</b> ${simEsc(c.impacto)}</div>`:''}</div>`).join('')}
+    <div class="ins-modal-block"><button class="btn" onclick="fecharInsight();go('atrasados')">Ver carteira vencida</button></div>`;
+  abrirInsightModal();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharInsight()});
 async function carregarInsightsIA(force=0){
   if(insightsIAState.loading)return;
   if(!force&&insightsIAState.data){renderInsightsIA();return;}
@@ -1437,7 +1536,7 @@ async function carregarClientesReceita(){
     const nomeOrd={pago_desc:'maior pago no período',pago_asc:'menor pago no período',receita_desc:'maior receita no período',receita_asc:'menor receita no período',nome_asc:'nome A-Z',aberto_desc:'maior em aberto',ultimo_desc:'último pagamento',produto_asc:'produto A-Z'}[j.ordem]||j.ordem;
     const periodoTxt=`${dtbr(j.inicio)} a ${dtbr(j.fim)}`;
     const cliTxt=j.cliente?` · cliente: ${j.cliente}`:'';
-    const notaSep=cliTxt&&/\.$/.test(cliTxt)?' ':' . ';
+    const notaSep=' · ';
     document.getElementById('kpisCliMes').innerHTML=
       kpi('Pago no período',brl2(t.pago||0),`Recebimentos entre ${periodoTxt}`,(t.pago||0)>0?'pos':'')+
       kpi('Receita no período',brl2(t.receitaPeriodo||0),'Emitida no período (competência)')+
@@ -1448,7 +1547,7 @@ async function carregarClientesReceita(){
       return p.length?`<div class="cli-prod">${p.slice(0,3).map(x=>`<span title="${simEsc(x)}">${simEsc(x)}</span>`).join('')}${p.length>3?`<span>+${p.length-3}</span>`:''}</div>`:'<span class="muted">—</span>';
     };
     tabela.innerHTML='<thead><tr><th>Cliente</th><th>Produto(s)</th><th class="n">Pago no período</th><th class="n">Receita no período</th><th class="n">Em aberto atual</th><th class="n">Receita 12m</th><th>Último pagamento</th></tr></thead><tbody>'+
-      (itens.map(c=>`<tr><td><span class="cli-name">${simEsc(c.cliente)}</span><div class="cli-sub">${c.qtdTitulos} ${c.qtdTitulos===1?'título':'títulos'} no período · ${c.qtdPagos} ${c.qtdPagos===1?'pago':'pagos'}</div></td><td>${prods(c)}</td><td class="n ${c.pago>0?'pos':''}">${brl2(c.pago)}</td><td class="n">${brl2(c.receitaPeriodo)}</td><td class="n ${c.aberto>0?'neg':''}">${brl2(c.aberto)}</td><td class="n">${brl2(c.receita12m)}</td><td>${dtbr(c.ultimoPagamento)}</td></tr>`).join('')||`<tr><td colspan="7" class="muted">${j.cliente?`Nenhum título para ${simEsc(j.cliente)} no período.`:'Nenhum cliente com movimento no período.'}</td></tr>`)+
+      (itens.map(c=>`<tr><td><span class="cli-name" title="${simEsc(c.cliente)}">${simEsc(c.cliente)}</span><div class="cli-sub">${c.qtdTitulos} ${c.qtdTitulos===1?'título':'títulos'} no período · ${c.qtdPagos} ${c.qtdPagos===1?'pago':'pagos'}</div></td><td>${prods(c)}</td><td class="n ${c.pago>0?'pos':''}">${brl2(c.pago)}</td><td class="n">${brl2(c.receitaPeriodo)}</td><td class="n ${c.aberto>0?'neg':''}">${brl2(c.aberto)}</td><td class="n">${brl2(c.receita12m)}</td><td>${dtbr(c.ultimoPagamento)}</td></tr>`).join('')||`<tr><td colspan="7" class="muted">${j.cliente?`Nenhum título para ${simEsc(j.cliente)} no período.`:'Nenhum cliente com movimento no período.'}</td></tr>`)+
       `</tbody><tfoot><tr class="tot"><td>Total (${itens.length} ${itens.length===1?'cliente':'clientes'})</td><td></td><td class="n">${brl2(t.pago||0)}</td><td class="n">${brl2(t.receitaPeriodo||0)}</td><td class="n">${brl2(t.aberto||0)}</td><td class="n">${brl2(t.receita12m||0)}</td><td></td></tr></tfoot>`;
     const qtdTxt=`${itens.length} ${itens.length===1?'cliente':'clientes'}`;
     const nota=`Período: ${periodoTxt} · ${qtdTxt} · ordenado por ${nomeOrd}${cliTxt}${notaSep}Receita 12m: 12 meses até ${dtbr(j.fim)}.`;
@@ -1481,7 +1580,7 @@ async function importarOrcamento(){
     const r=await fetch('/api/orcamento/importar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:link,ano})});
     const j=await r.json();
     if(!r.ok)throw new Error(j.erro||'Falha ao importar a planilha.');
-    st.textContent=`Orçamento ${j.ano} importado: ${j.linhas} linhas, cenário ${j.cenario}.`;
+    st.textContent=`Orçamento ${j.ano} importado: ${j.linhas} linhas · abas ${(j.abas||[]).join(', ')}${j.realizado?' · realizado incluído':' · sem realizado lançado'}.`;
     document.getElementById('orcImportBox').style.display='none';
     orcD=null;
     await carregarOrcamento();
@@ -1492,7 +1591,7 @@ async function carregarOrcamento(){
   if(orcLoading)return;
   orcLoading=true;
   const kpis=document.getElementById('kpisOrcamento');
-  kpis.innerHTML=kpi('Carregando','…','Buscando o plano e o realizado');
+  kpis.innerHTML=kpi('Carregando','…','Buscando o plano por área e linha');
   try{
     const r=await fetch('/api/orcamento');
     const j=await r.json();
@@ -1505,125 +1604,127 @@ async function carregarOrcamento(){
       document.getElementById('pageTitle').textContent='Orçamento '+j.ano;
     }
     const imp=j.importadoEm?new Date(j.importadoEm).toLocaleDateString('pt-BR'):'';
-    document.getElementById('orcNota').textContent=`Cenário ${j.cenario} · ${j.origem}${imp?' · importado em '+imp:''}`;
+    document.getElementById('orcNota').textContent=`${j.cenario||'Plano base'} · ${j.origem||'Google Sheets'}${imp?' · importado em '+imp:''}`;
+    const sel=document.getElementById('orcMesSel');
+    const hoje=new Date().toISOString().slice(0,7);
+    const atual=(j.meses||[]).findIndex(m=>m===hoje);
+    if(sel)sel.innerHTML=(j.meses||[]).map((m,i)=>`<option value="${i}">${nomeMes(m)}</option>`).join('');
+    if(sel)sel.value=String(atual>=0?atual:0);
     renderOrcamento();
   }catch(e){
     kpis.innerHTML='';
-    document.getElementById('tOrcamentoMensal').innerHTML=`<tr><td class="muted">Erro ao carregar orçamento: ${simEsc(e.message)}</td></tr>`;
-    document.getElementById('tOrcamentoResumo').innerHTML='';
-    document.getElementById('tOrcamentoLinhas').innerHTML='';
+    document.getElementById('tOrcamentoLinhas').innerHTML=`<tr><td class="muted">Erro ao carregar orçamento: ${simEsc(e.message)}</td></tr>`;
     document.getElementById('orcNota').textContent='Não foi possível carregar o orçamento.';
+    document.getElementById('orcPeriodoNota').textContent='';
+    document.getElementById('orcPremissasCard').style.display='none';
     charts.orc&&charts.orc.destroy();
   }finally{orcLoading=false}
 }
 
 function renderOrcamento(){
   if(!orcD)return;
-  const regime=document.getElementById('orcRegime').value||'competencia';
-  const plano=orcD.resumo||[],real=orcD[regime]||[];
-  const hoje=new Date().toISOString().slice(0,7),anoAtual=Number(hoje.slice(0,4));
-  const elegivel=i=>orcD.ano<anoAtual||(orcD.ano===anoAtual&&plano[i].mes<=hoje);
-  const somaPlan=(campo,ate=plano.length)=>plano.slice(0,ate).reduce((a,x)=>a+Number(x[campo]||0),0);
-  const somaReal=(campo,ate=real.length)=>real.slice(0,ate).reduce((a,x)=>a+Number(x[campo]||0),0);
-  const mesesElegiveis=plano.map((x,i)=>elegivel(i)?i:-1).filter(i=>i>=0);
-  const ate=mesesElegiveis.length?mesesElegiveis[mesesElegiveis.length-1]+1:0;
-  const pRec=somaPlan('receita'),pDesp=somaPlan('despesa'),pEb=somaPlan('ebitda');
-  const rRec=somaReal('receita',ate),rDesp=somaReal('despesa',ate),rEb=rRec-rDesp;
-  const planRecYtd=somaPlan('receita',ate),planDespYtd=somaPlan('despesa',ate);
-  const adrRec=planRecYtd?rRec/planRecYtd:null,adrDesp=planDespYtd?rDesp/planDespYtd:null;
-  const aindaNaoComecou=orcD.ano>anoAtual,anoFechado=orcD.ano<anoAtual;
-  const subAno=aindaNaoComecou?`${orcD.ano} ainda não começou`:(anoFechado?`Ano encerrado`:`Realizado até ${nomeMes(hoje)}`);
-  const adrTxt=v=>v===null?'—':pct(v);
-  const adrCls=(v,despesa)=>v===null?'':despesa?(v<=1.005?'pos':'neg'):(v>=0.995?'pos':'neg');
+  const resumo=orcD.resumo||[];
+  if(!resumo.length)return;
+  const escopo=document.getElementById('orcEscopo')?.value||'ano';
+  const sel=document.getElementById('orcMesSel');
+  const wrap=document.getElementById('orcMesWrap');
+  if(wrap)wrap.style.display=escopo==='ano'?'none':'flex';
+  const mesIdx=Math.max(0,Math.min(Number(sel?.value||0),resumo.length-1));
+  const indices=escopo==='ano'?resumo.map((_,i)=>i):escopo==='mes'?[mesIdx]:resumo.slice(0,mesIdx+1).map((_,i)=>i);
+  const soma=campo=>indices.reduce((a,i)=>a+Number(resumo[i]?.[campo]||0),0);
+  const ultimo=resumo[escopo==='ano'?resumo.length-1:mesIdx]||resumo[resumo.length-1];
+  const receita=soma('receita'),receitaLiquida=soma('receitaLiquida'),custos=soma('custos');
+  const despesas=soma('despesasOperacionais'),ebitda=soma('ebitda'),resultado=soma('resultadoMes');
+  const margem=receita?ebitda/receita:0;
+  const periodoTxt=escopo==='ano'?`Ano de ${orcD.ano}`:escopo==='mes'?`Mês de ${nomeMes(resumo[mesIdx].mes)}`:`Acumulado de jan/${String(orcD.ano).slice(-2)} a ${nomeMes(resumo[mesIdx].mes)}`;
+  document.getElementById('orcPeriodoNota').textContent=`${periodoTxt} · ${indices.length} ${indices.length===1?'mês':'meses'} · valores do plano`;
+  document.getElementById('orcChartNota').textContent='Plano mensal · 12 meses';
+  document.getElementById('orcTabelaPeriodo').textContent=periodoTxt;
+  const temReal=!!orcD.realizadoDisponivel;
+  document.getElementById('orcTabelaNota').textContent=temReal
+    ?'Comparação entre orçado e o realizado lançado na planilha.'
+    :'Plano por área e linha. O realizado ainda não foi lançado na planilha.';
+  document.getElementById('orcCatNota').textContent='Despesas e impostos aparecem negativos, como na planilha. Linhas de total aparecem em negrito.';
   document.getElementById('kpisOrcamento').innerHTML=
-    kpi('Plano de receita (ano)',k$(pRec),`${orcD.meses.length} meses previstos`)+
-    kpi('Receita realizada',k$(rRec),subAno)+
-    kpi('Aderência receita',adrTxt(adrRec),aindaNaoComecou?'Sem realizado ainda':`${k$(rRec)} de ${k$(planRecYtd)}`,adrCls(adrRec,false))+
-    kpi('Plano de despesa (ano)',k$(pDesp),'DAS, CSP, operação e demais custos')+
-    kpi('Despesa realizada',k$(rDesp),subAno)+
-    kpi('Aderência despesa',adrTxt(adrDesp),aindaNaoComecou?'Sem realizado ainda':`${k$(rDesp)} de ${k$(planDespYtd)}`,adrCls(adrDesp,true))+
-    kpi('EBITDA previsto (ano)',k$(pEb),'Receita bruta menos despesas do plano',pEb>=0?'pos':'neg')+
-    kpi('EBITDA realizado',k$(rEb),subAno,rEb>=0?'pos':'neg');
-  document.getElementById('orcRegimeNota').textContent=regime==='caixa'?'Caixa: títulos com data de pagamento':'Competência: títulos pela data de emissão';
+    kpi('Receita bruta',brl2(receita),periodoTxt)+
+    kpi('Receita líquida',brl2(receitaLiquida),'Depois de impostos')+
+    kpi('Custos dos serviços',brl2(custos),'Cloud, APIs e custos diretos')+
+    kpi('Despesas operacionais',brl2(despesas),'Diretoria, administrativo, tecnologia, CS e comercial')+
+    kpi('EBITDA',brl2(ebitda),'Margem '+pct(margem),ebitda>=0?'pos':'neg')+
+    kpi('Resultado do período',brl2(resultado),'Depois do rendimento do caixa',resultado>=0?'pos':'neg')+
+    kpi('Caixa final',brl2(ultimo?.caixaFinal||0),escopo==='ano'?`Dez/${String(orcD.ano).slice(-2)} estimado`:'Final do período')+
+    kpi('MRR total',brl2(ultimo?.mrrTotal||0),`${Number(ultimo?.headcount||0)} CLTs previstos`);
 
-  const labels=plano.map(x=>nomeMes(x.mes));
-  const semReal=real.every(x=>!Number(x.receita||0)&&!Number(x.despesa||0));
+  const labels=resumo.map(x=>nomeMes(x.mes));
   charts.orc&&charts.orc.destroy();
   charts.orc=new Chart(document.getElementById('gOrcamento'),{type:'bar',data:{labels,datasets:[
-    {label:'Receita plano',data:plano.map(x=>x.receita),backgroundColor:css('--brand'),borderRadius:4},
-    {label:'Receita realizada',data:real.map(x=>x.receita),backgroundColor:'#9cc7b8',borderRadius:4,hidden:semReal},
-    {label:'Despesa plano',data:plano.map(x=>x.despesa),backgroundColor:css('--sand'),borderRadius:4},
-    {label:'Despesa realizada',data:real.map(x=>x.despesa),backgroundColor:'#e8b4a8',borderRadius:4,hidden:semReal}]},
+    {label:'Receita bruta',data:resumo.map(x=>x.receita),backgroundColor:css('--brand'),borderRadius:4},
+    {label:'Despesa total',data:resumo.map(x=>x.despesa),backgroundColor:css('--sand'),borderRadius:4},
+    {label:'EBITDA',data:resumo.map(x=>x.ebitda),type:'line',borderColor:'#0d4f42',backgroundColor:'#0d4f42',borderWidth:2,tension:.25,pointRadius:2}]},
     options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},scales:{y:{ticks:{callback:x=>k$(x)},grid:{color:'#f0eee6'}},x:{grid:{display:false}}}}});
 
-  const gap=(a,b)=>a-b;
-  document.getElementById('tOrcamentoResumo').innerHTML=
-    '<tr><th>Indicador</th><th class="n">Plano ano</th><th class="n">Realizado</th><th class="n">A realizar</th><th class="n">Aderência</th></tr>'+
-    `<tr><td>Receita</td><td class="n">${k$(pRec)}</td><td class="n">${k$(rRec)}</td><td class="n">${k$(gap(pRec,rRec))}</td><td class="n ${adrCls(adrRec,false)}">${adrTxt(adrRec)}</td></tr>`+
-    `<tr><td>Despesa</td><td class="n">${k$(pDesp)}</td><td class="n">${k$(rDesp)}</td><td class="n">${k$(gap(pDesp,rDesp))}</td><td class="n ${adrCls(adrDesp,true)}">${adrTxt(adrDesp)}</td></tr>`+
-    `<tr class="tot"><td>EBITDA</td><td class="n ${pEb>=0?'pos':'neg'}">${k$(pEb)}</td><td class="n ${rEb>=0?'pos':'neg'}">${k$(rEb)}</td><td class="n">${k$(gap(pEb,rEb))}</td><td class="n">—</td></tr>`;
-
-  document.getElementById('tOrcamentoMensal').innerHTML=
-    '<thead><tr><th>Mês</th><th class="n">Receita plano</th><th class="n">Receita real</th><th class="n">Ader.</th><th class="n">Despesa plano</th><th class="n">Despesa real</th><th class="n">Ader.</th><th class="n">EBITDA plano</th><th class="n">EBITDA real</th></tr></thead><tbody>'+
-    plano.map((p,i)=>{
-      const r=real[i]||{},futuro=!elegivel(i),ar=p.receita?r.receita/p.receita:null,ad=p.despesa?r.despesa/p.despesa:null;
-      const rr=futuro?'—':brl2(r.receita||0),rd=futuro?'—':brl2(r.despesa||0),re=futuro?'—':brl2((r.receita||0)-(r.despesa||0));
-      return `<tr><td>${nomeMes(p.mes)}</td><td class="n">${brl2(p.receita)}</td><td class="n">${rr}</td><td class="n ${futuro?'':adrCls(ar,false)}">${futuro?'—':adrTxt(ar)}</td><td class="n">${brl2(p.despesa)}</td><td class="n">${rd}</td><td class="n ${futuro?'':adrCls(ad,true)}">${futuro?'—':adrTxt(ad)}</td><td class="n ${p.ebitda>=0?'pos':'neg'}">${brl2(p.ebitda)}</td><td class="n ${futuro?'':((r.receita||0)-(r.despesa||0))>=0?'pos':'neg'}">${re}</td></tr>`;
-    }).join('')+
-    `<tr class="tot"><td>Total</td><td class="n">${k$(pRec)}</td><td class="n">${k$(rRec)}</td><td class="n ${adrCls(adrRec,false)}">${adrTxt(adrRec)}</td><td class="n">${k$(pDesp)}</td><td class="n">${k$(rDesp)}</td><td class="n ${adrCls(adrDesp,true)}">${adrTxt(adrDesp)}</td><td class="n ${pEb>=0?'pos':'neg'}">${k$(pEb)}</td><td class="n ${rEb>=0?'pos':'neg'}">${k$(rEb)}</td></tr></tbody>`;
-
-  renderOrcamentoCategorias();
-}
-
-function renderOrcamentoCategorias(){
-  if(!orcD)return;
-  const visao=document.getElementById('orcVisao')?.value||'ano';
-  const wrap=document.getElementById('orcMesWrap');
-  if(wrap)wrap.style.display=visao==='mes'?'flex':'none';
-  const sel=document.getElementById('orcMesSel');
-  if(sel&&sel.options.length!==(orcD.meses||[]).length){
-    sel.innerHTML=(orcD.meses||[]).map((m,i)=>`<option value="${i}">${nomeMes(m)}</option>`).join('');
-  }
-  const receitaBruta=(orcD.linhas||[]).find(l=>/^Receita bruta/i.test(l.nome));
-  const rbTotal=Number(receitaBruta?.total||0)||1;
-  const fmt=(l,v)=>l.percentual?pct(v):brl2(v);
-  const mediaDe=l=>{
-    if(!l.percentual)return Number(l.total||0)/12;
-    const vals=(l.valores||[]).map(Number);
-    return vals.length?vals.reduce((a,v)=>a+v,0)/vals.length:0;
+  const rbEscopo=receita;
+  const linhas=(orcD.linhas||[]).filter(l=>!['caixaFinal','mrrTotal','headcount'].includes(l.tipo));
+  const valorDe=l=>{
+    if(l.percentual){
+      if(l.tipo==='margemEbitda')return rbEscopo?ebitda/rbEscopo:0;
+      return indices.reduce((a,i)=>a+Number(l.valores?.[i]||0),0)/indices.length;
+    }
+    return indices.reduce((a,i)=>a+Number(l.valores?.[i]||0),0);
   };
-  const nota=document.getElementById('orcCatNota');
+  const totalAnoDe=l=>{
+    if(l.percentual){
+      if(l.tipo==='margemEbitda'){
+        const tr=resumo.reduce((a,x)=>a+Number(x.receita||0),0);
+        const te=resumo.reduce((a,x)=>a+Number(x.ebitda||0),0);
+        return tr?te/tr:0;
+      }
+      return Number(l.total||0);
+    }
+    return Number(l.total||0);
+  };
+  const realDe=l=>Array.isArray(l.realizadoValores)?indices.reduce((a,i)=>a+Number(l.realizadoValores[i]||0),0):null;
+  const fmt=l=>{
+    if(l.tipo==='headcount')return v=>Number(v||0).toLocaleString('pt-BR');
+    return l.percentual?(v=>pct(v)):(v=>brl2(v));
+  };
+  const clsTotal=l=>['receitaBruta','receitaLiquida','lucroBruto','despesasOperacionais','ebitda','resultadoMes','totalArea'].includes(l.tipo)?' class="orc-total"':'';
   let html='';
-  if(visao==='mes'){
-    const mes=Number(sel?.value||0);
-    const rbMes=Number(receitaBruta?.valores?.[mes]||0)||1;
-    if(nota)nota.textContent=`Valores previstos para ${nomeMes(orcD.meses[mes])}. A coluna "vs média" mostra o desvio em relação à média mensal do ano.`;
-    html='<thead><tr><th>Categoria</th><th class="n">Valor no mês</th><th class="n">% da receita bruta</th><th class="n">Média/mês</th><th class="n">vs média</th></tr></thead><tbody>';
-    let grupo='';
-    for(const l of orcD.linhas||[]){
-      let prefixo='';
-      if(l.grupo!==grupo){grupo=l.grupo;prefixo=`<tr class="grp"><td colspan="5">${simEsc(l.grupo)}</td></tr>`;}
-      const valor=Number(l.valores?.[mes]||0),media=mediaDe(l);
-      const share=l.percentual?'—':pct(valor/rbMes);
-      const desvio=l.percentual||!media?'—':(valor/media-1);
-      const desvioTxt=desvio==='—'?'—':(desvio>0?'+':'')+pct(desvio);
-      const desvioCls=desvio==='—'?'':desvio>0?'neg':'pos';
-      html+=prefixo+`<tr><td>${simEsc(l.nome)}</td><td class="n">${fmt(l,valor)}</td><td class="n">${share}</td><td class="n">${fmt(l,media)}</td><td class="n ${desvioCls}">${desvioTxt}</td></tr>`;
-    }
-    html+='</tbody>';
-  } else {
-    if(nota)nota.textContent=`Resumo do plano de ${orcD.ano}. A coluna "% da receita bruta" mostra o peso de cada linha sobre a receita bruta do ano.`;
-    html='<thead><tr><th>Categoria</th><th class="n">Total do ano</th><th class="n">Média/mês</th><th class="n">% da receita bruta</th></tr></thead><tbody>';
-    let grupo='';
-    for(const l of orcD.linhas||[]){
-      let prefixo='';
-      if(l.grupo!==grupo){grupo=l.grupo;prefixo=`<tr class="grp"><td colspan="4">${simEsc(l.grupo)}</td></tr>`;}
-      const share=l.percentual?'—':pct(Number(l.total||0)/rbTotal);
-      html+=prefixo+`<tr><td>${simEsc(l.nome)}</td><td class="n"><b>${fmt(l,l.total)}</b></td><td class="n">${fmt(l,mediaDe(l))}</td><td class="n">${share}</td></tr>`;
-    }
-    html+='</tbody>';
+  if(temReal){
+    html='<thead><tr><th>Área / linha</th><th class="n">Orçado</th><th class="n">Realizado</th><th class="n">Variação R$</th><th class="n">Variação %</th><th>Status</th></tr></thead><tbody>';
+  }else{
+    html=`<thead><tr><th>Área / linha</th><th class="n">No período</th><th class="n">% receita bruta</th><th class="n">${escopo==='ano'?'Média/mês':'Total do ano'}</th></tr></thead><tbody>`;
   }
+  let area='';
+  for(const l of linhas){
+    let prefixo='';
+    if(l.area!==area){area=l.area;prefixo=`<tr class="grp"><td colspan="${temReal?6:4}">${simEsc(area)}</td></tr>`;}
+    const v=valorDe(l),f=fmt(l);
+    if(temReal){
+      const hasReal=Array.isArray(l.realizadoValores)&&l.realizadoValores.some(x=>Number(x)!==0);
+      const rv=hasReal?realDe(l):null;
+      const varR=rv===null?null:rv-v;
+      const varP=rv===null||!v?null:varR/Math.abs(v);
+      const status=rv===null?'—':Math.abs(varP||0)<=0.05?'OK':Math.abs(varP||0)<=0.10?'Atenção':'Fora';
+      html+=prefixo+`<tr${clsTotal(l)}><td>${simEsc(l.nome)}</td><td class="n">${f(v)}</td><td class="n">${rv===null?'—':f(rv)}</td><td class="n ${varR===null?'':varR>=0?'pos':'neg'}">${varR===null?'—':f(varR)}</td><td class="n ${varP===null?'':varP>=0?'pos':'neg'}">${varP===null?'—':(varP>0?'+':'')+pct(varP)}</td><td>${status}</td></tr>`;
+    }else{
+      const share=l.percentual||!rbEscopo?'—':(l.tipo==='receitaBruta'?'100%':pct(v/rbEscopo));
+      const outro=escopo==='ano'?v/12:totalAnoDe(l);
+      html+=prefixo+`<tr${clsTotal(l)}><td>${simEsc(l.nome)}</td><td class="n">${f(v)}</td><td class="n">${share}</td><td class="n">${f(outro)}</td></tr>`;
+    }
+  }
+  html+='</tbody>';
   document.getElementById('tOrcamentoLinhas').innerHTML=html;
+
+  const prem=orcD.premissas||[],pessoas=orcD.pessoas||[];
+  const card=document.getElementById('orcPremissasCard');
+  if(!prem.length&&!pessoas.length){card.style.display='none'}
+  else{
+    card.style.display='block';
+    document.getElementById('orcPremissas').innerHTML=
+      `<p class="muted" style="margin:10px 0 0">${pessoas.length?pessoas.length+' pessoas no plano de pessoal. ':''}Premissas usadas para calcular receita, custos e despesas.</p>`+
+      `<div class="orc-prem-grid">${prem.map(p=>`<div class="orc-prem"><span>${simEsc(p.nome)}</span><b>${simEsc(p.valor||'—')}</b></div>`).join('')}</div>`;
+  }
 }
 
 async function carregarDespesas(){
