@@ -839,10 +839,11 @@ function fallbackInsights(d, motivo) {
     modelo: null,
     aviso: motivo ? `Leitura gerada por regras porque a IA não respondeu: ${motivo}` : 'Leitura gerada por regras.',
     resumo: base.resumo || 'Ainda não há dados suficientes para uma leitura estratégica.',
-    focoSemana: acao ? { titulo: acao.titulo, acao: acao.titulo, porque: acao.porque } : { titulo: 'Organizar o caixa da semana', acao: 'Fechar a agenda de caixa e recebíveis.', porque: 'Sem dados suficientes para uma prioridade mais específica.' },
-    insights: (base.insights || []).slice(0, 4).map(i => ({
+    focoSemana: acao ? { titulo: acao.titulo, acao: acao.acao || acao.titulo, porque: acao.porque } : { titulo: 'Organizar o caixa da semana', acao: 'Fechar a agenda de caixa e recebíveis.', porque: 'Sem dados suficientes para uma prioridade mais específica.' },
+    insights: (base.insights || []).slice(0, 3).map(i => ({
       area: i.tema, prioridade: prioridade(i.nivel), titulo: i.titulo,
       diagnostico: i.leitura, implicacao: i.numero, acao: i.acao, impacto: '', prazo: i.comportamento,
+      metrica: i.comportamento || 'Acompanhar a evolução do indicador na reunião semanal.', dono: 'CEO e liderança da área.',
     })),
     cobranca: montarCobrancaFallback(d || {}),
   };
@@ -851,29 +852,29 @@ function fallbackInsights(d, motivo) {
 async function gerarInsightsIA(d) {
   if (!AI_KEY) return fallbackInsights(d, 'COMMANDCODE_API_KEY não configurada');
   const dadosIA = montarContextoIA(d);
-  const system = `Você é o CFO as a Service da StartGi Tecnologia (GovTech/B2B, ~25 pessoas, investida pelo FIP GovTech). Seu cliente é o CEO, Juliano. Hoje é ${new Date().toISOString().slice(0, 10)}.
+  const system = `Você é o CFO de crescimento da StartGi Tecnologia (GovTech/B2B, ~25 pessoas, investida pelo FIP GovTech). Seu cliente é o CEO, Juliano. Hoje é ${new Date().toISOString().slice(0, 10)}.
 
-Gere uma leitura semanal ESTRATÉGICA, não uma repetição de alertas operacionais. Conecte dois ou mais fatos e proponha movimentos de alocação de capital, pricing, contratação, retenção, mix de receita, garantias, eficiência comercial ou gestão de caixa.
+Sua missão é dizer onde colocar energia e capital para a StartGi crescer receita recorrente com margem. Isto não é um painel de alertas nem uma lista de cobrança. Toda leitura deve responder: onde crescer, como crescer, o que parar e qual métrica prova progresso.
 
 Regras:
-- Pense como CFO de uma empresa que precisa crescer sem perder o controle do caixa. Vender é necessário, mas antes avalie retenção, expansão na base, pricing, mix de receita, produtividade comercial, custo de servir, capital de giro e alocação de capital.
-- Use sempre o caixa total (contas Omie + valor aplicado) para falar de fôlego e capacidade de investimento.
-- Não invente números. Use apenas os dados fornecidos.
-- Cada insight deve ter uma tese, o trade-off e uma implicação prática. Evite alerta operacional sem consequência estratégica.
-- Em "acao", escreva de 2 a 4 passos concretos, em ordem, separados por ponto e vírgula. Diga o que fazer, não apenas o que observar.
-- Prefira 3 apostas fortes e distintas a 4 insights genéricos.
-- Não diga "cobre o cliente" nem proponha cobrança óbvia. Em cobranca, entregue engenharia de recebimento: novação com garantia, entrada, cessão de crédito, antecipação, escrow, seguro de crédito, retenção de marcos, quebra de escopo, desconto condicionado à vista, mediação ou proteção contratual.
+- Trate caixa como combustível e restrição de timing, não como tese central. Recebíveis e atraso podem aparecer no máximo em 1 insight e nunca devem ser o foco da semana.
+- Priorize crescimento: expansão na base, pricing, mix de produtos, novos canais, retenção, produtividade comercial e custo de servir. Vender é necessário, mas diga onde, para quem e com qual oferta.
+- Não invente números. Use apenas os dados fornecidos. Use sempre o caixa total (contas Omie + aplicado) quando falar de capacidade de investimento.
+- Gere exatamente 3 apostas fortes, distintas e acionáveis. Cada uma deve ter uma tese, o trade-off e um movimento claro. Nada de "vender mais", "reduzir custos", "melhorar processos" ou diagnóstico sem consequência.
+- Em "acao", escreva 2 ou 3 passos concretos, em ordem, separados por ponto e vírgula.
+- Em "metrica", defina um indicador leading mensurável e uma meta de direção. Em "dono", indique quem lidera (CEO, Comercial, Produto, CS, Financeiro).
+- Em "resumo", escreva 2 frases curtas: a tese da semana e o principal trade-off.
+- Em "focoSemana", resuma o único movimento mais alavancador da semana, com uma ação de crescimento, não de cobrança.
+- Em "cobranca", no máximo 3 estratégias de engenharia de recebimento, como apoio de caixa: novação com garantia, entrada, cessão de crédito, antecipação, escrow, seguro de crédito, retenção de marcos ou proteção contratual.
 - Se rescisões forem relevantes, use rescisoes.total, rescisoes.porMes e rescisoes.itens.
-- Sempre inclua 4 estratégias em cobranca, mesmo que precise ser mais enxuto nos insights.
-- Até 4 insights.
 - Responda SOMENTE com JSON válido, sem markdown e sem cercas de código.
 
 Formato:
 {
-  "resumo": "3 frases curtas com a tese da semana, citando o caixa total e o principal trade-off.",
+  "resumo": "2 frases curtas com a tese e o trade-off da semana.",
   "focoSemana": {"titulo": "...", "acao": "...", "porque": "..."},
   "cobranca": [{"publico": "...", "situacao": "...", "estrategia": "...", "abordagem": "...", "porque": "...", "impacto": "..."}],
-  "insights": [{"area": "Caixa|Receita|Custos|Pessoas|Clientes|Produto|Crescimento", "prioridade": "alta|media|baixa", "titulo": "...", "diagnostico": "...", "implicacao": "...", "acao": "...", "impacto": "...", "prazo": "..."}]
+  "insights": [{"area": "Receita|Crescimento|Clientes|Produto|Pricing|Canais|Custos|Pessoas|Caixa", "prioridade": "alta|media|baixa", "titulo": "...", "diagnostico": "...", "implicacao": "...", "acao": "...", "metrica": "...", "dono": "...", "impacto": "...", "prazo": "..."}]
 }
 
 DADOS: ${JSON.stringify(dadosIA)}`;
@@ -898,14 +899,15 @@ DADOS: ${JSON.stringify(dadosIA)}`;
   const pega = (o, ...chaves) => { for (const k of chaves) { const v = o?.[k]; if (v !== undefined && v !== null && String(v).trim()) return v; } return ''; };
   const lista = v => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
   const normPrio = v => { const p = String(v || '').toLowerCase(); return /alta|high|urgente/.test(p) ? 'alta' : /baixa|low/.test(p) ? 'baixa' : 'media'; };
-  const insights = lista(j.insights).slice(0, 4).map(i => ({
+  const insights = lista(j.insights).slice(0, 3).map(i => ({
     area: limpa(pega(i, 'area', 'tema', 'categoria') || 'Estratégia'), prioridade: normPrio(pega(i, 'prioridade', 'nivel', 'urgencia')),
     titulo: limpa(pega(i, 'titulo', 'título', 'title')), diagnostico: limpa(pega(i, 'diagnostico', 'diagnóstico', 'leitura', 'contexto')),
     implicacao: limpa(pega(i, 'implicacao', 'implicação', 'numero', 'número', 'dado')), acao: limpa(pega(i, 'acao', 'ação', 'action', 'movimento', 'recomendacao', 'recomendação')),
     impacto: limpa(pega(i, 'impacto', 'resultado', 'efeito')), prazo: limpa(pega(i, 'prazo', 'horizonte', 'quando')),
+    metrica: limpa(pega(i, 'metrica', 'métrica', 'kpi', 'indicador', 'meta')), dono: limpa(pega(i, 'dono', 'responsavel', 'responsável', 'owner', 'lider')),
   })).filter(i => i.titulo && i.acao);
   if (!insights.length) throw new Error('a IA não retornou insights utilizáveis: ' + JSON.stringify(j).slice(0, 500));
-  const cobranca = lista(j.cobranca || j.recebimento || j.planoRecebimento || j.collection).slice(0, 4).map(c => {
+  const cobranca = lista(j.cobranca || j.recebimento || j.planoRecebimento || j.collection).slice(0, 3).map(c => {
     const est = limpa(pega(c, 'estrategia', 'estratégia', 'movimento', 'acao', 'ação', 'recomendacao', 'recomendação', 'titulo', 'título'));
     const ab = limpa(pega(c, 'abordagem', 'como', 'plano', 'detalhe', 'execucao', 'execução')) || est;
     return {
