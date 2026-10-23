@@ -489,6 +489,7 @@ async function montarDados() {
       venc: dt(t.data_vencimento),
       pagamento,
       emissao: dt(t.data_emissao) || dt(t.data_previsao) || dt(t.data_registro) || dt(t.data_vencimento),
+      competencia: dt(t.data_emissao) || dt(t.data_registro),
       status,
       categoria: nomeCat[t.codigo_categoria] || t.codigo_categoria || 'Sem categoria',
       parceiro: nomeCli[t.codigo_cliente_fornecedor] || 'Não identificado',
@@ -514,6 +515,7 @@ async function montarDados() {
     valorPago: t.valorPago,
     baixas: (t.baixas || []).map(b => ({ data: iso(b.data), valor: b.valor })),
     emissao: iso(t.emissao),
+    competencia: iso(t.competencia),
     vencimento: iso(t.venc),
     pagamento: iso(t.pagamento),
     diasAtraso: aberto(t) && t.venc < hoje ? Math.max(0, Math.round((hoje - t.venc) / 864e5)) : 0,
@@ -1100,11 +1102,15 @@ app.get('/api/orcamento', async (req, res) => {
     const d = await dados();
     const financeiro = /receita financeira|rendimento|juros|tarifa|aplica[cç][aã]o|resgate|transfer[eê]ncia|aporte|empr[eé]stimo/i;
     const base = (d.lancamentos || []).filter(l => !financeiro.test(String(l.categoria || '')));
+    const hoje = new Date().toISOString().slice(0, 10);
     const soma = (tipo, campo, mes) => base
       .filter(l => l.tipo === tipo && String(l[campo] || '').slice(0, 7) === mes)
       .reduce((a, l) => a + Number(l.valor || 0), 0);
+    const somaComp = (tipo, mes) => base
+      .filter(l => l.tipo === tipo && l.competencia && l.competencia <= hoje && String(l.competencia).slice(0, 7) === mes)
+      .reduce((a, l) => a + Number(l.valor || 0), 0);
     const competencia = orc.meses.map(mes => ({
-      mes, receita: soma('receita', 'emissao', mes), despesa: soma('despesa', 'emissao', mes),
+      mes, receita: somaComp('receita', mes), despesa: somaComp('despesa', mes),
     }));
     const caixa = orc.meses.map(mes => ({
       mes, receita: soma('receita', 'pagamento', mes), despesa: soma('despesa', 'pagamento', mes),
