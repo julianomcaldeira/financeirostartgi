@@ -1,0 +1,492 @@
+{
+  "ano": 2027,
+  "cenario": "Conservador",
+  "origem": "Orcamento_StartGi_2027.xlsx",
+  "importadoEm": "2026-10-23T00:52:48.180709+00:00",
+  "meses": [
+    "2027-01",
+    "2027-02",
+    "2027-03",
+    "2027-04",
+    "2027-05",
+    "2027-06",
+    "2027-07",
+    "2027-08",
+    "2027-09",
+    "2027-10",
+    "2027-11",
+    "2027-12"
+  ],
+  "linhas": [
+    {
+      "grupo": "Receita",
+      "nome": "MRR core (carteira + novos, líquido de churn)",
+      "valores": [
+        223700.0,
+        227344.5,
+        230934.33,
+        234470.32,
+        237953.26,
+        241383.96,
+        244763.2,
+        248091.76,
+        251370.38,
+        254599.82,
+        257780.83,
+        260914.11
+      ],
+      "total": 2913306.48,
+      "percentual": false
+    },
+    {
+      "grupo": "Receita",
+      "nome": "MRR massificado (líquido de churn)",
+      "valores": [
+        2940.0,
+        4322.4,
+        5649.5,
+        6923.52,
+        8146.58,
+        9320.72,
+        10447.89,
+        11529.98,
+        12568.78,
+        13566.03,
+        14523.38,
+        15442.45
+      ],
+      "total": 115381.23,
+      "percentual": false
+    },
+    {
+      "grupo": "Receita",
+      "nome": "Receita de projetos/implantação",
+      "valores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "total": 0.0,
+      "percentual": false
+    },
+    {
+      "grupo": "Receita",
+      "nome": "Receita bruta",
+      "valores": [
+        226640.0,
+        231666.9,
+        236583.84,
+        241393.84,
+        246099.85,
+        250704.68,
+        255211.1,
+        259621.73,
+        263939.16,
+        268165.85,
+        272304.21,
+        276356.56
+      ],
+      "total": 3028687.71,
+      "percentual": false
+    },
+    {
+      "grupo": "Deduções",
+      "nome": "(−) DAS Simples Nacional",
+      "valores": [
+        -37395.6,
+        -38225.04,
+        -39036.33,
+        -39829.98,
+        -40606.47,
+        -41366.27,
+        -42109.83,
+        -42837.59,
+        -43549.96,
+        -44247.37,
+        -44930.19,
+        -45598.83
+      ],
+      "total": -499733.47,
+      "percentual": false
+    },
+    {
+      "grupo": "Deduções",
+      "nome": "(+) Economia Simples híbrido",
+      "valores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "total": 0.0,
+      "percentual": false
+    },
+    {
+      "grupo": "Deduções",
+      "nome": "Receita líquida",
+      "valores": [
+        189244.4,
+        193441.86,
+        197547.5,
+        201563.86,
+        205493.37,
+        209338.41,
+        213101.26,
+        216784.15,
+        220389.2,
+        223918.48,
+        227374.02,
+        230757.73
+      ],
+      "total": 2528954.24,
+      "percentual": false
+    },
+    {
+      "grupo": "Custos",
+      "nome": "(−) CSP",
+      "valores": [
+        -8899.6,
+        -8975.0,
+        -9048.76,
+        -9120.91,
+        -9191.5,
+        -9260.57,
+        -9328.17,
+        -9394.33,
+        -9459.09,
+        -9522.49,
+        -9584.56,
+        -9645.35
+      ],
+      "total": -111430.32,
+      "percentual": false
+    },
+    {
+      "grupo": "Custos",
+      "nome": "Lucro bruto",
+      "valores": [
+        180344.8,
+        184466.86,
+        188498.75,
+        192442.95,
+        196301.87,
+        200077.84,
+        203773.1,
+        207389.82,
+        210930.11,
+        214396.0,
+        217789.45,
+        221112.38
+      ],
+      "total": 2417523.92,
+      "percentual": false
+    },
+    {
+      "grupo": "Custos",
+      "nome": "Margem bruta %",
+      "valores": [
+        0.8,
+        0.8,
+        0.8,
+        0.8,
+        0.8,
+        0.8,
+        0.8,
+        0.8,
+        0.8,
+        0.8,
+        0.8,
+        0.8
+      ],
+      "total": 0.8,
+      "percentual": true
+    },
+    {
+      "grupo": "Despesas",
+      "nome": "(−) Despesas operacionais",
+      "valores": [
+        -209800.0,
+        -209800.0,
+        -218100.0,
+        -224500.0,
+        -237220.0,
+        -237220.0,
+        -242920.0,
+        -242920.0,
+        -242920.0,
+        -242920.0,
+        -242920.0,
+        -242920.0
+      ],
+      "total": -2794160.0,
+      "percentual": false
+    },
+    {
+      "grupo": "Despesas",
+      "nome": "(−) Contingência",
+      "valores": [
+        -6294.0,
+        -6294.0,
+        -6543.0,
+        -6735.0,
+        -7116.6,
+        -7116.6,
+        -7287.6,
+        -7287.6,
+        -7287.6,
+        -7287.6,
+        -7287.6,
+        -7287.6
+      ],
+      "total": -83824.8,
+      "percentual": false
+    },
+    {
+      "grupo": "Despesas",
+      "nome": "(−) Mídia paga massificado",
+      "valores": [
+        -2500.0,
+        -2500.0,
+        -2500.0,
+        -2500.0,
+        -2500.0,
+        -2500.0,
+        -2500.0,
+        -2500.0,
+        -2500.0,
+        -2500.0,
+        -2500.0,
+        -2500.0
+      ],
+      "total": -30000.0,
+      "percentual": false
+    },
+    {
+      "grupo": "Despesas",
+      "nome": "(−) Plano de saúde + PLR (CCT)",
+      "valores": [
+        -2400.0,
+        -2400.0,
+        -2400.0,
+        -2400.0,
+        -2400.0,
+        -2400.0,
+        -2400.0,
+        -2400.0,
+        -2400.0,
+        -2400.0,
+        -2400.0,
+        -2400.0
+      ],
+      "total": -28800.0,
+      "percentual": false
+    },
+    {
+      "grupo": "Resultado",
+      "nome": "EBITDA",
+      "valores": [
+        -40649.2,
+        -36527.14,
+        -41044.25,
+        -43692.05,
+        -52934.73,
+        -49158.76,
+        -51334.5,
+        -47717.78,
+        -44177.49,
+        -40711.6,
+        -37318.15,
+        -33995.22
+      ],
+      "total": -519260.88,
+      "percentual": false
+    },
+    {
+      "grupo": "Resultado",
+      "nome": "Margem EBITDA %",
+      "valores": [
+        -0.18,
+        -0.16,
+        -0.17,
+        -0.18,
+        -0.22,
+        -0.2,
+        -0.2,
+        -0.18,
+        -0.17,
+        -0.15,
+        -0.14,
+        -0.12
+      ],
+      "total": -0.17,
+      "percentual": true
+    },
+    {
+      "grupo": "Financeiro",
+      "nome": "(+/−) Resultado financeiro (rendimento − juros)",
+      "valores": [
+        5625.0,
+        5362.32,
+        5128.58,
+        4859.21,
+        4567.97,
+        4205.22,
+        3868.07,
+        3512.07,
+        3180.53,
+        2873.05,
+        2589.26,
+        2328.79
+      ],
+      "total": 48100.06,
+      "percentual": false
+    },
+    {
+      "grupo": "Resultado",
+      "nome": "Resultado após financeiro",
+      "valores": [
+        -35024.2,
+        -31164.82,
+        -35915.67,
+        -38832.84,
+        -48366.76,
+        -44953.54,
+        -47466.44,
+        -44205.71,
+        -40996.97,
+        -37838.56,
+        -34728.89,
+        -31666.43
+      ],
+      "total": -471160.82,
+      "percentual": false
+    }
+  ],
+  "resumo": [
+    {
+      "mes": "2027-01",
+      "receita": 226640.0,
+      "despesa": 267289.2,
+      "ebitda": -40649.2,
+      "receitaLiquida": 189244.4,
+      "resultadoFinanceiro": 5625.0,
+      "resultadoFinal": -35024.2
+    },
+    {
+      "mes": "2027-02",
+      "receita": 231666.9,
+      "despesa": 268194.04,
+      "ebitda": -36527.14,
+      "receitaLiquida": 193441.86,
+      "resultadoFinanceiro": 5362.32,
+      "resultadoFinal": -31164.82
+    },
+    {
+      "mes": "2027-03",
+      "receita": 236583.84,
+      "despesa": 277628.09,
+      "ebitda": -41044.25,
+      "receitaLiquida": 197547.5,
+      "resultadoFinanceiro": 5128.58,
+      "resultadoFinal": -35915.67
+    },
+    {
+      "mes": "2027-04",
+      "receita": 241393.84,
+      "despesa": 285085.89,
+      "ebitda": -43692.05,
+      "receitaLiquida": 201563.86,
+      "resultadoFinanceiro": 4859.21,
+      "resultadoFinal": -38832.84
+    },
+    {
+      "mes": "2027-05",
+      "receita": 246099.85,
+      "despesa": 299034.58,
+      "ebitda": -52934.73,
+      "receitaLiquida": 205493.37,
+      "resultadoFinanceiro": 4567.97,
+      "resultadoFinal": -48366.76
+    },
+    {
+      "mes": "2027-06",
+      "receita": 250704.68,
+      "despesa": 299863.44,
+      "ebitda": -49158.76,
+      "receitaLiquida": 209338.41,
+      "resultadoFinanceiro": 4205.22,
+      "resultadoFinal": -44953.54
+    },
+    {
+      "mes": "2027-07",
+      "receita": 255211.1,
+      "despesa": 306545.6,
+      "ebitda": -51334.5,
+      "receitaLiquida": 213101.26,
+      "resultadoFinanceiro": 3868.07,
+      "resultadoFinal": -47466.44
+    },
+    {
+      "mes": "2027-08",
+      "receita": 259621.73,
+      "despesa": 307339.51,
+      "ebitda": -47717.78,
+      "receitaLiquida": 216784.15,
+      "resultadoFinanceiro": 3512.07,
+      "resultadoFinal": -44205.71
+    },
+    {
+      "mes": "2027-09",
+      "receita": 263939.16,
+      "despesa": 308116.65,
+      "ebitda": -44177.49,
+      "receitaLiquida": 220389.2,
+      "resultadoFinanceiro": 3180.53,
+      "resultadoFinal": -40996.97
+    },
+    {
+      "mes": "2027-10",
+      "receita": 268165.85,
+      "despesa": 308877.45,
+      "ebitda": -40711.6,
+      "receitaLiquida": 223918.48,
+      "resultadoFinanceiro": 2873.05,
+      "resultadoFinal": -37838.56
+    },
+    {
+      "mes": "2027-11",
+      "receita": 272304.21,
+      "despesa": 309622.36,
+      "ebitda": -37318.15,
+      "receitaLiquida": 227374.02,
+      "resultadoFinanceiro": 2589.26,
+      "resultadoFinal": -34728.89
+    },
+    {
+      "mes": "2027-12",
+      "receita": 276356.56,
+      "despesa": 310351.78,
+      "ebitda": -33995.22,
+      "receitaLiquida": 230757.73,
+      "resultadoFinanceiro": 2328.79,
+      "resultadoFinal": -31666.43
+    }
+  ]
+}

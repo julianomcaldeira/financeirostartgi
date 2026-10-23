@@ -1077,6 +1077,42 @@ function clientesReceita(d, mes, ordem = 'pago_desc') {
   return { mes: ref, ordem, itens, totais, meses };
 }
 
+const ORCAMENTO_DIR = path.join(__dirname, 'data');
+const orcamentoCache = {};
+function lerOrcamento(ano) {
+  const anos = fs.existsSync(ORCAMENTO_DIR)
+    ? fs.readdirSync(ORCAMENTO_DIR).map(x => x.match(/^orcamento-(\d{4})\.json$/)).filter(Boolean).map(m => Number(m[1])).sort()
+    : [];
+  const alvo = Number(ano) || anos[anos.length - 1];
+  if (!alvo) return null;
+  if (orcamentoCache[alvo]) return orcamentoCache[alvo];
+  const arq = path.join(ORCAMENTO_DIR, `orcamento-${alvo}.json`);
+  if (!fs.existsSync(arq)) return null;
+  const dados = JSON.parse(fs.readFileSync(arq, 'utf8'));
+  orcamentoCache[alvo] = dados;
+  return dados;
+}
+
+app.get('/api/orcamento', async (req, res) => {
+  try {
+    const orc = lerOrcamento(req.query.ano);
+    if (!orc) return res.status(404).json({ erro: 'Nenhum orçamento importado.' });
+    const d = await dados();
+    const financeiro = /receita financeira|rendimento|juros|tarifa|aplica[cç][aã]o|resgate|transfer[eê]ncia|aporte|empr[eé]stimo/i;
+    const base = (d.lancamentos || []).filter(l => !financeiro.test(String(l.categoria || '')));
+    const soma = (tipo, campo, mes) => base
+      .filter(l => l.tipo === tipo && String(l[campo] || '').slice(0, 7) === mes)
+      .reduce((a, l) => a + Number(l.valor || 0), 0);
+    const competencia = orc.meses.map(mes => ({
+      mes, receita: soma('receita', 'emissao', mes), despesa: soma('despesa', 'emissao', mes),
+    }));
+    const caixa = orc.meses.map(mes => ({
+      mes, receita: soma('receita', 'pagamento', mes), despesa: soma('despesa', 'pagamento', mes),
+    }));
+    res.json({ ...orc, competencia, caixa, atualizadoEm: new Date().toISOString() });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 app.get('/api/clientes-receita', async (req, res) => {
   if (!OMIE_APP_KEY || !OMIE_APP_SECRET) return res.status(500).json({ erro: 'Configure OMIE_APP_KEY e OMIE_APP_SECRET nas variáveis de ambiente.' });
   try {

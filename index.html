@@ -142,6 +142,8 @@ table.lst td{padding:11px 0;border-bottom:1px solid var(--line);vertical-align:m
 table.lst tr:last-child td{border-bottom:0}
 table.lst .n{text-align:right;font-variant-numeric:tabular-nums}
 table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0;padding-top:13px}
+#tOrcamentoLinhas td:first-child,#tOrcamentoLinhas th:first-child{position:sticky;left:0;background:#fff;z-index:1;box-shadow:1px 0 0 var(--line)}
+#tOrcamentoLinhas tr.grp td{background:#f7f3e7;color:var(--brand);font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--line);position:sticky;left:0}
 .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:5px;margin-right:7px;background:#f0eee8;color:var(--ink2)}
 .badge.rec{background:var(--brand-soft);color:var(--brand)}
 .badge.one{background:#fbf1de;color:var(--warn)}
@@ -335,6 +337,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     <button data-view="insights"><span class="dot"></span>Insights e ações</button>
     <button data-view="simulacao"><span class="dot"></span>Simulação</button>
     <button data-view="receita"><span class="dot"></span>Receita</button>
+    <button data-view="orcamento"><span class="dot"></span>Orçamento 2027</button>
     <button data-view="caixa"><span class="dot"></span>Caixa e competência</button>
     <button data-view="lancamentos"><span class="dot"></span>Lançamentos</button>
     <button data-view="atrasados"><span class="dot"></span>Atrasados<span class="nav-badge" id="badgeAtrasados">0</span></button>
@@ -513,6 +516,45 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     <div class="card" style="margin-top:18px">
       <div class="card-head"><div><p class="eyebrow">Contratos no Omie</p><h2>Carteira recorrente contratada</h2></div></div>
       <div class="kpis" id="kpisContratos" style="margin-bottom:0"></div>
+    </div>
+  </section>
+
+  <!-- ORÇAMENTO -->
+  <section class="view" data-view="orcamento">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">Plano anual</p>
+          <h2>Orçamento <span id="orcAno">2027</span></h2>
+          <p class="muted" style="margin:6px 0 0" id="orcNota">Importe o orçamento para acompanhar o plano mês a mês.</p>
+        </div>
+        <div class="cli-filters">
+          <label>Realizado<select id="orcRegime" onchange="renderOrcamento()">
+            <option value="competencia">Por competência</option>
+            <option value="caixa">Por caixa</option>
+          </select></label>
+          <button class="btn ghost" onclick="carregarOrcamento()">Atualizar</button>
+        </div>
+      </div>
+      <div class="kpis" id="kpisOrcamento"></div>
+      <div class="grid even" style="margin-top:18px">
+        <div class="card" style="box-shadow:none">
+          <div class="card-head"><div><p class="eyebrow">Plano x realizado</p><h3>Aderência mês a mês</h3></div></div>
+          <div class="chart-h"><canvas id="gOrcamento"></canvas></div>
+        </div>
+        <div class="card" style="box-shadow:none">
+          <div class="card-head"><div><p class="eyebrow">Acumulado</p><h3>Plano x realizado no ano</h3></div></div>
+          <table class="lst" id="tOrcamentoResumo"></table>
+        </div>
+      </div>
+      <div class="card" style="margin-top:18px;box-shadow:none">
+        <div class="card-head"><div><p class="eyebrow">Detalhe mensal</p><h3>Receita, despesa e EBITDA</h3></div><span class="muted" id="orcRegimeNota"></span></div>
+        <div class="table-scroll" style="max-height:460px"><table class="lst" id="tOrcamentoMensal" style="min-width:940px"></table></div>
+      </div>
+      <div class="card" style="margin-top:18px;box-shadow:none">
+        <div class="card-head"><div><p class="eyebrow">Plano detalhado</p><h3>Categorias do orçamento</h3></div><span class="muted">Valores mensais previstos · R$</span></div>
+        <div class="table-scroll" style="max-height:580px"><table class="lst" id="tOrcamentoLinhas" style="min-width:1180px"></table></div>
+      </div>
     </div>
   </section>
 
@@ -705,6 +747,7 @@ const TITLES={
   insights:['Insights e ações','Leitura estratégica semanal gerada por IA'],
   simulacao:['Simulação','Simulador de faturamento e receita recorrente até dezembro'],
   receita:['Receita','De onde vem o dinheiro, produto a produto'],
+  orcamento:['Orçamento 2027','Plano anual por categoria, mês a mês, contra o realizado'],
   caixa:['Caixa e competência','O que já passou pelo caixa x o que foi faturado'],
   lancamentos:['Lançamentos','Todas as receitas e despesas do Omie, com filtros e exportação'],
   atrasados:['Atrasados a receber','Todos os títulos vencidos em aberto'],
@@ -712,7 +755,7 @@ const TITLES={
   clientes:['Clientes e custos','Concentração, cobrança e despesas'],
   cfo:['CFO de plantão','Conversa com o seu diretor financeiro']
 };
-let charts={},hist=[],atrasadosCache=[],autoTimer=null,ultimoD=null,simD=null,simEstado=null,simMsgTimer=null,lancPaginaAtual=1,lancTotalPaginas=1,lancBuscaTimerId=null,insightsIAState={data:null,loading:false,erro:null};
+let charts={},hist=[],atrasadosCache=[],autoTimer=null,ultimoD=null,simD=null,simEstado=null,simMsgTimer=null,lancPaginaAtual=1,lancTotalPaginas=1,lancBuscaTimerId=null,insightsIAState={data:null,loading:false,erro:null},orcD=null,orcLoading=false;
 
 function toggleSidebar(force){
   const open=typeof force==='boolean'?force:!document.body.classList.contains('side-open');
@@ -732,6 +775,7 @@ function go(view){
   if(view==='simulacao'&&simD)setTimeout(()=>simRender(),60);
   if(view==='lancamentos')setTimeout(()=>carregarLancamentos(lancPaginaAtual||1),60);
   if(view==='clientes-receita')setTimeout(()=>carregarClientesReceita(),60);
+  if(view==='orcamento')setTimeout(()=>orcD?renderOrcamento():carregarOrcamento(),60);
 }
 
 function openContexto(){document.getElementById('drawerCtx').classList.add('open');document.getElementById('ctx').focus()}
@@ -1284,6 +1328,101 @@ async function carregarClientesReceita(){
     tabela.innerHTML=`<tr><td class="muted">Erro ao carregar clientes: ${simEsc(e.message)}</td></tr>`;
     document.getElementById('cliNota').textContent='';
   }
+}
+
+async function carregarOrcamento(){
+  if(orcLoading)return;
+  orcLoading=true;
+  const kpis=document.getElementById('kpisOrcamento');
+  kpis.innerHTML=kpi('Carregando','…','Buscando o plano e o realizado');
+  try{
+    const r=await fetch('/api/orcamento');
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.erro||'orçamento não encontrado');
+    orcD=j;
+    document.getElementById('orcAno').textContent=j.ano;
+    const nav=document.querySelector('#nav button[data-view="orcamento"]');
+    if(nav)nav.innerHTML='<span class="dot"></span>Orçamento '+j.ano;
+    if(document.querySelector('.view[data-view="orcamento"]').classList.contains('active')){
+      document.getElementById('pageTitle').textContent='Orçamento '+j.ano;
+    }
+    const imp=j.importadoEm?new Date(j.importadoEm).toLocaleDateString('pt-BR'):'';
+    document.getElementById('orcNota').textContent=`Cenário ${j.cenario} · ${j.origem}${imp?' · importado em '+imp:''}`;
+    renderOrcamento();
+  }catch(e){
+    kpis.innerHTML='';
+    document.getElementById('tOrcamentoMensal').innerHTML=`<tr><td class="muted">Erro ao carregar orçamento: ${simEsc(e.message)}</td></tr>`;
+    document.getElementById('tOrcamentoResumo').innerHTML='';
+    document.getElementById('tOrcamentoLinhas').innerHTML='';
+    document.getElementById('orcNota').textContent='Não foi possível carregar o orçamento.';
+    charts.orc&&charts.orc.destroy();
+  }finally{orcLoading=false}
+}
+
+function renderOrcamento(){
+  if(!orcD)return;
+  const regime=document.getElementById('orcRegime').value||'competencia';
+  const plano=orcD.resumo||[],real=orcD[regime]||[];
+  const hoje=new Date().toISOString().slice(0,7),anoAtual=Number(hoje.slice(0,4));
+  const elegivel=i=>orcD.ano<anoAtual||(orcD.ano===anoAtual&&plano[i].mes<=hoje);
+  const somaPlan=(campo,ate=plano.length)=>plano.slice(0,ate).reduce((a,x)=>a+Number(x[campo]||0),0);
+  const somaReal=(campo,ate=real.length)=>real.slice(0,ate).reduce((a,x)=>a+Number(x[campo]||0),0);
+  const mesesElegiveis=plano.map((x,i)=>elegivel(i)?i:-1).filter(i=>i>=0);
+  const ate=mesesElegiveis.length?mesesElegiveis[mesesElegiveis.length-1]+1:0;
+  const pRec=somaPlan('receita'),pDesp=somaPlan('despesa'),pEb=somaPlan('ebitda');
+  const rRec=somaReal('receita',ate),rDesp=somaReal('despesa',ate),rEb=rRec-rDesp;
+  const planRecYtd=somaPlan('receita',ate),planDespYtd=somaPlan('despesa',ate);
+  const adrRec=planRecYtd?rRec/planRecYtd:null,adrDesp=planDespYtd?rDesp/planDespYtd:null;
+  const aindaNaoComecou=orcD.ano>anoAtual,anoFechado=orcD.ano<anoAtual;
+  const subAno=aindaNaoComecou?`${orcD.ano} ainda não começou`:(anoFechado?`Ano encerrado`:`Realizado até ${nomeMes(hoje)}`);
+  const adrTxt=v=>v===null?'—':pct(v);
+  const adrCls=(v,despesa)=>v===null?'':despesa?(v<=1.005?'pos':'neg'):(v>=0.995?'pos':'neg');
+  document.getElementById('kpisOrcamento').innerHTML=
+    kpi('Plano de receita (ano)',k$(pRec),`${orcD.meses.length} meses previstos`)+
+    kpi('Receita realizada',k$(rRec),subAno)+
+    kpi('Aderência receita',adrTxt(adrRec),aindaNaoComecou?'Sem realizado ainda':`${k$(rRec)} de ${k$(planRecYtd)}`,adrCls(adrRec,false))+
+    kpi('Plano de despesa (ano)',k$(pDesp),'DAS, CSP, operação e demais custos')+
+    kpi('Despesa realizada',k$(rDesp),subAno)+
+    kpi('Aderência despesa',adrTxt(adrDesp),aindaNaoComecou?'Sem realizado ainda':`${k$(rDesp)} de ${k$(planDespYtd)}`,adrCls(adrDesp,true))+
+    kpi('EBITDA previsto (ano)',k$(pEb),'Receita bruta menos despesas do plano',pEb>=0?'pos':'neg')+
+    kpi('EBITDA realizado',k$(rEb),subAno,rEb>=0?'pos':'neg');
+  document.getElementById('orcRegimeNota').textContent=regime==='caixa'?'Caixa: títulos com data de pagamento':'Competência: títulos pela data de emissão';
+
+  const labels=plano.map(x=>nomeMes(x.mes));
+  const semReal=real.every(x=>!Number(x.receita||0)&&!Number(x.despesa||0));
+  charts.orc&&charts.orc.destroy();
+  charts.orc=new Chart(document.getElementById('gOrcamento'),{type:'bar',data:{labels,datasets:[
+    {label:'Receita plano',data:plano.map(x=>x.receita),backgroundColor:css('--brand'),borderRadius:4},
+    {label:'Receita realizada',data:real.map(x=>x.receita),backgroundColor:'#9cc7b8',borderRadius:4,hidden:semReal},
+    {label:'Despesa plano',data:plano.map(x=>x.despesa),backgroundColor:css('--sand'),borderRadius:4},
+    {label:'Despesa realizada',data:real.map(x=>x.despesa),backgroundColor:'#e8b4a8',borderRadius:4,hidden:semReal}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},scales:{y:{ticks:{callback:x=>k$(x)},grid:{color:'#f0eee6'}},x:{grid:{display:false}}}}});
+
+  const gap=(a,b)=>a-b;
+  document.getElementById('tOrcamentoResumo').innerHTML=
+    '<tr><th>Indicador</th><th class="n">Plano ano</th><th class="n">Realizado</th><th class="n">A realizar</th><th class="n">Aderência</th></tr>'+
+    `<tr><td>Receita</td><td class="n">${k$(pRec)}</td><td class="n">${k$(rRec)}</td><td class="n">${k$(gap(pRec,rRec))}</td><td class="n ${adrCls(adrRec,false)}">${adrTxt(adrRec)}</td></tr>`+
+    `<tr><td>Despesa</td><td class="n">${k$(pDesp)}</td><td class="n">${k$(rDesp)}</td><td class="n">${k$(gap(pDesp,rDesp))}</td><td class="n ${adrCls(adrDesp,true)}">${adrTxt(adrDesp)}</td></tr>`+
+    `<tr class="tot"><td>EBITDA</td><td class="n ${pEb>=0?'pos':'neg'}">${k$(pEb)}</td><td class="n ${rEb>=0?'pos':'neg'}">${k$(rEb)}</td><td class="n">${k$(gap(pEb,rEb))}</td><td class="n">—</td></tr>`;
+
+  document.getElementById('tOrcamentoMensal').innerHTML=
+    '<thead><tr><th>Mês</th><th class="n">Receita plano</th><th class="n">Receita real</th><th class="n">Ader.</th><th class="n">Despesa plano</th><th class="n">Despesa real</th><th class="n">Ader.</th><th class="n">EBITDA plano</th><th class="n">EBITDA real</th></tr></thead><tbody>'+
+    plano.map((p,i)=>{
+      const r=real[i]||{},futuro=!elegivel(i),ar=p.receita?r.receita/p.receita:null,ad=p.despesa?r.despesa/p.despesa:null;
+      const rr=futuro?'—':brl2(r.receita||0),rd=futuro?'—':brl2(r.despesa||0),re=futuro?'—':brl2((r.receita||0)-(r.despesa||0));
+      return `<tr><td>${nomeMes(p.mes)}</td><td class="n">${brl2(p.receita)}</td><td class="n">${rr}</td><td class="n ${futuro?'':adrCls(ar,false)}">${futuro?'—':adrTxt(ar)}</td><td class="n">${brl2(p.despesa)}</td><td class="n">${rd}</td><td class="n ${futuro?'':adrCls(ad,true)}">${futuro?'—':adrTxt(ad)}</td><td class="n ${p.ebitda>=0?'pos':'neg'}">${brl2(p.ebitda)}</td><td class="n ${futuro?'':((r.receita||0)-(r.despesa||0))>=0?'pos':'neg'}">${re}</td></tr>`;
+    }).join('')+
+    `<tr class="tot"><td>Total</td><td class="n">${k$(pRec)}</td><td class="n">${k$(rRec)}</td><td class="n ${adrCls(adrRec,false)}">${adrTxt(adrRec)}</td><td class="n">${k$(pDesp)}</td><td class="n">${k$(rDesp)}</td><td class="n ${adrCls(adrDesp,true)}">${adrTxt(adrDesp)}</td><td class="n ${pEb>=0?'pos':'neg'}">${k$(pEb)}</td><td class="n ${rEb>=0?'pos':'neg'}">${k$(rEb)}</td></tr></tbody>`;
+
+  let grupoAnterior='';
+  document.getElementById('tOrcamentoLinhas').innerHTML=
+    '<thead><tr><th>Categoria</th>'+orcD.meses.map(m=>`<th class="n">${nomeMes(m)}</th>`).join('')+'<th class="n">Total</th></tr></thead><tbody>'+
+    (orcD.linhas||[]).map(l=>{
+      let prefixo='';
+      if(l.grupo!==grupoAnterior){grupoAnterior=l.grupo;prefixo=`<tr class="grp"><td colspan="${orcD.meses.length+2}">${simEsc(l.grupo)}</td></tr>`;}
+      const cel=l.percentual?v=>pct(v):v=>brl2(v);
+      return prefixo+`<tr><td>${simEsc(l.nome)}</td>${(l.valores||[]).map(v=>`<td class="n">${cel(v)}</td>`).join('')}<td class="n"><b>${cel(l.total)}</b></td></tr>`;
+    }).join('')+'</tbody>';
 }
 
 function renderClientes(d){
