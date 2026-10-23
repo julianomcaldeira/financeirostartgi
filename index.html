@@ -36,6 +36,9 @@ h1,h2,h3,p{margin:0}
 .nav button.active{background:rgba(200,230,160,.14);color:#fff;box-shadow:inset 3px 0 0 var(--lime)}
 .nav .dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.45;flex:0 0 auto}
 .nav button.active .dot{background:var(--lime);opacity:1;box-shadow:0 0 0 4px rgba(200,230,160,.12)}
+.nav button[draggable="true"]{cursor:grab}
+.nav button.dragging{opacity:.45;background:rgba(255,255,255,.12)}
+.nav button.drag-target{box-shadow:inset 0 2px 0 var(--lime)}
 .side-foot{margin-top:auto;border-top:1px solid rgba(255,255,255,.09);padding:18px 8px 0;display:flex;gap:10px;align-items:flex-start}
 .side-foot .live{width:8px;height:8px;border-radius:50%;background:var(--lime);margin-top:5px;box-shadow:0 0 0 4px rgba(200,230,160,.12)}
 .side-foot b{display:block;font-size:12px;font-weight:600}
@@ -346,7 +349,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     <button data-view="clientes-receita"><span class="dot"></span>Receita por cliente</button>
     <button data-view="clientes"><span class="dot"></span>Despesas</button>
     <button data-view="cfo"><span class="dot"></span>CFO de plantão</button>
-    <button onclick="openContexto()"><span class="dot"></span>Contexto</button>
+    <button data-nav="contexto" onclick="navClickContexto()"><span class="dot"></span>Contexto</button>
   </nav>
   <div class="side-foot">
     <div class="live"></div>
@@ -493,14 +496,31 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 
   <!-- RECEITA -->
   <section class="view" data-view="receita">
-    <div class="kpis" id="kpisReceita"></div>
-    <div class="grid even">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">Receita realizada</p>
+          <h2>Receita</h2>
+          <p class="muted" style="margin:6px 0 0">Visão de caixa: recebimentos pela data de pagamento; quando ausente, pelo vencimento.</p>
+        </div>
+        <div class="cli-filters">
+          <label>Período<select id="recPeriodo" onchange="renderReceita(recD)">
+            <option value="12">Últimos 12 meses</option>
+            <option value="6">Últimos 6 meses</option>
+            <option value="3">Últimos 3 meses</option>
+          </select></label>
+          <button class="btn ghost" onclick="carregarReceita()">Atualizar</button>
+        </div>
+      </div>
+      <div class="kpis" id="kpisReceita" style="margin-bottom:0"></div>
+    </div>
+    <div class="grid even" style="margin-top:18px">
       <div class="card">
-        <div class="card-head"><div><p class="eyebrow">Recorrente x pontual</p><h2>Receita mês a mês</h2></div><span class="muted">12 meses · mês atual parcial</span></div>
+        <div class="card-head"><div><p class="eyebrow">Recorrente x pontual</p><h2>Receita mês a mês</h2></div><span class="muted" id="recSerieNota">12 meses · mês atual parcial</span></div>
         <div class="chart-h"><canvas id="gRecorrente"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-head"><div><p class="eyebrow">Produtos e serviços</p><h2>O que mais fatura</h2></div><span class="muted">12 meses</span></div>
+        <div class="card-head"><div><p class="eyebrow">Produtos e serviços</p><h2>O que mais fatura</h2></div><span class="muted" id="recProdNota">12 meses</span></div>
         <div class="chart-h"><canvas id="gProdutos"></canvas></div>
       </div>
     </div>
@@ -818,7 +838,7 @@ const TITLES={
   clientes:['Despesas','Composição, tendência e fornecedores'],
   cfo:['CFO de plantão','Conversa com o seu diretor financeiro']
 };
-let charts={},hist=[],atrasadosCache=[],autoTimer=null,ultimoD=null,simD=null,simEstado=null,simMsgTimer=null,lancPaginaAtual=1,lancTotalPaginas=1,lancBuscaTimerId=null,insightsIAState={data:null,loading:false,erro:null},orcD=null,orcLoading=false,despD=null,despLoading=false;
+let charts={},hist=[],atrasadosCache=[],autoTimer=null,ultimoD=null,simD=null,simEstado=null,simMsgTimer=null,lancPaginaAtual=1,lancTotalPaginas=1,lancBuscaTimerId=null,insightsIAState={data:null,loading:false,erro:null},orcD=null,orcLoading=false,despD=null,despLoading=false,recD=null,recLoading=false;
 
 function toggleSidebar(force){
   const open=typeof force==='boolean'?force:!document.body.classList.contains('side-open');
@@ -838,6 +858,7 @@ function go(view){
   if(view==='simulacao'&&simD)setTimeout(()=>simRender(),60);
   if(view==='lancamentos')setTimeout(()=>carregarLancamentos(lancPaginaAtual||1),60);
   if(view==='clientes-receita')setTimeout(()=>carregarClientesReceita(),60);
+  if(view==='receita')setTimeout(()=>recD?renderReceita(recD):carregarReceita(),60);
   if(view==='clientes')setTimeout(()=>despD?renderDespesas(despD):carregarDespesas(),60);
   if(view==='orcamento')setTimeout(()=>orcD?renderOrcamento():carregarOrcamento(),60);
 }
@@ -902,7 +923,8 @@ async function carregar(force){
   document.getElementById('sideCadencia').textContent=cad>0?(prox?'Auto '+cadTxt(cad)+' · próxima '+prox.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'Auto '+cadTxt(cad)):'Atualização manual';
   document.getElementById('dataP').textContent=dt.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})+(cad>0?` · ${cadTxt(cad)}`:' · atualização manual');
   ultimoD=d;
-  renderVisao(d);renderInsights(d);simPreparar(d);renderReceita(d);renderCaixa(d);renderAtrasados(d);
+  renderVisao(d);renderInsights(d);simPreparar(d);renderCaixa(d);renderAtrasados(d);
+  if(document.querySelector('.view[data-view="receita"]').classList.contains('active'))carregarReceita();
   if(document.querySelector('.view[data-view="clientes"]').classList.contains('active'))carregarDespesas();
   agendarAuto(d);
 }
@@ -1236,21 +1258,31 @@ function renderInsights(d){
 }
 
 function renderReceita(d){
-  const rec=d.recorrente||{}, produtos=d.produtosReceita||[];
+  if(!d)return;
+  const periodo=Number(document.getElementById('recPeriodo')?.value||12);
+  const meses=(d.meses||[]).slice(-periodo);
+  const recTotal=meses.reduce((a,m)=>a+Number(d.recorrentePorMes?.[m]||0),0);
+  const pontual=meses.reduce((a,m)=>a+Number(d.naoRecorrentePorMes?.[m]||0),0);
+  const total=recTotal+pontual;
+  const produtos=(d.produtos||[]).map(p=>{
+    const valor=meses.reduce((a,m)=>a+Number(p.meses?.[m]||0),0);
+    return {...p,valor,participacao:total?valor/total:0,mediaMensal:valor/periodo};
+  }).filter(p=>p.valor>0).sort((a,b)=>b.valor-a.valor);
   const top=produtos[0];
+  document.getElementById('recSerieNota').textContent=periodo+' meses · mês atual parcial';
+  document.getElementById('recProdNota').textContent=periodo+' meses';
   document.getElementById('kpisReceita').innerHTML=
-    kpi('Recorrente em 12 meses',k$(rec.receita12||0),'Categorias de mensalidade recebidas')+
-    kpi('Média recorrente mensal',k$(rec.mensalMedia||0),'Receita recorrente dividida por 12')+
-    kpi('Participação recorrente',pct(rec.participacao||0),'Do total recebido nos últimos 12 meses','', ['Previsível','pos'])+
-    kpi('Receita pontual',k$(rec.naoRecorrente12||0),'Implantação, pesquisa, comissões e outros')+
+    kpi('Recorrente no período',k$(recTotal),'Categorias de mensalidade recebidas')+
+    kpi('Média recorrente mensal',k$(recTotal/periodo),'Receita recorrente dividida por '+periodo+' meses')+
+    kpi('Participação recorrente',pct(total?recTotal/total:0),'Do total recebido no período','', ['Previsível','pos'])+
+    kpi('Receita pontual',k$(pontual),'Implantação, pesquisa, comissões e outros')+
     kpi('Produtos com receita',String(produtos.length),'Categorias de receita no Omie')+
     kpi('Maior produto',top?k$(top.valor):'—',top?top.nome+' · '+pct(top.participacao):'Sem dados no período');
 
-  const serie=rec.serie||[];
   charts.rec&&charts.rec.destroy();
-  charts.rec=new Chart(document.getElementById('gRecorrente'),{type:'bar',data:{labels:serie.map(x=>nomeMes(x.mes)),datasets:[
-    {label:'Recorrente',data:serie.map(x=>x.recorrente),backgroundColor:css('--brand'),borderRadius:4,stack:'r'},
-    {label:'Pontual',data:serie.map(x=>x.naoRecorrente),backgroundColor:css('--sand'),borderRadius:4,stack:'r'}]},
+  charts.rec=new Chart(document.getElementById('gRecorrente'),{type:'bar',data:{labels:meses.map(nomeMes),datasets:[
+    {label:'Recorrente',data:meses.map(m=>d.recorrentePorMes?.[m]||0),backgroundColor:css('--brand'),borderRadius:4,stack:'r'},
+    {label:'Pontual',data:meses.map(m=>d.naoRecorrentePorMes?.[m]||0),backgroundColor:css('--sand'),borderRadius:4,stack:'r'}]},
     options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:x=>k$(x)},grid:{color:'#f0eee6'}}}}});
 
   const top8=produtos.slice(0,8);
@@ -1259,14 +1291,13 @@ function renderReceita(d){
     options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>brl(c.raw)}}},scales:{x:{ticks:{callback:x=>k$(x)},grid:{color:'#f0eee6'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}});
 
   charts.mix&&charts.mix.destroy();
-  charts.mix=new Chart(document.getElementById('gMix'),{type:'doughnut',data:{labels:['Recorrente','Pontual'],datasets:[{data:[rec.receita12||0,rec.naoRecorrente12||0],backgroundColor:[css('--brand'),css('--sand')],borderWidth:0}]},options:{cutout:'66%',maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:c=>c.label+': '+brl(c.raw)}}}}});
+  charts.mix=new Chart(document.getElementById('gMix'),{type:'doughnut',data:{labels:['Recorrente','Pontual'],datasets:[{data:[recTotal,pontual],backgroundColor:[css('--brand'),css('--sand')],borderWidth:0}]},options:{cutout:'66%',maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:c=>c.label+': '+brl(c.raw)}}}}});
 
-  const tot=rec.receita12+rec.naoRecorrente12||0;
   document.getElementById('prodCount').textContent=produtos.length+' categorias';
   document.getElementById('tProdutos').innerHTML=
-    '<tr><th>Produto / serviço</th><th class="n">12 meses</th><th class="n">% total</th><th class="n">Média/mês</th></tr>'+
+    '<tr><th>Produto / serviço</th><th class="n">Período</th><th class="n">% total</th><th class="n">Média/mês</th></tr>'+
     (produtos.map(p=>`<tr><td><span class="badge ${p.recorrente?'rec':'one'}">${p.recorrente?'rec':'pontual'}</span>${p.nome}</td><td class="n">${k$(p.valor)}</td><td class="n">${pct(p.participacao)}</td><td class="n">${k$(p.mediaMensal)}</td></tr>`).join('')||'<tr><td class="muted">Sem dados no período.</td></tr>')+
-    (produtos.length?`<tr class="tot"><td>Total</td><td class="n">${k$(tot)}</td><td class="n">100%</td><td class="n">${k$(tot/12)}</td></tr>`:'');
+    (produtos.length?`<tr class="tot"><td>Total</td><td class="n">${k$(total)}</td><td class="n">100%</td><td class="n">${k$(total/periodo)}</td></tr>`:'');
 
   const contratos=d.contratos||{};
   document.getElementById('kpisContratos').innerHTML=
@@ -1274,6 +1305,23 @@ function renderReceita(d){
     kpi('MRR contratado',k$(contratos.mrr||0),'Soma do valor mensal dos contratos ativos')+
     kpi('ARR contratado',k$(contratos.arr||0),'MRR projetado por 12 meses')+
     kpi('Contratos totais',String(contratos.total??'—'),'Ativos e encerrados no Omie');
+}
+
+async function carregarReceita(){
+  if(recLoading)return;
+  recLoading=true;
+  const kpis=document.getElementById('kpisReceita');
+  if(kpis)kpis.innerHTML=kpi('Carregando','…','Analisando as receitas do Omie');
+  try{
+    const r=await fetch('/api/receita');
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.erro||'Não foi possível carregar as receitas.');
+    recD=j;
+    renderReceita(j);
+  }catch(e){
+    if(kpis)kpis.innerHTML=kpi('Erro','—',e.message);
+    document.getElementById('tProdutos').innerHTML=`<tr><td class="muted">${simEsc(e.message)}</td></tr>`;
+  }finally{recLoading=false}
 }
 
 function renderCaixa(d){
@@ -1666,7 +1714,55 @@ async function perguntar(t){
   c.lastChild.className='';c.lastChild.textContent=r.resposta;hist.push({role:'assistant',content:r.resposta});chat.scrollTop=1e9;
 }
 
-document.querySelectorAll('#nav button[data-view]').forEach(b=>b.onclick=()=>go(b.dataset.view));
+const NAV_ORDER_KEY='startgi.ordemMenu';
+let navDrag=null,navSuppressClick=false;
+function navKey(b){return b.dataset.view||b.dataset.nav||''}
+function navClickContexto(){if(navSuppressClick)return;openContexto()}
+function aplicarNavOrdem(){
+  let saved=[];try{saved=JSON.parse(localStorage.getItem(NAV_ORDER_KEY)||'[]')}catch(e){}
+  if(!Array.isArray(saved)||!saved.length)return;
+  const nav=document.getElementById('nav');
+  const map=new Map([...nav.querySelectorAll('button')].map(b=>[navKey(b),b]));
+  saved.forEach(k=>{const b=map.get(k);if(b){nav.appendChild(b);map.delete(k)}});
+  map.forEach(b=>nav.appendChild(b));
+}
+function salvarNavOrdem(){
+  const nav=document.getElementById('nav');
+  const ordem=[...nav.querySelectorAll('button')].map(navKey).filter(Boolean);
+  let anterior=[];try{anterior=JSON.parse(localStorage.getItem(NAV_ORDER_KEY)||'[]')}catch(e){}
+  if(JSON.stringify(ordem)!==JSON.stringify(anterior))localStorage.setItem(NAV_ORDER_KEY,JSON.stringify(ordem));
+}
+function initNavOrdem(){
+  const nav=document.getElementById('nav');
+  nav.querySelectorAll('button').forEach(b=>{
+    b.draggable=true;
+    b.title='Arraste para reordenar';
+    b.addEventListener('dragstart',e=>{
+      navDrag=b;navSuppressClick=true;
+      e.dataTransfer.effectAllowed='move';
+      try{e.dataTransfer.setData('text/plain',navKey(b))}catch(e){}
+      setTimeout(()=>b.classList.add('dragging'),0);
+    });
+    b.addEventListener('dragend',()=>{
+      b.classList.remove('dragging');
+      navDrag=null;salvarNavOrdem();
+      setTimeout(()=>{navSuppressClick=false},150);
+    });
+  });
+  nav.addEventListener('dragover',e=>{
+    if(!navDrag)return;
+    const target=e.target.closest('button');
+    if(!target||target===navDrag)return;
+    e.preventDefault();
+    const r=target.getBoundingClientRect();
+    const antes=e.clientY<r.top+r.height/2;
+    nav.insertBefore(navDrag,antes?target:target.nextSibling);
+  });
+  nav.addEventListener('drop',e=>{if(navDrag){e.preventDefault();salvarNavOrdem()}});
+}
+aplicarNavOrdem();
+initNavOrdem();
+document.querySelectorAll('#nav button[data-view]').forEach(b=>b.onclick=()=>{if(navSuppressClick)return;go(b.dataset.view)});
 carregarContexto();
 carregar();
 </script>

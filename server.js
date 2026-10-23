@@ -1080,6 +1080,42 @@ function clientesReceita(d, mes, ordem = 'pago_desc') {
   return { mes: ref, ordem, itens, totais, meses };
 }
 
+function analiseReceita(d) {
+  const hoje = new Date();
+  const meses = [];
+  for (let i = 23; i >= 0; i--) meses.push(mesKey(new Date(hoje.getFullYear(), hoje.getMonth() - i, 1)));
+  const dentro = new Set(meses);
+  const totalPorMes = Object.fromEntries(meses.map(m => [m, 0]));
+  const recorrentePorMes = Object.fromEntries(meses.map(m => [m, 0]));
+  const naoRecorrentePorMes = Object.fromEntries(meses.map(m => [m, 0]));
+  const produtos = new Map();
+  const valorDe = l => Number(l.valorPago) > 0 ? Number(l.valorPago) : Number(l.valor || 0);
+  for (const l of d.lancamentos || []) {
+    if (l.tipo !== 'receita') continue;
+    if (l.status !== 'RECEBIDO' && l.status !== 'LIQUIDADO' && !(Number(l.valorPago) > 0)) continue;
+    const data = l.pagamento || l.vencimento;
+    if (!data) continue;
+    const mes = String(data).slice(0, 7);
+    if (!dentro.has(mes)) continue;
+    const valor = valorDe(l);
+    const nome = l.categoria || 'Sem categoria';
+    const rec = /mensalidade/i.test(nome);
+    totalPorMes[mes] += valor;
+    if (rec) recorrentePorMes[mes] += valor; else naoRecorrentePorMes[mes] += valor;
+    if (!produtos.has(nome)) produtos.set(nome, { nome, total: 0, qtd: 0, meses: {}, recorrente: rec });
+    const item = produtos.get(nome);
+    item.total += valor; item.qtd++;
+    item.meses[mes] = (item.meses[mes] || 0) + valor;
+  }
+  return {
+    base: 'Data de pagamento; quando ausente, vencimento.',
+    atualizadoEm: d.atualizadoEm,
+    meses, totalPorMes, recorrentePorMes, naoRecorrentePorMes,
+    produtos: [...produtos.values()].sort((a, b) => b.total - a.total),
+    contratos: d.contratos,
+  };
+}
+
 function analiseDespesas(d) {
   const hoje = new Date();
   const meses = [];
@@ -1184,6 +1220,13 @@ app.post('/api/orcamento/importar', async (req, res) => {
     delete orcamentoCache[dados.ano];
     res.json({ ok: true, ano: dados.ano, linhas: dados.linhas.length, cenario: dados.cenario });
   } catch (e) { res.status(400).json({ erro: e.message }); }
+});
+
+app.get('/api/receita', async (req, res) => {
+  try {
+    const d = await dados();
+    res.json(analiseReceita(d));
+  } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
 app.get('/api/despesas', async (req, res) => {
