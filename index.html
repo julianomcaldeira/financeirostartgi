@@ -680,15 +680,19 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
         <div>
           <p class="eyebrow">Carteira de clientes</p>
           <h2>Receita e pagamentos por cliente</h2>
-          <p class="muted" style="margin:6px 0 0">Pago usa a data de pagamento. Receita usa a emissão/competência. Em aberto é o saldo de títulos de receita ainda não quitados.</p>
+          <p class="muted" style="margin:6px 0 0">Pago e receita consideram as datas de pagamento e emissão dentro do período. Em aberto é o saldo atual de títulos ainda não quitados.</p>
         </div>
         <div class="cli-filters">
-          <label>Mês<input type="month" id="cliMes" onchange="carregarClientesReceita()"></label>
+          <label>Cliente<select id="cliCliente" onchange="carregarClientesReceita()">
+            <option value="">Todos os clientes</option>
+          </select></label>
+          <label>Início<input type="date" id="cliInicio" onchange="carregarClientesReceita()"></label>
+          <label>Fim<input type="date" id="cliFim" onchange="carregarClientesReceita()"></label>
           <label>Ordenar<select id="cliOrdem" onchange="carregarClientesReceita()">
-            <option value="pago_desc">Maior pago no mês</option>
-            <option value="pago_asc">Menor pago no mês</option>
-            <option value="receita_desc">Maior receita no mês</option>
-            <option value="receita_asc">Menor receita no mês</option>
+            <option value="pago_desc">Maior pago no período</option>
+            <option value="pago_asc">Menor pago no período</option>
+            <option value="receita_desc">Maior receita no período</option>
+            <option value="receita_asc">Menor receita no período</option>
             <option value="nome_asc">Nome A-Z</option>
             <option value="aberto_desc">Maior em aberto</option>
             <option value="ultimo_desc">Último pagamento</option>
@@ -1408,33 +1412,44 @@ function renderAtrasados(d){
 }
 
 async function carregarClientesReceita(){
-  const mesEl=document.getElementById('cliMes');
-  if(!mesEl.value)mesEl.value=new Date().toISOString().slice(0,7);
-  const mes=mesEl.value,ordem=document.getElementById('cliOrdem').value||'pago_desc';
+  const iniEl=document.getElementById('cliInicio'),fimEl=document.getElementById('cliFim'),cliEl=document.getElementById('cliCliente');
+  const hoje=new Date(),isoLocal=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  if(!iniEl.value)iniEl.value=isoLocal(new Date(hoje.getFullYear(),hoje.getMonth(),1));
+  if(!fimEl.value)fimEl.value=isoLocal(hoje);
+  let inicio=iniEl.value,fim=fimEl.value;
+  if(inicio&&fim&&inicio>fim){[inicio,fim]=[fim,inicio];iniEl.value=inicio;fimEl.value=fim}
+  const clienteAnterior=cliEl.value||'';
+  const ordem=document.getElementById('cliOrdem').value||'pago_desc';
   const tabela=document.getElementById('tClientesMes');
   tabela.innerHTML='<tr><td class="muted">Carregando clientes…</td></tr>';
   try{
-    const r=await fetch(`/api/clientes-receita?mes=${encodeURIComponent(mes)}&ordem=${encodeURIComponent(ordem)}`);
+    const params=new URLSearchParams({inicio,fim,cliente:clienteAnterior,ordem});
+    const r=await fetch('/api/clientes-receita?'+params.toString());
     const j=await r.json();
     if(!r.ok)throw new Error(j.erro||'falha ao consultar');
-    if(j.mes)mesEl.value=j.mes;
+    if(j.inicio)iniEl.value=j.inicio;
+    if(j.fim)fimEl.value=j.fim;
+    const atual=j.cliente||clienteAnterior;
+    cliEl.innerHTML='<option value="">Todos os clientes</option>'+(j.clientes||[]).map(n=>`<option value="${simEsc(n)}">${simEsc(n)}</option>`).join('');
+    cliEl.value=[...cliEl.options].some(o=>o.value===atual)?atual:'';
     const t=j.totais||{},itens=j.itens||[];
     const dtbr=s=>s?s.split('-').reverse().join('/'):'—';
-    const nomeOrd={pago_desc:'maior pago no mês',pago_asc:'menor pago no mês',receita_desc:'maior receita no mês',receita_asc:'menor receita no mês',nome_asc:'nome A-Z',aberto_desc:'maior em aberto',ultimo_desc:'último pagamento',produto_asc:'produto A-Z'}[j.ordem]||j.ordem;
-    const mesTxt=new Date(j.mes+'-01T12:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    const nomeOrd={pago_desc:'maior pago no período',pago_asc:'menor pago no período',receita_desc:'maior receita no período',receita_asc:'menor receita no período',nome_asc:'nome A-Z',aberto_desc:'maior em aberto',ultimo_desc:'último pagamento',produto_asc:'produto A-Z'}[j.ordem]||j.ordem;
+    const periodoTxt=`${dtbr(j.inicio)} a ${dtbr(j.fim)}`;
+    const cliTxt=j.cliente?` · cliente: ${j.cliente}`:'';
     document.getElementById('kpisCliMes').innerHTML=
-      kpi('Pago no mês',brl2(t.pago||0),'Recebimentos com data de pagamento no mês',(t.pago||0)>0?'pos':'')+
-      kpi('Receita no mês',brl2(t.receitaMes||0),'Emitida no mês (competência)')+
-      kpi('Em aberto',brl2(t.aberto||0),'Saldo de títulos ainda em aberto',(t.aberto||0)>0?'neg':'')+
+      kpi('Pago no período',brl2(t.pago||0),`Recebimentos entre ${periodoTxt}`,(t.pago||0)>0?'pos':'')+
+      kpi('Receita no período',brl2(t.receitaPeriodo||0),'Emitida no período (competência)')+
+      kpi('Em aberto atual',brl2(t.aberto||0),'Saldo de títulos ainda em aberto',(t.aberto||0)>0?'neg':'')+
       kpi('Clientes com pagamento',`${t.comPagamento||0} de ${t.clientes||0}`,'Base de clientes com receita');
     const prods=c=>{
       const p=c.produtos||[];
       return p.length?`<div class="cli-prod">${p.slice(0,3).map(x=>`<span title="${simEsc(x)}">${simEsc(x)}</span>`).join('')}${p.length>3?`<span>+${p.length-3}</span>`:''}</div>`:'<span class="muted">—</span>';
     };
-    tabela.innerHTML='<thead><tr><th>Cliente</th><th>Produto(s)</th><th class="n">Pago no mês</th><th class="n">Receita no mês</th><th class="n">Em aberto</th><th class="n">Receita 12m</th><th>Último pagamento</th></tr></thead><tbody>'+
-      (itens.map(c=>`<tr><td><span class="cli-name">${simEsc(c.cliente)}</span><div class="cli-sub">${c.qtdTitulos} ${c.qtdTitulos===1?'título':'títulos'} · ${c.qtdPagos} ${c.qtdPagos===1?'pago':'pagos'} no mês</div></td><td>${prods(c)}</td><td class="n ${c.pago>0?'pos':''}">${brl2(c.pago)}</td><td class="n">${brl2(c.receitaMes)}</td><td class="n ${c.aberto>0?'neg':''}">${brl2(c.aberto)}</td><td class="n">${brl2(c.receita12m)}</td><td>${dtbr(c.ultimoPagamento)}</td></tr>`).join('')||'<tr><td colspan="7" class="muted">Nenhum cliente com receita neste mês.</td></tr>')+
-      `</tbody><tfoot><tr class="tot"><td>Total (${itens.length} clientes)</td><td></td><td class="n">${brl2(t.pago||0)}</td><td class="n">${brl2(t.receitaMes||0)}</td><td class="n">${brl2(t.aberto||0)}</td><td class="n">${brl2(t.receita12m||0)}</td><td></td></tr></tfoot>`;
-    document.getElementById('cliNota').textContent=`Mês de referência: ${mesTxt} · ${itens.length} clientes · ordenado por ${nomeOrd}.`;
+    tabela.innerHTML='<thead><tr><th>Cliente</th><th>Produto(s)</th><th class="n">Pago no período</th><th class="n">Receita no período</th><th class="n">Em aberto atual</th><th class="n">Receita 12m</th><th>Último pagamento</th></tr></thead><tbody>'+
+      (itens.map(c=>`<tr><td><span class="cli-name">${simEsc(c.cliente)}</span><div class="cli-sub">${c.qtdTitulos} ${c.qtdTitulos===1?'título':'títulos'} no período · ${c.qtdPagos} ${c.qtdPagos===1?'pago':'pagos'}</div></td><td>${prods(c)}</td><td class="n ${c.pago>0?'pos':''}">${brl2(c.pago)}</td><td class="n">${brl2(c.receitaPeriodo)}</td><td class="n ${c.aberto>0?'neg':''}">${brl2(c.aberto)}</td><td class="n">${brl2(c.receita12m)}</td><td>${dtbr(c.ultimoPagamento)}</td></tr>`).join('')||`<tr><td colspan="7" class="muted">${j.cliente?`Nenhum título para ${simEsc(j.cliente)} no período.`:'Nenhum cliente com movimento no período.'}</td></tr>`)+
+      `</tbody><tfoot><tr class="tot"><td>Total (${itens.length} clientes)</td><td></td><td class="n">${brl2(t.pago||0)}</td><td class="n">${brl2(t.receitaPeriodo||0)}</td><td class="n">${brl2(t.aberto||0)}</td><td class="n">${brl2(t.receita12m||0)}</td><td></td></tr></tfoot>`;
+    document.getElementById('cliNota').textContent=`Período: ${periodoTxt} · ${itens.length} clientes · ordenado por ${nomeOrd}${cliTxt}. Receita 12m: 12 meses até ${dtbr(j.fim)}.`;
   }catch(e){
     document.getElementById('kpisCliMes').innerHTML='';
     tabela.innerHTML=`<tr><td class="muted">Erro ao carregar clientes: ${simEsc(e.message)}</td></tr>`;

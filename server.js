@@ -1013,14 +1013,21 @@ app.get('/api/lancamentos', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-function clientesReceita(d, mes, ordem = 'pago_desc') {
-  const hoje = new Date().toISOString().slice(0, 7);
-  const ref = /^\d{4}-\d{2}$/.test(mes || '') ? mes : hoje;
-  const [ano, m] = ref.split('-').map(Number);
-  const inicio12 = new Date(Date.UTC(ano, m - 12, 1)).toISOString().slice(0, 10);
-  const fim = `${ref}-31`;
+function clientesReceita(d, opts = {}) {
+  if (typeof opts === 'string') opts = { mes: opts };
+  const hoje = new Date();
+  const isoLocal = dt => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  const isoValida = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')) ? String(s) : '';
+  const padraoInicio = isoLocal(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
+  const padraoFim = isoLocal(hoje);
+  let inicio = isoValida(opts.inicio) || padraoInicio;
+  let fim = isoValida(opts.fim) || padraoFim;
+  if (inicio > fim) [inicio, fim] = [fim, inicio];
+  const clienteFiltro = String(opts.cliente || '').trim().toLowerCase();
+  const ordem = String(opts.ordem || 'pago_desc');
+  const fimDate = new Date(fim + 'T12:00:00');
+  const inicio12 = isoLocal(new Date(fimDate.getFullYear(), fimDate.getMonth() - 11, 1));
   const mapa = new Map();
-  const mesesSet = new Set();
   const ignorarCategoria = /receita financeira|rendimento|juros|aporte|empr[eé]stimo|tarifa|estorno|transfer[eê]ncia/i;
   for (const l of d.lancamentos || []) {
     if (l.tipo !== 'receita') continue;
@@ -1031,7 +1038,7 @@ function clientesReceita(d, mes, ordem = 'pago_desc') {
     const chave = nome.toLowerCase();
     let c = mapa.get(chave);
     if (!c) {
-      c = { cliente: nome, pago: 0, receitaMes: 0, aberto: 0, receita12m: 0, ultimoPagamento: '', qtdTitulos: 0, qtdPagos: 0, produtosMap: new Map() };
+      c = { cliente: nome, pago: 0, receitaPeriodo: 0, aberto: 0, receita12m: 0, ultimoPagamento: '', qtdTitulos: 0, qtdPagos: 0, produtosMap: new Map() };
       mapa.set(chave, c);
     }
     const valor = Number(l.valor || 0);
@@ -1039,45 +1046,49 @@ function clientesReceita(d, mes, ordem = 'pago_desc') {
     const baixas = (l.baixas || []).length
       ? l.baixas
       : (l.pagamento ? [{ data: l.pagamento, valor: Number(l.valorPago || valor) }] : []);
-    const pagamento = String(l.pagamento || (baixas.length ? baixas[baixas.length - 1].data : '') || '');
-    if (pagamento) mesesSet.add(pagamento.slice(0, 7));
-    if (emissao) mesesSet.add(emissao.slice(0, 7));
-    let pagouNoMes = false;
+    let pagouPeriodo = false;
     for (const b of baixas) {
       const data = String(b.data || '');
       if (!data) continue;
-      mesesSet.add(data.slice(0, 7));
-      if (data.slice(0, 7) === ref) { c.pago += Number(b.valor || valor); pagouNoMes = true; }
+      if (data >= inicio && data <= fim) { c.pago += Number(b.valor || valor); pagouPeriodo = true; }
       if (data > c.ultimoPagamento) c.ultimoPagamento = data;
     }
-    if (pagouNoMes) c.qtdPagos++;
-    if (emissao.slice(0, 7) === ref) c.receitaMes += valor;
+    const receitaPeriodo = emissao >= inicio && emissao <= fim;
+    if (pagouPeriodo) c.qtdPagos++;
+    if (receitaPeriodo) c.receitaPeriodo += valor;
     if (!['RECEBIDO', 'PAGO', 'LIQUIDADO'].includes(String(l.status || '').toUpperCase())) c.aberto += Math.max(0, valor - Number(l.valorPago || 0));
     if (emissao >= inicio12 && emissao <= fim) c.receita12m += valor;
-    c.qtdTitulos++;
-    if (cat) c.produtosMap.set(cat, (c.produtosMap.get(cat) || 0) + valor);
+    if (receitaPeriodo || pagouPeriodo) {
+      c.qtdTitulos++;
+      if (cat) c.produtosMap.set(cat, (c.produtosMap.get(cat) || 0) + valor);
+    }
+    c.cliente = c.cliente || nome;
   }
   const cmp = {
-    pago_desc: (a, b) => b.pago - a.pago || b.receitaMes - a.receitaMes || a.cliente.localeCompare(b.cliente, 'pt-BR'),
+    pago_desc: (a, b) => b.pago - a.pago || b.receitaPeriodo - a.receitaPeriodo || a.cliente.localeCompare(b.cliente, 'pt-BR'),
     pago_asc: (a, b) => a.pago - b.pago || a.cliente.localeCompare(b.cliente, 'pt-BR'),
-    receita_desc: (a, b) => b.receitaMes - a.receitaMes || a.cliente.localeCompare(b.cliente, 'pt-BR'),
-    receita_asc: (a, b) => a.receitaMes - b.receitaMes || a.cliente.localeCompare(b.cliente, 'pt-BR'),
+    receita_desc: (a, b) => b.receitaPeriodo - a.receitaPeriodo || a.cliente.localeCompare(b.cliente, 'pt-BR'),
+    receita_asc: (a, b) => a.receitaPeriodo - b.receitaPeriodo || a.cliente.localeCompare(b.cliente, 'pt-BR'),
     nome_asc: (a, b) => a.cliente.localeCompare(b.cliente, 'pt-BR'),
-    aberto_desc: (a, b) => b.aberto - a.aberto || b.receitaMes - a.receitaMes,
+    aberto_desc: (a, b) => b.aberto - a.aberto || b.receitaPeriodo - a.receitaPeriodo,
     ultimo_desc: (a, b) => String(b.ultimoPagamento).localeCompare(String(a.ultimoPagamento)) || b.pago - a.pago,
     produto_asc: (a, b) => String(a.produtos[0] || '').localeCompare(String(b.produtos[0] || ''), 'pt-BR') || a.cliente.localeCompare(b.cliente, 'pt-BR'),
   };
-  const itens = [...mapa.values()].map(c => {
+  const todos = [...mapa.values()].map(c => {
     const produtos = [...c.produtosMap.entries()].sort((a, b) => b[1] - a[1]).map(([nome]) => nome).slice(0, 6);
-    return { cliente: c.cliente, produtos, pago: c.pago, receitaMes: c.receitaMes, aberto: c.aberto, receita12m: c.receita12m, ultimoPagamento: c.ultimoPagamento, qtdTitulos: c.qtdTitulos, qtdPagos: c.qtdPagos };
-  }).sort(cmp[ordem] || cmp.pago_desc);
+    return { cliente: c.cliente, produtos, pago: c.pago, receitaPeriodo: c.receitaPeriodo, aberto: c.aberto, receita12m: c.receita12m, ultimoPagamento: c.ultimoPagamento, qtdTitulos: c.qtdTitulos, qtdPagos: c.qtdPagos };
+  });
+  const clientes = todos.map(c => c.cliente).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  let itens = todos;
+  if (clienteFiltro) itens = itens.filter(c => c.cliente.toLowerCase() === clienteFiltro);
+  else itens = itens.filter(c => c.pago > 0 || c.receitaPeriodo > 0 || c.aberto > 0);
+  itens.sort(cmp[ordem] || cmp.pago_desc);
   const totais = itens.reduce((a, c) => {
-    a.pago += c.pago; a.receitaMes += c.receitaMes; a.aberto += c.aberto; a.receita12m += c.receita12m;
+    a.pago += c.pago; a.receitaPeriodo += c.receitaPeriodo; a.aberto += c.aberto; a.receita12m += c.receita12m;
     if (c.pago > 0) a.comPagamento++; a.clientes++;
     return a;
-  }, { pago: 0, receitaMes: 0, aberto: 0, receita12m: 0, clientes: 0, comPagamento: 0 });
-  const meses = [...mesesSet].sort().reverse().slice(0, 36);
-  return { mes: ref, ordem, itens, totais, meses };
+  }, { pago: 0, receitaPeriodo: 0, aberto: 0, receita12m: 0, clientes: 0, comPagamento: 0 });
+  return { inicio, fim, cliente: opts.cliente || '', ordem, itens, totais, clientes };
 }
 
 function analiseReceita(d) {
@@ -1240,7 +1251,7 @@ app.get('/api/clientes-receita', async (req, res) => {
   if (!OMIE_APP_KEY || !OMIE_APP_SECRET) return res.status(500).json({ erro: 'Configure OMIE_APP_KEY e OMIE_APP_SECRET nas variáveis de ambiente.' });
   try {
     const d = await dados();
-    res.json(clientesReceita(d, req.query.mes, req.query.ordem));
+    res.json(clientesReceita(d, { inicio: req.query.inicio, fim: req.query.fim, cliente: req.query.cliente, ordem: req.query.ordem }));
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
