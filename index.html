@@ -1292,7 +1292,7 @@ function renderInsightsIA(){
   if(primeiro){
     const atraso=Number(ultimoD?.kpis?.atrasadoReceber??ultimoD?.atrasadosResumo?.total??0);
     cash.style.display='grid';
-    cash.innerHTML=`<div><p class="eyebrow">Caixa e recebíveis</p><h3>${simEsc(primeiro.estrategia||'Engenharia de recebimento')}</h3><p>${simEsc(primeiro.situacao||'')}</p><div class="next"><b>Maior alavanca:</b> ${simEsc(primeiro.abordagem||'')}</div></div><div class="ins-cash-side"><span>Em atraso</span><b>${k$(atraso)}</b><span class="go">Ver plano de caixa →</span></div>`;
+    cash.innerHTML=`<div><p class="eyebrow">Caixa e recebíveis</p><h3>${simEsc(primeiro.estrategia||'Plano de caixa e recebíveis')}</h3><p>${simEsc(primeiro.situacao||'')}</p><div class="next"><b>Maior alavanca:</b> ${simEsc(primeiro.abordagem||'')}</div></div><div class="ins-cash-side"><span>Em atraso</span><b>${k$(atraso)}</b><span class="go">Ver plano de caixa →</span></div>`;
   }else{cash.style.display='none'}
   document.getElementById('insRodape').textContent=x.aviso||'Leitura baseada em caixa, receita, despesas, carteira e contratos.';
 }
