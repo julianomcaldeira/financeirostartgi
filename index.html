@@ -395,6 +395,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
       <button class="btn ghost" onclick="openContexto()">Contexto</button>
       <button class="btn ghost" onclick="window.print()">Imprimir</button>
       <button class="btn primary" id="btnAtualizar" onclick="carregar(1)">Atualizar agora</button>
+      <form method="post" action="/logout" style="margin:0"><button class="btn ghost" type="submit">Sair</button></form>
     </div>
   </header>
 
@@ -859,6 +860,9 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 </div>
 
 <script>
+// Se a sessão expirar, qualquer chamada à API leva de volta ao login
+(()=>{const f=window.fetch.bind(window);window.fetch=async(...a)=>{const r=await f(...a);if(r.status===401){const u=String(a[0]&&a[0].url||a[0]);if(u.startsWith('/api/')){location.href='/login';}}return r;};})();
+
 const brl=v=>(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const brl2=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const k$=v=>{const a=Math.abs(v||0),s=v<0?'-':'';return a>=1e6?s+'R$ '+(a/1e6).toFixed(1).replace('.',',')+' mi':a>=1e3?s+'R$ '+Math.round(a/1e3)+' mil':brl(v)};

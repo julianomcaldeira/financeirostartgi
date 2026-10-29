@@ -116,18 +116,124 @@ app.use(express.json());
 app.get('/favicon.svg', (req, res) => res.type('image/svg+xml').sendFile(path.join(__dirname, 'favicon.svg')));
 app.get('/favicon.ico', (req, res) => res.redirect(302, '/favicon.svg'));
 
-// Proteção simples por senha (os dados são sensíveis)
+// ---------- Sessão (login/logout) ----------
+// Cookie assinado com HMAC e sem estado no servidor: continua válido depois de
+// reinícios e novos deploys no Render, enquanto SESSION_SECRET (ou a senha) não mudar.
+const crypto = require('crypto');
+const SESSAO_COOKIE = 'sg_sessao';
+const SESSAO_DIAS = Number(process.env.SESSAO_DIAS || 30);
+const SESSAO_MS = SESSAO_DIAS * 864e5;
+const SESSAO_SECRET = process.env.SESSION_SECRET ||
+  crypto.createHash('sha256').update('startgi-sessao:' + (PAINEL_SENHA || '')).digest('hex');
+
+const b64url = (b) => Buffer.from(b).toString('base64url');
+const assinar = (dados) => crypto.createHmac('sha256', SESSAO_SECRET).update(dados).digest('base64url');
+function igual(a, b) {
+  const x = Buffer.from(String(a)), y = Buffer.from(String(b));
+  return x.length === y.length && crypto.timingSafeEqual(x, y);
+}
+function lerCookies(req) {
+  const out = {};
+  for (const par of (req.headers.cookie || '').split(';')) {
+    const i = par.indexOf('=');
+    if (i > 0) out[par.slice(0, i).trim()] = decodeURIComponent(par.slice(i + 1).trim());
+  }
+  return out;
+}
+function lerSessao(req) {
+  const tok = lerCookies(req)[SESSAO_COOKIE];
+  if (!tok || !tok.includes('.')) return null;
+  const [dados, sig] = tok.split('.');
+  if (!igual(sig, assinar(dados))) return null;
+  try {
+    const s = JSON.parse(Buffer.from(dados, 'base64url').toString());
+    return s.exp > Date.now() ? s : null;
+  } catch { return null; }
+}
+function gravarSessao(req, res) {
+  const dados = b64url(JSON.stringify({ iat: Date.now(), exp: Date.now() + SESSAO_MS }));
+  res.cookie(SESSAO_COOKIE, `${dados}.${assinar(dados)}`, {
+    httpOnly: true, sameSite: 'lax', secure: req.secure, path: '/', maxAge: SESSAO_MS,
+  });
+}
+
+// Limite simples de tentativas de login por IP (10 a cada 15 min)
+const tentativas = new Map();
+function bloqueado(ip) {
+  const t = tentativas.get(ip);
+  if (!t || t.ate < Date.now()) return false;
+  return t.n >= 10;
+}
+function registrarFalha(ip) {
+  const t = tentativas.get(ip);
+  if (!t || t.ate < Date.now()) tentativas.set(ip, { n: 1, ate: Date.now() + 15 * 60e3 });
+  else t.n++;
+}
+
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function paginaLogin(erro = '') {
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Entrar · Painel StartGi</title><link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f3f1ea;font:15px Inter,system-ui,sans-serif;color:#14231f;padding:16px}
+.card{width:100%;max-width:380px;background:#fff;border:1px solid #e5e1d6;border-radius:16px;padding:32px;box-shadow:0 12px 32px rgba(20,35,31,.06)}
+h1{font:600 26px Fraunces,Georgia,serif;margin:0 0 4px;color:#0d4f42}p{margin:0 0 24px;color:#7c8983}
+label{display:block;font-weight:500;margin-bottom:6px;font-size:13px;color:#46564f}
+input{width:100%;padding:11px 12px;border:1px solid #e5e1d6;border-radius:10px;font:inherit}
+input:focus{outline:2px solid #0f6b57;border-color:transparent}
+button{width:100%;margin-top:18px;padding:12px;border:0;border-radius:10px;background:#0d4f42;color:#fff;font:600 15px Inter,sans-serif;cursor:pointer}
+button:hover{background:#0f6b57}.erro{background:#fbe9e4;color:#c14a34;padding:10px 12px;border-radius:10px;margin-bottom:16px;font-size:13px}
+</style></head><body><form class="card" method="post" action="/login">
+<h1>Painel StartGi</h1><p>Entre para ver os dados financeiros.</p>
+${erro ? `<div class="erro">${esc(erro)}</div>` : ''}
+<label for="senha">Senha</label>
+<input id="senha" name="senha" type="password" autocomplete="current-password" required autofocus>
+<button type="submit">Entrar</button></form></body></html>`;
+}
+
+app.use(express.urlencoded({ extended: false }));
+
+app.get('/login', (req, res) => {
+  if (!PAINEL_SENHA || lerSessao(req)) return res.redirect('/');
+  res.set('Cache-Control', 'no-store').type('html').send(paginaLogin());
+});
+app.post('/login', (req, res) => {
+  if (!PAINEL_SENHA) return res.redirect('/');
+  const ip = req.ip;
+  if (bloqueado(ip)) {
+    return res.status(429).type('html').send(paginaLogin('Muitas tentativas. Aguarde 15 minutos.'));
+  }
+  if (!igual(req.body?.senha || '', PAINEL_SENHA)) {
+    registrarFalha(ip);
+    return res.status(401).type('html').send(paginaLogin('Senha incorreta.'));
+  }
+  tentativas.delete(ip);
+  gravarSessao(req, res);
+  res.redirect(303, '/');
+});
+app.post('/logout', (req, res) => {
+  res.clearCookie(SESSAO_COOKIE, { httpOnly: true, sameSite: 'lax', secure: req.secure, path: '/' });
+  res.redirect(303, '/login');
+});
+
+// Tudo abaixo exige sessão válida (os dados são sensíveis)
 app.use((req, res, next) => {
   if (!PAINEL_SENHA) return next();
-  const h = req.headers.authorization || '';
-  const [, b64] = h.split(' ');
-  const senha = b64 ? Buffer.from(b64, 'base64').toString().split(':').slice(1).join(':') : '';
-  if (senha === PAINEL_SENHA) return next();
-  res.set('WWW-Authenticate', 'Basic realm="Painel StartGi"').status(401).send('Acesso restrito');
+  const s = lerSessao(req);
+  if (s) {
+    // Renova sozinho quando passar da metade do prazo: quem usa não é deslogado
+    if (s.exp - Date.now() < SESSAO_MS / 2) gravarSessao(req, res);
+    return next();
+  }
+  if (req.path.startsWith('/api/')) return res.status(401).json({ erro: 'Sessão expirada. Entre novamente.', login: true });
+  res.redirect(302, '/login');
 });
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => {
   const a = path.join(__dirname, 'public', 'index.html'), b = path.join(__dirname, 'index.html');
+  res.set('Cache-Control', 'no-store');
   res.sendFile(fs.existsSync(a) ? a : b);
 });
 
