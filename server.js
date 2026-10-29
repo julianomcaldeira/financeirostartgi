@@ -80,6 +80,36 @@ async function chamarIAOpenAI(system, mensagens, maxTokens = 4096, modelo = INSI
 }
 
 const app = express();
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+
+// Headers de segurança aplicados a todas as respostas
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
+  "script-src-attr 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "img-src 'self' data: blob:",
+  "connect-src 'self'",
+  "frame-ancestors 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+  "upgrade-insecure-requests",
+].join('; ');
+app.use((req, res, next) => {
+  res.set({
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'Content-Security-Policy': CSP,
+    'X-Frame-Options': 'SAMEORIGIN',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+  });
+  next();
+});
+
 app.use(express.json());
 
 // Favicon público (antes da proteção por senha)
