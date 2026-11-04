@@ -168,6 +168,21 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 #tOrcamentoPV tr.tot td{font-weight:700;background:#fcfbf7;border-top:1px solid var(--ink)}
 #tOrcamentoPV .sub{display:block;font-size:9px;color:var(--muted);font-weight:500;letter-spacing:0;text-transform:none}
 
+.orc-chat{display:flex;flex-direction:column;gap:10px;max-height:460px;overflow:auto;margin-bottom:12px;padding-right:4px}
+.orc-chat:empty{display:none}
+.orc-chat .msg{max-width:92%}
+.orc-alt{margin-top:8px;font-size:12px;border-top:1px solid var(--line);padding-top:8px}
+.orc-alt div{display:flex;justify-content:space-between;gap:12px;padding:2px 0}
+.orc-alt .n{white-space:nowrap;font-variant-numeric:tabular-nums}
+.orc-sug{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.orc-sug button{border:1px solid var(--line);background:#fcfbf7;border-radius:999px;padding:7px 12px;font:12.5px Inter;color:var(--ink2);cursor:pointer}
+.orc-sug button:hover{border-color:var(--brand2);color:var(--brand)}
+.orc-inp{display:flex;gap:10px;align-items:stretch}
+.orc-inp textarea{flex:1;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:13.5px Inter;resize:vertical;min-height:64px;color:var(--ink);background:#fff}
+.orc-inp textarea:focus{outline:2px solid var(--brand2);border-color:transparent}
+.orc-status{font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;background:var(--warn-soft);color:var(--warn);white-space:nowrap}
+.orc-status.ok{background:var(--pos-soft);color:var(--pos)}.orc-status.erro{background:var(--neg-soft);color:var(--neg)}
+@media(max-width:560px){.orc-inp{flex-direction:column}}
 .orc-det summary{cursor:pointer;font-weight:700;color:var(--brand);font-size:13px}
 .orc-prem-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
 .orc-prem{background:#fcfbf7;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
@@ -596,25 +611,30 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
             <option value="mes">Mês selecionado</option>
           </select></label>
           <label id="orcMesWrap">Mês<select id="orcMesSel" onchange="renderOrcamento()"></select></label>
-          <button class="btn ghost" onclick="toggleOrcImport()">Importar planilha</button>
+          <label>Versão<select id="orcVersaoSel"></select></label>
+          <button class="btn ghost" onclick="restaurarVersao()">Restaurar</button>
           <button class="btn ghost" onclick="carregarOrcamento()">Atualizar</button>
         </div>
       </div>
-      <div id="orcImportBox" style="display:none;margin:0 0 18px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:#fbfaf6">
-        <p class="eyebrow" style="margin-bottom:10px">Importar do Google Sheets</p>
-        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-          <label style="flex:1;min-width:260px;display:flex;flex-direction:column;gap:5px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Link da planilha
-            <input id="orcLink" type="url" placeholder="https://docs.google.com/spreadsheets/d/..." style="border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:13px Inter;background:#fff;color:var(--ink);min-width:0">
-          </label>
-          <label style="width:100px;display:flex;flex-direction:column;gap:5px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Ano
-            <input id="orcImportAno" type="number" min="2020" max="2100" value="2027" style="border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:13px Inter;background:#fff;color:var(--ink);width:100%">
-          </label>
-          <button class="btn" onclick="importarOrcamento()">Importar</button>
-        </div>
-        <p class="muted" id="orcImportStatus" style="margin:10px 0 0;font-size:12px">A planilha deve estar pública para leitura. O painel lê as abas Orçado, Realizado, Premissas e Pessoas.</p>
-      </div>
       <div class="kpis" id="kpisOrcamento"></div>
       <p class="muted" id="orcPeriodoNota" style="margin-top:10px"></p>
+    </div>
+    <div class="card" style="margin-top:18px" id="orcChatCard">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">Monte com a IA</p>
+          <h2>Converse para montar e ajustar o orçamento</h2>
+          <p class="muted" style="margin:6px 0 0">A IA usa os números do Omie dos últimos 12 meses e as suas premissas. Cada ajuste vira uma nova versão.</p>
+        </div>
+        <span class="orc-status" id="orcStatus">Verificando conexão…</span>
+      </div>
+      <div id="orcChat" class="orc-chat"></div>
+      <div id="orcSug" class="orc-sug"></div>
+      <div class="orc-inp">
+        <textarea id="orcMsg" rows="3" placeholder="Ex.: monte o orçamento 2027. Crescimento de 30% no MRR, 2 devs em março a R$ 12 mil, dissídio de 6% em maio…" onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))enviarOrcChat()"></textarea>
+        <button class="btn primary" id="orcEnviar" onclick="enviarOrcChat()">Enviar</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0;font-size:12px">Cmd/Ctrl + Enter envia. Montar o orçamento inteiro pode levar até 2 minutos.</p>
     </div>
     <div class="card" style="margin-top:18px">
       <div class="card-head"><div><p class="eyebrow">Visão mensal</p><h2>Receita, despesa e EBITDA</h2></div><span class="muted" id="orcChartNota"></span></div>
@@ -907,7 +927,7 @@ function go(view){
   if(view==='clientes-receita')setTimeout(()=>carregarClientesReceita(),60);
   if(view==='receita')setTimeout(()=>recD?renderReceita(recD):carregarReceita(),60);
   if(view==='clientes')setTimeout(()=>despD?renderDespesas(despD):carregarDespesas(),60);
-  if(view==='orcamento')setTimeout(()=>orcD?renderOrcamento():carregarOrcamento(),60);
+  if(view==='orcamento')setTimeout(()=>orcD&&!orcD.vazio?renderOrcamento():carregarOrcamento(),60);
 }
 
 function openContexto(){document.getElementById('drawerCtx').classList.add('open');document.getElementById('ctx').focus()}
@@ -1541,32 +1561,79 @@ async function carregarClientesReceita(){
   }
 }
 
-function toggleOrcImport(){
-  const box=document.getElementById('orcImportBox');
-  const abrir=box.style.display==='none'||!box.style.display;
-  box.style.display=abrir?'block':'none';
-  if(abrir){
-    const ano=document.getElementById('orcImportAno');
-    if(!ano.value)ano.value=orcD?.ano||(new Date().getFullYear()+1);
-    document.getElementById('orcLink').focus();
+let orcHist=[],orcEnviando=false;
+const ORC_SUGESTOES=['Monte o primeiro orçamento a partir do Omie','Quais premissas você precisa de mim?','Mostre onde estão as maiores despesas','Qual o caixa no fim do ano neste plano?'];
+
+function orcMsg(papel,texto,extra=''){
+  const chat=document.getElementById('orcChat');
+  const el=document.createElement('div');
+  el.className='msg '+(papel==='user'?'u':'c');
+  el.innerHTML=(papel==='user'?'':'<span class="who">CFO</span>')+`<span>${simEsc(texto)}</span>`+extra;
+  chat.appendChild(el);chat.scrollTop=1e9;
+  return el;
+}
+function orcAlteracoesHTML(r){
+  const alt=r.alteracoes||[];
+  if(!alt.length)return '';
+  const linha=a=>`<div><span>${simEsc(a.area)} · ${simEsc(a.nome)}${a.nova?' (nova)':a.removida?' (removida)':''}</span><span class="n">${brl(a.antes)} → ${brl(a.depois)}</span></div>`;
+  const resto=(r.totalAlteracoes||alt.length)-alt.length;
+  return `<div class="orc-alt"><b>Versão #${r.versao} salva.</b> Total no ano por linha:${alt.map(linha).join('')}${resto>0?`<div class="muted">e mais ${resto} linhas</div>`:''}</div>`;
+}
+async function iniciarOrcChat(){
+  const sug=document.getElementById('orcSug');
+  if(!sug.childElementCount)ORC_SUGESTOES.forEach(s=>{const b=document.createElement('button');b.textContent=s;b.onclick=()=>{document.getElementById('orcMsg').value=s;enviarOrcChat()};sug.appendChild(b)});
+  const st=document.getElementById('orcStatus');
+  try{
+    const j=await (await fetch('/api/orcamento/status')).json();
+    const b=j.banco||{};
+    if(b.conectado){st.className='orc-status ok';st.textContent='Banco conectado'+(j.ia?'':' · IA sem chave')}
+    else{st.className='orc-status erro';st.textContent=b.configurado?'Erro no banco':'Banco não configurado';st.title=b.erro||''}
+  }catch(e){st.className='orc-status erro';st.textContent='Sem conexão'}
+  if(!orcHist.length){
+    try{
+      const j=await (await fetch('/api/orcamento/conversa?ano='+(orcD?.ano||''))).json();
+      orcHist=(j.conversa||[]).slice(-12);
+      document.getElementById('orcChat').innerHTML='';
+      orcHist.forEach(m=>orcMsg(m.role,m.content));
+    }catch(e){}
+    if(!orcHist.length)orcMsg('assistant','Olá, Juliano. Já tenho os números do Omie dos últimos 12 meses. Me mande as premissas do orçamento, ou peça para eu montar um primeiro rascunho só com base no histórico.');
   }
 }
-
-async function importarOrcamento(){
-  const link=document.getElementById('orcLink').value.trim();
-  const ano=Number(document.getElementById('orcImportAno').value)||undefined;
-  const st=document.getElementById('orcImportStatus');
-  if(!link){st.textContent='Cole o link da planilha do Google Sheets.';st.style.color='var(--neg)';return}
-  st.style.color='';st.textContent='Importando do Google Sheets…';
+async function enviarOrcChat(){
+  if(orcEnviando)return;
+  const inp=document.getElementById('orcMsg');const q=inp.value.trim();if(!q)return;
+  inp.value='';orcEnviando=true;
+  const btn=document.getElementById('orcEnviar');btn.disabled=true;btn.textContent='Pensando…';
+  orcMsg('user',q);
+  const c=orcMsg('assistant','Analisando os números e as premissas…');c.querySelector('span:last-child').className='muted';
   try{
-    const r=await fetch('/api/orcamento/importar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:link,ano})});
+    const r=await fetch('/api/orcamento/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ano:orcD?.ano,mensagem:q,historico:orcHist})});
     const j=await r.json();
-    if(!r.ok)throw new Error(j.erro||'Falha ao importar a planilha.');
-    st.textContent=`Orçamento ${j.ano} importado: ${j.linhas} linhas · abas ${(j.abas||[]).join(', ')}${j.realizado?' · realizado incluído':' · sem realizado lançado'}.`;
-    document.getElementById('orcImportBox').style.display='none';
-    orcD=null;
-    await carregarOrcamento();
-  }catch(e){st.style.color='var(--neg)';st.textContent=e.message}
+    if(!r.ok)throw new Error(j.erro||'Falha ao falar com a IA.');
+    c.remove();orcMsg('assistant',j.resposta,j.alterou?orcAlteracoesHTML(j):'');
+    orcHist.push({role:'user',content:q},{role:'assistant',content:j.resposta});orcHist=orcHist.slice(-12);
+    if(j.alterou){orcD=null;await carregarOrcamento()}
+  }catch(e){c.remove();orcMsg('assistant','Não consegui concluir: '+e.message)}
+  finally{orcEnviando=false;btn.disabled=false;btn.textContent='Enviar'}
+}
+async function carregarVersoes(ano){
+  const sel=document.getElementById('orcVersaoSel');if(!sel)return;
+  try{
+    const j=await (await fetch('/api/orcamento/versoes?ano='+(ano||''))).json();
+    const vs=j.versoes||[];
+    sel.innerHTML=vs.length?vs.map((v,i)=>`<option value="${v.id}">#${v.id} · ${new Date(v.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}${i===0?' (atual)':''}</option>`).join(''):'<option value="">Sem versões</option>';
+    vs.forEach((v,i)=>{sel.options[i].title=v.mensagem||''});
+  }catch(e){sel.innerHTML='<option value="">—</option>'}
+}
+async function restaurarVersao(){
+  const sel=document.getElementById('orcVersaoSel');const id=Number(sel?.value);
+  if(!id||sel.selectedIndex===0)return alert('Escolha uma versão anterior para restaurar.');
+  if(!confirm(`Restaurar a versão #${id}? Ela vira a versão atual (nada é apagado).`))return;
+  const r=await fetch('/api/orcamento/restaurar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+  const j=await r.json();
+  if(!r.ok)return alert(j.erro||'Falha ao restaurar.');
+  orcMsg('assistant',`Versão #${id} restaurada como versão #${j.versao}.`);
+  orcD=null;await carregarOrcamento();
 }
 
 async function carregarOrcamento(){
@@ -1577,6 +1644,19 @@ async function carregarOrcamento(){
   try{
     const r=await fetch('/api/orcamento');
     const j=await r.json();
+    iniciarOrcChat();
+    carregarVersoes(j.ano);
+    if(j.vazio){
+      orcD={ano:j.ano,vazio:true};
+      document.getElementById('orcAno').textContent=j.ano;
+      kpis.innerHTML=kpi('Sem orçamento','—','Use o chat abaixo para a IA montar o primeiro');
+      document.getElementById('orcNota').textContent=j.erro;
+      ['tOrcamentoLinhas','tOrcamentoPV'].forEach(id=>document.getElementById(id).innerHTML='');
+      document.getElementById('orcPeriodoNota').textContent='';
+      document.getElementById('orcPremissasCard').style.display='none';
+      charts.orc&&charts.orc.destroy();
+      return;
+    }
     if(!r.ok)throw new Error(j.erro||'orçamento não encontrado');
     orcD=j;
     document.getElementById('orcAno').textContent=j.ano;
@@ -1585,8 +1665,8 @@ async function carregarOrcamento(){
     if(document.querySelector('.view[data-view="orcamento"]').classList.contains('active')){
       document.getElementById('pageTitle').textContent='Orçamento '+j.ano;
     }
-    const imp=j.importadoEm?new Date(j.importadoEm).toLocaleDateString('pt-BR'):'';
-    document.getElementById('orcNota').textContent=`${j.cenario||'Plano base'} · ${j.origem||'Google Sheets'}${imp?' · importado em '+imp:''}`;
+    const salvo=j.salvoEm?new Date(j.salvoEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+    document.getElementById('orcNota').textContent=`${j.cenario||'Plano base'} · versão #${j.versao}${salvo?' · salva em '+salvo:''} · ${j.origem}`;
     const sel=document.getElementById('orcMesSel');
     const hoje=new Date().toISOString().slice(0,7);
     const atual=(j.meses||[]).findIndex(m=>m===hoje);
@@ -1605,7 +1685,7 @@ async function carregarOrcamento(){
 }
 
 function renderOrcamento(){
-  if(!orcD)return;
+  if(!orcD||orcD.vazio)return;
   const resumo=orcD.resumo||[];
   if(!resumo.length)return;
   const escopo=document.getElementById('orcEscopo')?.value||'ano';
@@ -1625,9 +1705,9 @@ function renderOrcamento(){
   document.getElementById('orcTabelaPeriodo').textContent=periodoTxt;
   const temReal=!!orcD.realizadoDisponivel;
   document.getElementById('orcTabelaNota').textContent=temReal
-    ?'Comparação entre orçado e o realizado lançado na planilha.'
-    :'Plano por área e linha. O realizado ainda não foi lançado na planilha.';
-  document.getElementById('orcCatNota').textContent='Despesas e impostos aparecem negativos, como na planilha. Linhas de total aparecem em negrito.';
+    ?'Comparação entre o orçado e o realizado do Omie.'
+    :'Plano por área e linha montado pela IA. Passe o mouse sobre uma linha para ver de onde veio o número.';
+  document.getElementById('orcCatNota').textContent='Despesas e impostos aparecem negativos. Linhas de total aparecem em negrito.';
   document.getElementById('kpisOrcamento').innerHTML=
     kpi('Receita bruta',brl2(receita),periodoTxt)+
     kpi('Receita líquida',brl2(receitaLiquida),'Depois de impostos')+
@@ -1692,9 +1772,9 @@ function renderOrcamento(){
   document.getElementById('tOrcamentoPV').innerHTML=pv;
   document.getElementById('orcPVFonte').textContent=manualReal?'Realizado: aba Realizado':realTemDados?'Realizado: Omie por competência':'Sem realizado lançado';
   document.getElementById('orcPVNota').textContent=manualReal
-    ?'Comparação mês a mês com o realizado lançado na aba Realizado da planilha.'
+    ?'Comparação mês a mês com o realizado do Omie.'
     :realTemDados?'Comparação mês a mês com os lançamentos do Omie por competência.'
-    :'A estrutura está pronta: quando houver realizado na planilha ou lançamentos no Omie, a comparação aparece mês a mês.';
+    :'Quando houver lançamentos no Omie para os meses do plano, a comparação aparece mês a mês.';
 
   const rbEscopo=receita;
   const linhas=(orcD.linhas||[]).filter(l=>!['caixaFinal','mrrTotal','headcount'].includes(l.tipo));
@@ -1739,11 +1819,11 @@ function renderOrcamento(){
       const varR=rv===null?null:rv-v;
       const varP=rv===null||!v?null:varR/Math.abs(v);
       const status=rv===null?'—':Math.abs(varP||0)<=0.05?'OK':Math.abs(varP||0)<=0.10?'Atenção':'Fora';
-      html+=prefixo+`<tr${clsTotal(l)}><td>${simEsc(l.nome)}</td><td class="n">${f(v)}</td><td class="n">${rv===null?'—':f(rv)}</td><td class="n ${varR===null?'':varR>=0?'pos':'neg'}">${varR===null?'—':f(varR)}</td><td class="n ${varP===null?'':varP>=0?'pos':'neg'}">${varP===null?'—':(varP>0?'+':'')+pct(varP)}</td><td>${status}</td></tr>`;
+      html+=prefixo+`<tr${clsTotal(l)}${l.base?` title="${simEsc(l.base)}"`:""}><td>${simEsc(l.nome)}</td><td class="n">${f(v)}</td><td class="n">${rv===null?'—':f(rv)}</td><td class="n ${varR===null?'':varR>=0?'pos':'neg'}">${varR===null?'—':f(varR)}</td><td class="n ${varP===null?'':varP>=0?'pos':'neg'}">${varP===null?'—':(varP>0?'+':'')+pct(varP)}</td><td>${status}</td></tr>`;
     }else{
       const share=l.percentual||!rbEscopo?'—':(l.tipo==='receitaBruta'?'100%':pct(v/rbEscopo));
       const outro=escopo==='ano'?v/12:totalAnoDe(l);
-      html+=prefixo+`<tr${clsTotal(l)}><td>${simEsc(l.nome)}</td><td class="n">${f(v)}</td><td class="n">${share}</td><td class="n">${f(outro)}</td></tr>`;
+      html+=prefixo+`<tr${clsTotal(l)}${l.base?` title="${simEsc(l.base)}"`:""}><td>${simEsc(l.nome)}</td><td class="n">${f(v)}</td><td class="n">${share}</td><td class="n">${f(outro)}</td></tr>`;
     }
   }
   html+='</tbody>';

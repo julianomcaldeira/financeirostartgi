@@ -2,7 +2,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { googleSheetExportUrl, googleSheetGvizUrl, parseOrcamentoCSV, montarOrcamento } = require('./lib/orcamento');
+const orcIA = require('./lib/orcamento-ia');
 
 const { OMIE_APP_KEY, OMIE_APP_SECRET, PAINEL_SENHA } = process.env;
 const PORT = process.env.PORT || 3000;
@@ -43,12 +43,12 @@ function caixaAplicadoContexto() {
   return v;
 }
 
-async function chamarIA(system, mensagens, maxTokens = 4096, modelo = AI_MODEL) {
+async function chamarIA(system, mensagens, maxTokens = 4096, modelo = AI_MODEL, timeoutMs = 120000) {
   const r = await fetch(`${AI_BASE}/messages`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}`, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({ model: modelo, max_tokens: maxTokens, thinking: { type: 'adaptive' }, output_config: { effort: 'low' }, system, messages: mensagens }),
-    signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(120000) : undefined,
+    signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(timeoutMs) : undefined,
   });
   const bruto = await r.text();
   let j;
@@ -1312,115 +1312,89 @@ function analiseDespesas(d) {
   };
 }
 
-const ORCAMENTO_DIR = path.join(__dirname, 'data');
-const orcamentoCache = {};
-function lerOrcamento(ano) {
-  const anos = fs.existsSync(ORCAMENTO_DIR)
-    ? fs.readdirSync(ORCAMENTO_DIR).map(x => x.match(/^orcamento-(\d{4})\.json$/)).filter(Boolean).map(m => Number(m[1])).sort()
-    : [];
-  const alvo = Number(ano) || anos[anos.length - 1];
-  if (!alvo) return null;
-  if (orcamentoCache[alvo]) return orcamentoCache[alvo];
-  const arq = path.join(ORCAMENTO_DIR, `orcamento-${alvo}.json`);
-  if (!fs.existsSync(arq)) return null;
-  const dados = JSON.parse(fs.readFileSync(arq, 'utf8'));
-  orcamentoCache[alvo] = dados;
-  return dados;
+// ---------- Orçamento (montado pela IA, versões no Supabase) ----------
+const ANO_ORCAMENTO = Number(process.env.ORCAMENTO_ANO) || (new Date().getMonth() >= 8 ? new Date().getFullYear() + 1 : new Date().getFullYear());
+const anoPedido = q => Number(q) || ANO_ORCAMENTO;
+
+// Junta o plano salvo com o realizado do Omie (competência e caixa)
+function comRealizado(orc, d) {
+  const base = (d.lancamentos || []).filter(l => !/receita financeira|rendimento|juros|tarifa|aplica[cç][aã]o|resgate|transfer[eê]ncia|aporte|empr[eé]stimo/i.test(String(l.categoria || '')));
+  const hoje = new Date().toISOString().slice(0, 10);
+  const soma = (tipo, campo, mes) => base
+    .filter(l => l.tipo === tipo && String(l[campo] || '').slice(0, 7) === mes)
+    .reduce((a, l) => a + Number(l.valor || 0), 0);
+  const somaComp = (tipo, mes) => base
+    .filter(l => l.tipo === tipo && l.competencia && l.competencia <= hoje && String(l.competencia).slice(0, 7) === mes)
+    .reduce((a, l) => a + Number(l.valor || 0), 0);
+  return {
+    ...orc,
+    competencia: orc.meses.map(mes => ({ mes, receita: somaComp('receita', mes), despesa: somaComp('despesa', mes) })),
+    caixa: orc.meses.map(mes => ({ mes, receita: soma('receita', 'pagamento', mes), despesa: soma('despesa', 'pagamento', mes) })),
+  };
 }
+
+app.get('/api/orcamento/status', async (req, res) => {
+  res.json({ ano: ANO_ORCAMENTO, ia: Boolean(AI_KEY), banco: await orcIA.statusSupabase() });
+});
 
 app.get('/api/orcamento', async (req, res) => {
   try {
-    const orc = lerOrcamento(req.query.ano);
-    if (!orc) return res.status(404).json({ erro: 'Nenhum orçamento importado.' });
-    const d = await dados();
-    const financeiro = /receita financeira|rendimento|juros|tarifa|aplica[cç][aã]o|resgate|transfer[eê]ncia|aporte|empr[eé]stimo/i;
-    const base = (d.lancamentos || []).filter(l => !financeiro.test(String(l.categoria || '')));
-    const hoje = new Date().toISOString().slice(0, 10);
-    const soma = (tipo, campo, mes) => base
-      .filter(l => l.tipo === tipo && String(l[campo] || '').slice(0, 7) === mes)
-      .reduce((a, l) => a + Number(l.valor || 0), 0);
-    const somaComp = (tipo, mes) => base
-      .filter(l => l.tipo === tipo && l.competencia && l.competencia <= hoje && String(l.competencia).slice(0, 7) === mes)
-      .reduce((a, l) => a + Number(l.valor || 0), 0);
-    const competencia = orc.meses.map(mes => ({
-      mes, receita: somaComp('receita', mes), despesa: somaComp('despesa', mes),
-    }));
-    const caixa = orc.meses.map(mes => ({
-      mes, receita: soma('receita', 'pagamento', mes), despesa: soma('despesa', 'pagamento', mes),
-    }));
-    res.json({ ...orc, competencia, caixa, atualizadoEm: new Date().toISOString() });
+    const ano = anoPedido(req.query.ano);
+    const v = await orcIA.versaoAtual(ano);
+    if (!v) return res.status(404).json({ vazio: true, ano, erro: 'Ainda não existe orçamento para ' + ano + '. Peça no chat para a IA montar o primeiro.' });
+    const d = await dados().catch(() => ({ lancamentos: [] })); // plano aparece mesmo se o Omie falhar
+    const orc = orcIA.calcular(v.dados.plano, ano);
+    res.json({ ...comRealizado(orc, d), versao: v.id, salvoEm: v.criado_em, mensagemVersao: v.mensagem, origem: 'Montado pela IA com base no Omie', atualizadoEm: new Date().toISOString() });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-async function baixarCSVGoogle(url) {
-  const r = await fetch(url, {
-    redirect: 'follow',
-    signal: AbortSignal.timeout(20000),
-    headers: { 'user-agent': 'Mozilla/5.0 (compatible; StartGiPainel/1.0)', accept: 'text/csv,*/*' },
-  });
-  if (!r.ok) throw new Error(`Google Sheets retornou ${r.status}. Verifique o compartilhamento.`);
-  const texto = await r.text();
-  if (/^\s*<(!doctype|html)/i.test(texto)) {
-    throw new Error('A planilha não está pública. Compartilhe como "Qualquer pessoa com o link · Leitor".');
-  }
-  return texto;
-}
+app.get('/api/orcamento/versoes', async (req, res) => {
+  try { res.json({ versoes: await orcIA.listarVersoes(anoPedido(req.query.ano)) }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
 
-async function abasGoogleSheet(link) {
-  const m = String(link || '').match(/docs\.google\.com\/spreadsheets\/d\/([A-Za-z0-9_-]+)/);
-  if (!m) return [];
+app.get('/api/orcamento/conversa', async (req, res) => {
   try {
-    const r = await fetch(`https://docs.google.com/spreadsheets/d/${m[1]}/edit`, {
-      signal: AbortSignal.timeout(20000),
-      headers: { 'user-agent': 'Mozilla/5.0 (compatible; StartGiPainel/1.0)' },
-    });
-    if (!r.ok) return [];
-    const html = await r.text();
-    return [...new Set([...html.matchAll(/docs-sheet-tab-caption">([^<]+)</g)].map(x => x[1]
-      .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')))];
-  } catch (e) { return []; }
-}
+    const v = await orcIA.versaoAtual(anoPedido(req.query.ano));
+    res.json({ conversa: v?.dados?.conversa || [] });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
 
-app.post('/api/orcamento/importar', async (req, res) => {
+app.post('/api/orcamento/restaurar', async (req, res) => {
   try {
-    const link = String(req.body?.url || '').trim();
-    const ano = Number(req.body?.ano) || undefined;
-    if (!link) throw new Error('Informe o link da planilha.');
-    const abas = await abasGoogleSheet(link);
-    const nomes = [...abas, 'Orçado', 'Realizado', 'Premissas', 'Pessoas', 'Controle'];
-    const achar = re => [...new Set(nomes)].find(n => re.test(n));
-    const tentarAba = async re => {
-      const nome = achar(re);
-      if (!nome) return null;
-      try { return { nome, texto: await baixarCSVGoogle(googleSheetGvizUrl(link, nome)) }; } catch (e) { return null; }
-    };
-    const orcado = await tentarAba(/^or[çc]ado/i);
-    let dados;
-    const usadas = [];
-    if (orcado) {
-      const realizado = await tentarAba(/^realizado/i);
-      const premissas = await tentarAba(/^premissas/i);
-      const pessoas = await tentarAba(/^pessoas/i);
-      dados = montarOrcamento({
-        orcado: orcado.texto,
-        realizado: realizado?.texto,
-        premissas: premissas?.texto,
-        pessoas: pessoas?.texto,
-      }, { ano, origem: 'Google Sheets', url: link });
-      usadas.push(orcado.nome);
-      if (realizado) usadas.push(realizado.nome);
-      if (premissas) usadas.push(premissas.nome);
-      if (pessoas) usadas.push(pessoas.nome);
-    } else {
-      const texto = await baixarCSVGoogle(googleSheetExportUrl(link));
-      dados = parseOrcamentoCSV(texto, { ano, origem: 'Google Sheets', url: link });
-      usadas.push('primeira aba');
+    const v = await orcIA.obterVersao(req.body?.id);
+    if (!v) return res.status(404).json({ erro: 'Versão não encontrada.' });
+    const nova = await orcIA.salvarVersao(v.ano, v.dados, `Restaurada a versão #${v.id}`);
+    res.json({ ok: true, versao: nova.id });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+app.post('/api/orcamento/chat', async (req, res) => {
+  if (!AI_KEY) return res.status(503).json({ erro: 'A IA precisa da variável COMMANDCODE_API_KEY no servidor.' });
+  try {
+    const ano = anoPedido(req.body?.ano);
+    const mensagem = String(req.body?.mensagem || '').trim().slice(0, 8000);
+    if (!mensagem) return res.status(400).json({ erro: 'Escreva uma mensagem.' });
+    const [d, atual] = await Promise.all([dados(), orcIA.versaoAtual(ano)]);
+    const planoAtual = atual?.dados?.plano || null;
+    const conversa = (atual?.dados?.conversa || []).slice(-20);
+    const historico = (Array.isArray(req.body?.historico) ? req.body.historico : conversa)
+      .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+      .slice(-12).map(m => ({ role: m.role, content: m.content.slice(0, 4000) }));
+    const system = orcIA.promptSistema({ ano, contexto: contextoEmpresa(), base: orcIA.baseOmie(d), planoAtual });
+    const texto = await chamarIA(system, [...historico, { role: 'user', content: mensagem }], 32000, AI_MODEL, 300000);
+    const j = orcIA.extrairJSON(texto);
+    const resposta = String(j.resposta || 'Pronto.');
+    const novaConversa = [...conversa, { role: 'user', content: mensagem }, { role: 'assistant', content: resposta }].slice(-40);
+    if (!j.alterou || !j.orcamento) {
+      return res.json({ resposta, alterou: false });
     }
-    fs.mkdirSync(ORCAMENTO_DIR, { recursive: true });
-    fs.writeFileSync(path.join(ORCAMENTO_DIR, `orcamento-${dados.ano}.json`), JSON.stringify(dados, null, 2) + '\n');
-    delete orcamentoCache[dados.ano];
-    res.json({ ok: true, ano: dados.ano, linhas: dados.linhas.length, cenario: dados.cenario, abas: usadas, realizado: !!dados.realizadoDisponivel });
-  } catch (e) { res.status(400).json({ erro: e.message }); }
+    const plano = orcIA.normalizarPlano(j.orcamento);
+    if (!plano.linhas.length) throw new Error('A IA devolveu um orçamento sem linhas. Tente de novo.');
+    const alteracoes = orcIA.diferencas(planoAtual, plano);
+    const v = await orcIA.salvarVersao(ano, { plano, conversa: novaConversa }, mensagem);
+    res.json({ resposta, alterou: true, versao: v.id, alteracoes: alteracoes.slice(0, 15), totalAlteracoes: alteracoes.length });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
 app.get('/api/receita', async (req, res) => {
