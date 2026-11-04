@@ -656,7 +656,7 @@ async function montarDados() {
       documento: String(t.numero_documento ?? ''),
       // Rateio por departamento (centro de custo) informado no Omie
       departamentos: (Array.isArray(t.distribuicao) ? t.distribuicao : [])
-        .map(x => ({ nome: nomeDep[String(x.cCodDep)] || x.cDesDep || (x.cCodDep ? `Depto ${x.cCodDep}` : ''), pct: Number(x.nPerDep) || 0, valor: Number(x.nValDep) || 0 }))
+        .map(x => ({ nome: (x.cDesDep && String(x.cDesDep).trim()) || nomeDep[String(x.cCodDep)] || (x.cCodDep ? `Depto ${x.cCodDep}` : ''), cod: String(x.cCodDep ?? ''), descOmie: x.cDesDep || '', nomeLista: nomeDep[String(x.cCodDep)] || '', pct: Number(x.nPerDep) || 0, valor: Number(x.nValDep) || 0 }))
         .filter(x => x.nome),
     };
   };
@@ -865,6 +865,7 @@ async function montarDados() {
 
   const data = {
     atualizadoEm: new Date().toISOString(),
+    departamentosOmie: departamentos.map(x => ({ codigo: x.codigo, descricao: x.descricao, estrutura: x.estrutura, inativo: x.inativo })),
     saldo, saldoOmie, caixaAplicado, saldoDisponivel,
     caixa: { omie: saldoOmie, aplicado: caixaAplicado, total: saldo },
     kpis: {
@@ -1481,6 +1482,21 @@ app.get('/api/colaboradores', async (req, res) => {
     for (const l of d?.lancamentos || []) for (const x of l.departamentos || []) deps.add(x.nome);
     for (const c of r.lista) if (c.departamento !== orcIA.SEM_DEP) deps.add(c.departamento);
     res.json({ ...r, erroOmie, departamentos: [...deps].sort(), atualizadoEm: d?.atualizadoEm });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// Diagnóstico: mostra exatamente o que o Omie manda de departamento nos pagamentos de uma pessoa.
+app.get('/api/colaboradores/diagnostico', async (req, res) => {
+  try {
+    const d = await dados();
+    const q = String(req.query.nome || '').trim().toLowerCase();
+    if (!q) return res.status(400).json({ erro: 'Informe ?nome=' });
+    const itens = (d.lancamentos || [])
+      .filter(l => l.tipo === 'despesa' && `${l.parceiro} ${l.descricao}`.toLowerCase().includes(q))
+      .sort((a, b) => String(b.pagamento || b.vencimento).localeCompare(String(a.pagamento || a.vencimento)))
+      .slice(0, 40)
+      .map(l => ({ data: l.pagamento || l.vencimento, parceiro: l.parceiro, categoria: l.categoria, valor: l.valorPago || l.valor, descricao: l.descricao, departamentos: l.departamentos }));
+    res.json({ busca: q, quantidade: itens.length, departamentosCadastradosNoOmie: d.departamentosOmie || null, itens });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
