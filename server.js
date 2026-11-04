@@ -3,6 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const orcIA = require('./lib/orcamento-ia');
+const colab = require('./lib/colaboradores');
 
 const { OMIE_APP_KEY, OMIE_APP_SECRET, PAINEL_SENHA } = process.env;
 const PORT = process.env.PORT || 3000;
@@ -1469,6 +1470,23 @@ app.get('/api/despesas', async (req, res) => {
     const d = await dados();
     res.json(analiseDespesas(d));
   } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+app.get('/api/colaboradores', async (req, res) => {
+  try {
+    let d = null, erroOmie = null;
+    try { d = await dados(); } catch (e) { erroOmie = e.message; }
+    const r = await colab.listar(d);
+    const deps = new Set();
+    for (const l of d?.lancamentos || []) for (const x of l.departamentos || []) deps.add(x.nome);
+    for (const c of r.lista) if (c.departamento !== orcIA.SEM_DEP) deps.add(c.departamento);
+    res.json({ ...r, erroOmie, departamentos: [...deps].sort(), atualizadoEm: d?.atualizadoEm });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+app.post('/api/colaboradores', async (req, res) => {
+  try { res.json({ ok: true, colaborador: await colab.salvarCadastro(req.body || {}) }); }
+  catch (e) { res.status(400).json({ erro: e.message }); }
 });
 
 app.get('/api/clientes-receita', async (req, res) => {

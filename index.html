@@ -390,6 +390,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     <button data-view="atrasados"><span class="dot"></span>Atrasados<span class="nav-badge" id="badgeAtrasados">0</span></button>
     <button data-view="clientes-receita"><span class="dot"></span>Receita por cliente</button>
     <button data-view="clientes"><span class="dot"></span>Despesas</button>
+    <button data-view="colaboradores"><span class="dot"></span>Colaboradores</button>
     <button data-view="cfo"><span class="dot"></span>CFO de plantão</button>
     <button data-nav="contexto" onclick="navClickContexto()"><span class="dot"></span>Contexto</button>
   </nav>
@@ -832,6 +833,49 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     </div>
   </section>
 
+  <!-- COLABORADORES -->
+  <section class="view" data-view="colaboradores">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">Pessoas</p>
+          <h2>Colaboradores da StartGi</h2>
+          <p class="muted" style="margin:6px 0 0">Valor líquido e departamento vêm dos pagamentos no Omie. Salário bruto, admissão e tipo de contrato não existem no financeiro do Omie: preencha em Editar.</p>
+        </div>
+        <div class="cli-filters">
+          <label>Buscar<input id="colBusca" placeholder="Nome ou cargo" oninput="renderColab()"></label>
+          <label>Departamento<select id="colDep" onchange="renderColab()"><option value="">Todos</option></select></label>
+          <label>Situação<select id="colSit" onchange="renderColab()"><option value="ativos">Ativos</option><option value="todos">Todos</option><option value="inativos">Desligados</option></select></label>
+          <button class="btn primary" onclick="editarColab(null)">Novo colaborador</button>
+          <button class="btn ghost" onclick="carregarColab()">Atualizar</button>
+        </div>
+      </div>
+      <div class="kpis" id="kpisColab"></div>
+      <p class="muted" id="colAviso" style="margin-top:4px"></p>
+    </div>
+    <div class="card" id="colForm" style="margin-top:18px;display:none">
+      <div class="card-head"><div><p class="eyebrow">Cadastro</p><h2 id="colFormTit">Editar colaborador</h2></div></div>
+      <div class="cli-filters" style="align-items:flex-end">
+        <label style="min-width:220px">Nome (igual ao Omie)<input id="cfNome"></label>
+        <label>Cargo<input id="cfCargo"></label>
+        <label>Tipo<select id="cfTipo" onchange="colEncPadrao()"><option>CLT</option><option>PJ</option><option>Pró-labore</option><option>Estágio</option></select></label>
+        <label>Departamento<input id="cfDep" list="colDepList" placeholder="Do Omie se vazio"></label>
+        <label>Salário bruto (R$)<input id="cfSal" type="number" step="0.01" min="0"></label>
+        <label>Admissão<input id="cfAdm" type="date"></label>
+        <label>Encargos + benefícios (%)<input id="cfEnc" type="number" step="0.1" min="0"></label>
+        <label>Situação<select id="cfAtivo"><option value="1">Ativo</option><option value="0">Desligado</option></select></label>
+        <button class="btn primary" onclick="salvarColab()">Salvar</button>
+        <button class="btn ghost" onclick="document.getElementById('colForm').style.display='none'">Cancelar</button>
+      </div>
+      <datalist id="colDepList"></datalist>
+      <p class="muted" id="cfInfo" style="margin-top:10px"></p>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="table-scroll"><table class="lst" id="tColab" style="min-width:1050px"></table></div>
+      <p class="muted" style="margin-top:10px">Custo = salário bruto × (1 + encargos e benefícios %). Sem salário cadastrado, PJ e estágio usam a média paga nos últimos 3 meses; CLT fica em aberto. Admissão em cinza = mês do primeiro pagamento no Omie (estimativa).</p>
+    </div>
+  </section>
+
   <!-- LANÇAMENTOS -->
   <section class="view" data-view="lancamentos">
     <div class="card">
@@ -914,6 +958,7 @@ const TITLES={
   atrasados:['Atrasados a receber','Todos os títulos vencidos em aberto'],
   'clientes-receita':['Receita por cliente','Quanto cada cliente pagou, receita do mês e produto'],
   clientes:['Despesas','Composição, tendência e fornecedores'],
+  colaboradores:['Colaboradores','Cadastro, departamento, salário e custo de cada pessoa'],
   cfo:['CFO de plantão','Conversa com o seu diretor financeiro']
 };
 let charts={},hist=[],atrasadosCache=[],autoTimer=null,ultimoD=null,simD=null,simEstado=null,simMsgTimer=null,lancPaginaAtual=1,lancTotalPaginas=1,lancBuscaTimerId=null,insightsIAState={data:null,loading:false,erro:null},orcD=null,orcLoading=false,despD=null,despLoading=false,recD=null,recLoading=false;
@@ -937,6 +982,7 @@ function go(view){
   if(view==='lancamentos')setTimeout(()=>carregarLancamentos(lancPaginaAtual||1),60);
   if(view==='clientes-receita')setTimeout(()=>carregarClientesReceita(),60);
   if(view==='receita')setTimeout(()=>recD?renderReceita(recD):carregarReceita(),60);
+  if(view==='colaboradores')setTimeout(()=>colD?renderColab():carregarColab(),60);
   if(view==='clientes')setTimeout(()=>despD?renderDespesas(despD):carregarDespesas(),60);
   if(view==='orcamento')setTimeout(()=>orcD&&!orcD.vazio?renderOrcamento():carregarOrcamento(),60);
 }
@@ -2022,6 +2068,75 @@ initNavOrdem();
 document.querySelectorAll('#nav button[data-view]').forEach(b=>b.onclick=()=>{if(navSuppressClick)return;go(b.dataset.view)});
 carregarContexto();
 carregar();
+
+let colD=null;
+async function carregarColab(){
+  document.getElementById('tColab').innerHTML='<tbody><tr><td class="muted">Carregando colaboradores...</td></tr></tbody>';
+  try{
+    const r=await fetch('/api/colaboradores');const j=await r.json();
+    if(!r.ok)throw new Error(j.erro||'falha');
+    colD=j;
+    const sel=document.getElementById('colDep'),atual=sel.value;
+    const deps=[...new Set([...j.departamentos,...j.lista.map(c=>c.departamento)])].sort();
+    sel.innerHTML='<option value="">Todos</option>'+deps.map(x=>`<option${x===atual?' selected':''}>${simEsc(x)}</option>`).join('');
+    document.getElementById('colDepList').innerHTML=j.departamentos.map(x=>`<option value="${simEsc(x)}">`).join('');
+    renderColab();
+  }catch(e){document.getElementById('tColab').innerHTML=`<tbody><tr><td class="neg">Erro: ${simEsc(e.message)}</td></tr></tbody>`;}
+}
+const dataBR=s=>s?s.slice(0,10).split('-').reverse().join('/'):'';
+function renderColab(){
+  if(!colD)return;
+  const q=document.getElementById('colBusca').value.trim().toLowerCase(),dep=document.getElementById('colDep').value,sit=document.getElementById('colSit').value;
+  const lista=colD.lista.filter(c=>(!q||(c.nome+' '+c.cargo).toLowerCase().includes(q))&&(!dep||c.departamento===dep)&&(sit==='todos'||(sit==='ativos'?c.ativo:!c.ativo)));
+  const ativos=colD.lista.filter(c=>c.ativo);
+  const soma=(l,f)=>l.reduce((a,c)=>a+(Number(c[f])||0),0);
+  const semDep=ativos.filter(c=>c.departamento==='Sem departamento').length,semSal=ativos.filter(c=>c.salario==null&&c.tipo!=='PJ').length;
+  document.getElementById('kpisColab').innerHTML=
+    kpi('Colaboradores ativos',String(ativos.length),'Com pagamento nos últimos 2 meses ou cadastrados')+
+    kpi('Custo mensal',brl2(soma(ativos,'custo')),ativos.some(c=>c.custo==null)?'Parcial: há pessoas sem salário cadastrado':'Salários + encargos + benefícios')+
+    kpi('Líquido pago',brl2(soma(ativos,'liquidoUltimoMes')),'Último mês fechado com pagamento, no Omie')+
+    kpi('Sem departamento',String(semDep),semDep?'Preencha no Omie ou em Editar':'Todos com departamento',semDep?'neg':'');
+  const avisos=[];
+  if(colD.erroOmie)avisos.push('Omie indisponível agora: '+colD.erroOmie);
+  if(colD.erroBanco)avisos.push(/does not exist|42P01|colaboradores/i.test(colD.erroBanco)?'A tabela "colaboradores" ainda não existe no Supabase: crie-a para salvar salário e admissão.':'Banco: '+colD.erroBanco);
+  if(semSal)avisos.push(`${semSal} pessoa(s) sem salário bruto cadastrado.`);
+  const av=document.getElementById('colAviso');av.textContent=avisos.join(' ');av.style.color=avisos.length?'var(--warn)':'';
+  const esc=simEsc;
+  document.getElementById('tColab').innerHTML='<thead><tr><th>Nome</th><th>Departamento</th><th>Tipo</th><th>Admissão</th><th class="n">Salário bruto</th><th class="n">Custo mensal</th><th class="n">Líquido pago</th><th></th></tr></thead><tbody>'+
+    (lista.length?lista.map((c,i)=>`<tr${c.ativo?'':' style="opacity:.55"'}>
+      <td title="${esc(c.categorias.join(', '))}"><b>${esc(c.nome)}</b>${c.cargo?`<br><span class="muted">${esc(c.cargo)}</span>`:''}</td>
+      <td${c.departamento==='Sem departamento'?' class="neg"':''} title="${esc(c.departamentosOmie.map(x=>x.nome+': '+brl2(x.valor)).join(' | ')||'Sem rateio no Omie')}">${esc(c.departamento)}${c.origemDepartamento==='manual'?' <span class="muted">(manual)</span>':''}</td>
+      <td>${esc(c.tipo)}</td>
+      <td>${c.admissao?dataBR(c.admissao):c.admissaoEstimada?`<span class="muted" title="Primeiro pagamento no Omie">~${c.admissaoEstimada.split('-').reverse().join('/')}</span>`:'—'}</td>
+      <td class="n">${c.salario!=null?brl2(c.salario):'<span class="muted">—</span>'}</td>
+      <td class="n">${c.custo!=null?brl2(c.custo)+(c.custoEstimado?' <span class="muted" title="Média paga nos últimos 3 meses">*</span>':''):'<span class="muted">—</span>'}</td>
+      <td class="n" title="${c.ultimoMes?'Referente a '+c.ultimoMes:''}">${c.liquidoUltimoMes?brl2(c.liquidoUltimoMes):'—'}</td>
+      <td class="n"><button class="btn ghost" onclick="editarColab(${colD.lista.indexOf(c)})">Editar</button></td></tr>`).join(''):'<tr><td class="muted" colspan="8">Nenhum colaborador encontrado.</td></tr>')+
+    `<tr class="tot"><td>${lista.length} pessoas</td><td></td><td></td><td></td><td class="n">${brl2(soma(lista,'salario'))}</td><td class="n">${brl2(soma(lista,'custo'))}</td><td class="n">${brl2(soma(lista,'liquidoUltimoMes'))}</td><td></td></tr></tbody>`;
+}
+function colEncPadrao(){const t=document.getElementById('cfTipo').value;document.getElementById('cfEnc').placeholder='Padrão '+((colD?.encargosPadrao||{})[t]??0)+'%';}
+function editarColab(i){
+  const c=i==null?{nome:'',cargo:'',tipo:'CLT',departamento:'',ativo:true}:colD.lista[i];
+  const f=id=>document.getElementById(id);
+  f('colFormTit').textContent=i==null?'Novo colaborador':'Editar '+c.nome;
+  f('cfNome').value=c.nome;f('cfNome').readOnly=i!=null&&c.noOmie;
+  f('cfCargo').value=c.cargo||'';f('cfTipo').value=c.tipo||'CLT';
+  f('cfDep').value=c.origemDepartamento==='manual'?c.departamento:'';f('cfDep').placeholder=c.departamentosOmie?.[0]?.nome?'Omie: '+c.departamentosOmie[0].nome:'Do Omie se vazio';
+  f('cfSal').value=c.salario??'';f('cfAdm').value=c.admissao?c.admissao.slice(0,10):'';
+  f('cfEnc').value=c.cadastrado&&c.encargosPct!=null&&c.encargosPct!==(colD.encargosPadrao[c.tipo]??0)?c.encargosPct:'';
+  f('cfAtivo').value=c.ativo?'1':'0';colEncPadrao();
+  f('cfInfo').textContent=c.noOmie?`No Omie: ${c.categorias.join(', ')}. Média líquida paga nos últimos 3 meses: ${brl2(c.liquidoMedia3)}.`:'Pessoa sem pagamentos no Omie.';
+  f('colForm').style.display='';f('colForm').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function salvarColab(){
+  const f=id=>document.getElementById(id).value;
+  const corpo={nome:f('cfNome'),cargo:f('cfCargo'),tipo:f('cfTipo'),departamento:f('cfDep'),salario:f('cfSal'),admissao:f('cfAdm'),encargos_pct:f('cfEnc'),ativo:f('cfAtivo')==='1'};
+  try{
+    const r=await fetch('/api/colaboradores',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(corpo)});const j=await r.json();
+    if(!r.ok)throw new Error(j.erro||'falha');
+    document.getElementById('colForm').style.display='none';carregarColab();
+  }catch(e){alert('Não foi possível salvar: '+(/does not exist|42P01|schema cache/i.test(e.message)?'a tabela "colaboradores" ainda não existe no Supabase.':e.message));}
+}
 </script>
 </body>
 </html>
