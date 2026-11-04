@@ -1400,7 +1400,15 @@ app.post('/api/orcamento/chat', async (req, res) => {
       .slice(-12).map(m => ({ role: m.role, content: m.content.slice(0, 4000) }));
     const system = orcIA.promptSistema({ ano, contexto: contextoEmpresa(), base: orcIA.baseOmie(d), planoAtual });
     const texto = await chamarIA(system, [...historico, { role: 'user', content: mensagem }], 32000, AI_MODEL, 300000);
-    const j = orcIA.extrairJSON(texto);
+    let j;
+    try { j = orcIA.extrairJSON(texto); }
+    catch (e) {
+      // Uma segunda chance: a IA corrige o próprio JSON
+      console.warn('[orcamento] JSON inválido, pedindo correção:', e.message);
+      const corrigido = await chamarIA('Você corrige JSON. Devolva somente o JSON corrigido, completo e válido, sem nenhum texto fora dele. Todos os números já calculados, sem contas, sem separador de milhar.',
+        [{ role: 'user', content: `Erro: ${e.message}\n\nJSON:\n${texto}` }], 32000, AI_MODEL, 300000);
+      j = orcIA.extrairJSON(corrigido);
+    }
     const resposta = String(j.resposta || 'Pronto.');
     const novaConversa = [...conversa, { role: 'user', content: mensagem }, { role: 'assistant', content: resposta }].slice(-40);
     if (!j.alterou || !j.orcamento) {
