@@ -260,6 +260,17 @@ async function omie(endpoint, call, param, tentativa = 1) {
   }
   return j;
 }
+async function listarDepartamentos() {
+  let pagina = 1, total = 1, itens = [];
+  do {
+    const j = await omie('geral/departamentos/', 'ListarDepartamentos', { pagina, registros_por_pagina: 500 });
+    if (!j) break;
+    itens = itens.concat(j.departamentos || []);
+    total = j.total_de_paginas || 1;
+    pagina++;
+  } while (pagina <= total);
+  return itens;
+}
 async function listarTudo(endpoint, call, chave, extra = {}) {
   let pagina = 1, total = 1, itens = [];
   do {
@@ -595,6 +606,8 @@ async function montarDados() {
     listarBaixas('CR').catch(() => ({})),
     listarBaixas('CP').catch(() => ({})),
   ]);
+  const departamentos = await listarDepartamentos().catch(e => { console.warn('[omie] departamentos:', e.message); return []; });
+  const nomeDep = Object.fromEntries(departamentos.map(x => [String(x.codigo), x.descricao]));
 
   const nomeCli = Object.fromEntries(clientes.map(c => [c.codigo_cliente, c.nome_fantasia || c.razao_social]));
   const nomeCat = Object.fromEntries(categorias.map(c => [c.codigo, c.descricao]));
@@ -640,6 +653,10 @@ async function montarDados() {
       descricao: [t.descricao, t.observacao].filter(Boolean).map(x => String(x).trim()).filter(Boolean).join(' · '),
       codigo: String(t.codigo_lancamento_omie ?? t.codigo_lancamento_integracao ?? ''),
       documento: String(t.numero_documento ?? ''),
+      // Rateio por departamento (centro de custo) informado no Omie
+      departamentos: (Array.isArray(t.distribuicao) ? t.distribuicao : [])
+        .map(x => ({ nome: nomeDep[String(x.cCodDep)] || x.cDesDep || (x.cCodDep ? `Depto ${x.cCodDep}` : ''), pct: Number(x.nPerDep) || 0, valor: Number(x.nValDep) || 0 }))
+        .filter(x => x.nome),
     };
   };
   const R = receber.map(t => norm(t, 'R', baixasCR)).filter(t => t.status !== 'CANCELADO' && t.venc);
@@ -662,6 +679,7 @@ async function montarDados() {
     competencia: iso(t.competencia),
     vencimento: iso(t.venc),
     pagamento: iso(t.pagamento),
+    departamentos: t.departamentos,
     diasAtraso: aberto(t) && t.venc < hoje ? Math.max(0, Math.round((hoje - t.venc) / 864e5)) : 0,
   })).sort((a, b) => (b.pagamento || b.vencimento || b.emissao || '').localeCompare(a.pagamento || a.vencimento || a.emissao || ''));
 
@@ -1293,7 +1311,8 @@ function analiseDespesas(d) {
   const dentro = new Set(meses);
   const totalPorMes = Object.fromEntries(meses.map(m => [m, 0]));
   const receitaPorMes = Object.fromEntries(meses.map(m => [m, 0]));
-  const categorias = new Map(), fornecedores = new Map();
+  const categorias = new Map(), fornecedores = new Map(), deps = new Map(), pessoas = new Map();
+  let comDep = 0, totalDesp = 0;
   const valorDe = l => Number(l.valorPago) > 0 ? Number(l.valorPago) : Number(l.valor || 0);
   const registro = (mapa, nome, mes, valor) => {
     if (!mapa.has(nome)) mapa.set(nome, { nome, total: 0, qtd: 0, meses: {} });
@@ -1315,6 +1334,19 @@ function analiseDespesas(d) {
       totalPorMes[mes] += valor;
       registro(categorias, l.categoria || 'Sem categoria', mes, valor);
       registro(fornecedores, l.parceiro || l.descricao || 'Sem fornecedor', mes, valor);
+      totalDesp += valor;
+      const partes = orcIA.rateio(l, valor);
+      if (l.departamentos?.length) comDep += valor;
+      for (const [dep, v] of partes) registro(deps, dep, mes, v);
+      if (orcIA.CATEGORIA_PESSOAL.test(l.categoria || '')) {
+        const nome = l.parceiro || l.descricao || 'Sem nome';
+        for (const [dep, v] of partes) {
+          const k = nome + '||' + dep;
+          if (!pessoas.has(k)) pessoas.set(k, { nome, departamento: dep, categorias: new Set(), total: 0, qtd: 0, meses: {} });
+          const p = pessoas.get(k);
+          p.total += v; p.qtd++; p.meses[mes] = (p.meses[mes] || 0) + v; p.categorias.add(l.categoria);
+        }
+      }
     }
   }
   return {
@@ -1323,6 +1355,9 @@ function analiseDespesas(d) {
     meses, totalPorMes, receitaPorMes,
     categorias: [...categorias.values()].sort((a, b) => b.total - a.total),
     fornecedores: [...fornecedores.values()].sort((a, b) => b.total - a.total),
+    departamentos: [...deps.values()].sort((a, b) => b.total - a.total),
+    pessoas: [...pessoas.values()].map(p => ({ ...p, categorias: [...p.categorias] })).sort((a, b) => b.total - a.total),
+    coberturaDepartamento: totalDesp ? comDep / totalDesp : 0,
     rescisoes: d.rescisoes,
     anoAtual: d.anoCaixa?.atual || d.ano?.atual,
     anoAnterior: d.anoCaixa?.anterior || d.ano?.anterior,

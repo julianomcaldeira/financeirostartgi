@@ -814,6 +814,17 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
         <div class="table-scroll" style="max-height:390px"><table class="lst" id="tDespFornecedores"></table></div>
       </div>
     </div>
+    <div class="grid even" style="margin-top:18px">
+      <div class="card">
+        <div class="card-head"><div><p class="eyebrow">Centro de custo</p><h2>Despesas por departamento</h2></div><span class="muted" id="despDepNota"></span></div>
+        <div class="table-scroll" style="max-height:390px"><table class="lst" id="tDespDepartamentos"></table></div>
+        <p class="muted" id="despDepCobertura" style="margin-top:10px"></p>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><p class="eyebrow">Pessoal</p><h2>Pessoas por departamento</h2></div><span class="muted">Salários, pró-labore, PJ e benefícios</span></div>
+        <div class="table-scroll" style="max-height:390px"><table class="lst" id="tDespPessoas"></table></div>
+      </div>
+    </div>
     <div class="card" style="margin-top:18px">
       <div class="card-head"><div><p class="eyebrow">Pessoal</p><h2 id="rescTitulo">Rescisões em 2026</h2></div><span class="muted" id="rescBase"></span></div>
       <div class="kpis" id="kpisResc"></div>
@@ -1919,6 +1930,21 @@ function renderDespesas(d){
     '<thead><tr><th>Fornecedor</th><th class="n">Total</th><th class="n">% total</th><th class="n">Média/mês</th></tr></thead><tbody>'+
     (fornList.length?fornList.slice(0,12).map(f=>`<tr><td title="${simEsc(f.nome)}">${simEsc(f.nome)}</td><td class="n">${brl2(f.totalPeriodo)}</td><td class="n">${pct(f.totalPeriodo/(total||1))}</td><td class="n">${brl2(f.totalPeriodo/periodo)}</td></tr>`).join(''):'<tr><td class="muted" colspan="4">Sem despesas pagas no período.</td></tr>')+
     `<tr class="tot"><td>${fornList.length} fornecedores</td><td class="n">${brl2(total)}</td><td class="n">100%</td><td class="n">${brl2(total/periodo)}</td></tr></tbody>`;
+
+  const depList=(d.departamentos||[]).map(x=>({...x,totalPeriodo:somaMeses(x.meses,meses)})).filter(x=>x.totalPeriodo>0).sort((a,b)=>b.totalPeriodo-a.totalPeriodo);
+  const semDep=depList.find(x=>x.nome==='Sem departamento')?.totalPeriodo||0;
+  const cob=total?1-semDep/total:0;
+  document.getElementById('despDepNota').textContent=pl;
+  document.getElementById('tDespDepartamentos').innerHTML=
+    '<thead><tr><th>Departamento</th><th class="n">Total</th><th class="n">% total</th><th class="n">Média/mês</th></tr></thead><tbody>'+
+    (depList.length?depList.map(x=>`<tr><td title="${simEsc(x.nome)}"${x.nome==='Sem departamento'?' class="muted"':''}>${simEsc(x.nome)}</td><td class="n">${brl2(x.totalPeriodo)}</td><td class="n">${pct(x.totalPeriodo/(total||1))}</td><td class="n">${brl2(x.totalPeriodo/periodo)}</td></tr>`).join(''):'<tr><td class="muted" colspan="4">Sem despesas pagas no período.</td></tr>')+'</tbody>';
+  const cobEl=document.getElementById('despDepCobertura');
+  cobEl.textContent=`${pct(cob)} do valor pago tem departamento no Omie.`+(cob<.9?` ${k$(semDep)} estão sem departamento: preencha o rateio desses lançamentos no Omie para os números por área ficarem certos.`:'');
+  cobEl.style.color=cob<.9?'var(--warn)':'';
+  const pesList=(d.pessoas||[]).map(x=>({...x,totalPeriodo:somaMeses(x.meses,meses)})).filter(x=>x.totalPeriodo>0).sort((a,b)=>a.departamento.localeCompare(b.departamento)||b.totalPeriodo-a.totalPeriodo);
+  document.getElementById('tDespPessoas').innerHTML=
+    '<thead><tr><th>Pessoa / fornecedor</th><th>Departamento</th><th class="n">Média/mês</th></tr></thead><tbody>'+
+    (pesList.length?pesList.slice(0,80).map(x=>`<tr><td title="${simEsc(x.categorias.join(', '))}">${simEsc(x.nome)}</td><td${x.departamento==='Sem departamento'?' class="muted"':''}>${simEsc(x.departamento)}</td><td class="n">${brl2(x.totalPeriodo/periodo)}</td></tr>`).join(''):'<tr><td class="muted" colspan="3">Nenhum pagamento de pessoal no período.</td></tr>')+'</tbody>';
 
   const resc=d.rescisoes||{},pico=(resc.porMes||[]).slice().sort((a,b)=>b.valor-a.valor)[0];
   document.getElementById('rescTitulo').textContent='Rescisões em '+(resc.ano||new Date().getFullYear());
