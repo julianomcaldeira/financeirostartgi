@@ -370,6 +370,25 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 }
 @media(max-width:560px){.kpis{grid-template-columns:1fr}.top-actions{width:100%}.top-actions .btn{flex:1}.card{padding:17px}.hero h2{font-size:26px}}
 @media print{.sidebar,.topbar,.overlay,.drawer{display:none!important}.main{margin:0;padding:0}.view{display:block!important}.card{box-shadow:none;break-inside:avoid}}
+.col-tab{min-width:880px}
+.col-tab tr.grp td{background:#f7f5ee;border-bottom:1px solid var(--line);padding:9px 12px;font-weight:700;font-size:12.5px}
+.col-tab tr.grp td .muted{font-weight:500}
+.col-tab td,.col-tab th{padding-left:12px;padding-right:12px}
+.col-tab tr.pes{cursor:pointer}
+.col-tab tr.pes:hover td{background:#fbfaf6}
+.col-tab tr.pes.off td{color:var(--muted)}
+.col-tab .nome{font-weight:600}
+.col-tab .sub{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.col-tab td.n,.col-tab th.n{white-space:nowrap}
+.col-rodape{margin-top:12px;font-size:12px}
+.col-form{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
+.col-form .full{grid-column:1/-1}
+.col-form label{display:flex;flex-direction:column;gap:6px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.col-form input,.col-form select{border:1px solid var(--line);border-radius:9px;padding:10px 11px;font:14px Inter;background:#fff;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400}
+.col-form input:focus,.col-form select:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
+.col-acoes{display:flex;gap:10px;margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+.col-remover{color:var(--neg)}
+@media(max-width:640px){.col-form{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -839,42 +858,49 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
       <div class="card-head">
         <div>
           <p class="eyebrow">Pessoas</p>
-          <h2>Colaboradores da StartGi</h2>
-          <p class="muted" style="margin:6px 0 0">Valor líquido e departamento vêm dos pagamentos no Omie. Salário bruto, admissão e tipo de contrato não existem no financeiro do Omie: preencha em Editar.</p>
+          <h2>Colaboradores</h2>
+          <p class="muted" style="margin:6px 0 0">Departamento e líquido pago vêm do Omie. Salário bruto, admissão e cargo você completa clicando na pessoa.</p>
         </div>
         <div class="cli-filters">
           <label>Buscar<input id="colBusca" placeholder="Nome ou cargo" oninput="renderColab()"></label>
-          <label>Departamento<select id="colDep" onchange="renderColab()"><option value="">Todos</option></select></label>
           <label>Situação<select id="colSit" onchange="renderColab()"><option value="ativos">Ativos</option><option value="todos">Todos</option><option value="inativos">Desligados</option></select></label>
-          <button class="btn primary" onclick="editarColab(null)">Novo colaborador</button>
           <button class="btn ghost" onclick="carregarColab()">Atualizar</button>
+          <button class="btn primary" onclick="editarColab(null)">Adicionar pessoa</button>
         </div>
       </div>
       <div class="kpis" id="kpisColab"></div>
-      <p class="muted" id="colAviso" style="margin-top:4px"></p>
-    </div>
-    <div class="card" id="colForm" style="margin-top:18px;display:none">
-      <div class="card-head"><div><p class="eyebrow">Cadastro</p><h2 id="colFormTit">Editar colaborador</h2></div></div>
-      <div class="cli-filters" style="align-items:flex-end">
-        <label style="min-width:220px">Nome (igual ao Omie)<input id="cfNome"></label>
-        <label>Cargo<input id="cfCargo"></label>
-        <label>Tipo<select id="cfTipo" onchange="colEncPadrao()"><option>CLT</option><option>PJ</option><option>Pró-labore</option><option>Estágio</option></select></label>
-        <label>Departamento<input id="cfDep" list="colDepList" placeholder="Do Omie se vazio"></label>
-        <label>Salário bruto (R$)<input id="cfSal" type="number" step="0.01" min="0"></label>
-        <label>Admissão<input id="cfAdm" type="date"></label>
-        <label>Encargos + benefícios (%)<input id="cfEnc" type="number" step="0.1" min="0"></label>
-        <label>Situação<select id="cfAtivo"><option value="1">Ativo</option><option value="0">Desligado</option></select></label>
-        <button class="btn primary" onclick="salvarColab()">Salvar</button>
-        <button class="btn ghost" onclick="document.getElementById('colForm').style.display='none'">Cancelar</button>
-      </div>
-      <datalist id="colDepList"></datalist>
-      <p class="muted" id="cfInfo" style="margin-top:10px"></p>
+      <p class="muted" id="colAviso"></p>
     </div>
     <div class="card" style="margin-top:18px">
-      <div class="table-scroll"><table class="lst" id="tColab" style="min-width:1050px"></table></div>
-      <p class="muted" style="margin-top:10px">Custo = salário bruto × (1 + encargos e benefícios %). Sem salário cadastrado, PJ e estágio usam a média paga nos últimos 3 meses; CLT fica em aberto. Admissão em cinza = mês do primeiro pagamento no Omie (estimativa).</p>
+      <div class="card-head"><div><p class="eyebrow">Por departamento</p><h2>Quadro de pessoal</h2></div><span class="muted" id="colNota"></span></div>
+      <div class="table-scroll" style="max-height:none"><table class="lst col-tab" id="tColab"></table></div>
+      <p class="muted col-rodape">Custo mensal = salário bruto + encargos e benefícios (padrão CLT 70%, pró-labore 20%, PJ 0%). Sem salário cadastrado, PJ usa a média paga nos últimos 3 meses. Admissão com ~ é o primeiro pagamento no Omie.</p>
+      <p class="muted col-rodape" id="colIgnorados"></p>
     </div>
   </section>
+
+  <div class="ins-modal" id="colModal" role="dialog" aria-modal="true" onclick="if(event.target===this)fecharColab()">
+    <div class="ins-modal-box" style="width:min(640px,100%)">
+      <button class="ins-close" onclick="fecharColab()" aria-label="Fechar">×</button>
+      <div class="ins-modal-head"><p class="eyebrow">Cadastro</p><h2 id="cfTitulo">Colaborador</h2><p class="lead" id="cfInfo"></p></div>
+      <div class="col-form">
+        <label class="full">Nome (igual ao Omie)<input id="cfNome"></label>
+        <label>Cargo<input id="cfCargo" placeholder="Ex.: Analista comercial"></label>
+        <label>Departamento<select id="cfDep"></select></label>
+        <label>Tipo de contrato<select id="cfTipo" onchange="colEncPadrao()"><option>CLT</option><option>PJ</option><option>Pró-labore</option><option>Estágio</option></select></label>
+        <label>Admissão<input id="cfAdm" type="date"></label>
+        <label>Salário bruto (R$)<input id="cfSal" type="number" step="0.01" min="0" placeholder="0,00"></label>
+        <label>Encargos + benefícios (%)<input id="cfEnc" type="number" step="0.1" min="0"></label>
+        <label>Situação<select id="cfAtivo"><option value="1">Ativo</option><option value="0">Desligado</option></select></label>
+      </div>
+      <div class="col-acoes">
+        <button class="btn ghost col-remover" onclick="removerColab()">Não é colaborador</button>
+        <span style="flex:1"></span>
+        <button class="btn ghost" onclick="fecharColab()">Cancelar</button>
+        <button class="btn primary" onclick="salvarColab()">Salvar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- LANÇAMENTOS -->
   <section class="view" data-view="lancamentos">
@@ -2069,74 +2095,92 @@ document.querySelectorAll('#nav button[data-view]').forEach(b=>b.onclick=()=>{if
 carregarContexto();
 carregar();
 
-let colD=null;
+let colD=null,colEdit=null;
+const dataBR=s=>s?s.slice(0,10).split('-').reverse().join('/'):'';
+const mesBR=m=>{if(!m)return'';const[y,mm]=m.split('-');return['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][+mm-1]+'/'+y.slice(2)};
 async function carregarColab(){
   document.getElementById('tColab').innerHTML='<tbody><tr><td class="muted">Carregando colaboradores...</td></tr></tbody>';
   try{
     const r=await fetch('/api/colaboradores');const j=await r.json();
     if(!r.ok)throw new Error(j.erro||'falha');
-    colD=j;
-    const sel=document.getElementById('colDep'),atual=sel.value;
-    const deps=[...new Set([...j.departamentos,...j.lista.map(c=>c.departamento)])].sort();
-    sel.innerHTML='<option value="">Todos</option>'+deps.map(x=>`<option${x===atual?' selected':''}>${simEsc(x)}</option>`).join('');
-    document.getElementById('colDepList').innerHTML=j.departamentos.map(x=>`<option value="${simEsc(x)}">`).join('');
-    renderColab();
+    colD=j;renderColab();
   }catch(e){document.getElementById('tColab').innerHTML=`<tbody><tr><td class="neg">Erro: ${simEsc(e.message)}</td></tr></tbody>`;}
 }
-const dataBR=s=>s?s.slice(0,10).split('-').reverse().join('/'):'';
 function renderColab(){
   if(!colD)return;
-  const q=document.getElementById('colBusca').value.trim().toLowerCase(),dep=document.getElementById('colDep').value,sit=document.getElementById('colSit').value;
-  const lista=colD.lista.filter(c=>(!q||(c.nome+' '+c.cargo).toLowerCase().includes(q))&&(!dep||c.departamento===dep)&&(sit==='todos'||(sit==='ativos'?c.ativo:!c.ativo)));
-  const ativos=colD.lista.filter(c=>c.ativo);
+  const esc=simEsc,q=document.getElementById('colBusca').value.trim().toLowerCase(),sit=document.getElementById('colSit').value;
   const soma=(l,f)=>l.reduce((a,c)=>a+(Number(c[f])||0),0);
-  const semDep=ativos.filter(c=>c.departamento==='Sem departamento').length,semSal=ativos.filter(c=>c.salario==null&&c.tipo!=='PJ').length;
+  const ativos=colD.lista.filter(c=>c.ativo);
+  const lista=colD.lista.filter(c=>(!q||(c.nome+' '+c.cargo).toLowerCase().includes(q))&&(sit==='todos'||(sit==='ativos'?c.ativo:!c.ativo)));
+  const semDep=ativos.filter(c=>c.departamento==='Sem departamento').length;
+  const semSal=ativos.filter(c=>c.salario==null&&c.tipo!=='PJ').length;
+  const custoAberto=ativos.some(c=>c.custo==null);
   document.getElementById('kpisColab').innerHTML=
-    kpi('Colaboradores ativos',String(ativos.length),'Com pagamento nos últimos 2 meses ou cadastrados')+
-    kpi('Custo mensal',brl2(soma(ativos,'custo')),ativos.some(c=>c.custo==null)?'Parcial: há pessoas sem salário cadastrado':'Salários + encargos + benefícios')+
-    kpi('Líquido pago',brl2(soma(ativos,'liquidoUltimoMes')),'Último mês fechado com pagamento, no Omie')+
-    kpi('Sem departamento',String(semDep),semDep?'Preencha no Omie ou em Editar':'Todos com departamento',semDep?'neg':'');
+    kpi('Pessoas ativas',String(ativos.length),`${ativos.filter(c=>c.tipo==='CLT').length} CLT · ${ativos.filter(c=>c.tipo==='PJ').length} PJ · ${ativos.filter(c=>!['CLT','PJ'].includes(c.tipo)).length} outros`)+
+    kpi('Custo mensal',brl2(soma(ativos,'custo')),custoAberto?'Parcial: falta salário de '+semSal:'Salário + encargos e benefícios','',custoAberto?['Incompleto','warn']:'')+
+    kpi('Líquido pago',brl2(soma(ativos,'liquidoUltimoMes')),'Último mês fechado, no Omie')+
+    kpi('Sem departamento',String(semDep),semDep?'Clique na pessoa para definir':'Todos com departamento',semDep?'neg':'');
   const avisos=[];
   if(colD.erroOmie)avisos.push('Omie indisponível agora: '+colD.erroOmie);
-  if(colD.erroBanco)avisos.push(/does not exist|42P01|colaboradores/i.test(colD.erroBanco)?'A tabela "colaboradores" ainda não existe no Supabase: crie-a para salvar salário e admissão.':'Banco: '+colD.erroBanco);
-  if(semSal)avisos.push(`${semSal} pessoa(s) sem salário bruto cadastrado.`);
-  const av=document.getElementById('colAviso');av.textContent=avisos.join(' ');av.style.color=avisos.length?'var(--warn)':'';
-  const esc=simEsc;
-  document.getElementById('tColab').innerHTML='<thead><tr><th>Nome</th><th>Departamento</th><th>Tipo</th><th>Admissão</th><th class="n">Salário bruto</th><th class="n">Custo mensal</th><th class="n">Líquido pago</th><th></th></tr></thead><tbody>'+
-    (lista.length?lista.map((c,i)=>`<tr${c.ativo?'':' style="opacity:.55"'}>
-      <td title="${esc(c.categorias.join(', '))}"><b>${esc(c.nome)}</b>${c.cargo?`<br><span class="muted">${esc(c.cargo)}</span>`:''}</td>
-      <td${c.departamento==='Sem departamento'?' class="neg"':''} title="${esc(c.departamentosOmie.map(x=>x.nome+': '+brl2(x.valor)).join(' | ')||'Sem rateio no Omie')}">${esc(c.departamento)}${c.origemDepartamento==='manual'?' <span class="muted">(manual)</span>':''}</td>
-      <td>${esc(c.tipo)}</td>
-      <td>${c.admissao?dataBR(c.admissao):c.admissaoEstimada?`<span class="muted" title="Primeiro pagamento no Omie">~${c.admissaoEstimada.split('-').reverse().join('/')}</span>`:'—'}</td>
+  if(colD.erroBanco)avisos.push('Banco: '+colD.erroBanco);
+  const av=document.getElementById('colAviso');av.textContent=avisos.join(' ');av.style.display=avisos.length?'':'none';av.style.color='var(--warn)';
+  const grupos={};lista.forEach(c=>(grupos[c.departamento]=grupos[c.departamento]||[]).push(c));
+  const ordem=Object.keys(grupos).sort((a,b)=>(a==='Sem departamento')-(b==='Sem departamento')||a.localeCompare(b));
+  document.getElementById('colNota').textContent=`${lista.length} pessoas em ${ordem.length} departamentos`;
+  const linha=c=>{
+    const i=colD.lista.indexOf(c);
+    const adm=c.admissao?dataBR(c.admissao):c.admissaoEstimada?`<span class="muted" title="Primeiro pagamento encontrado no Omie">~${mesBR(c.admissaoEstimada)}</span>`:'<span class="muted">—</span>';
+    const tipo=`<span class="badge${c.tipo==='CLT'?' rec':c.tipo==='PJ'?' one':''}">${esc(c.tipo)}</span>`;
+    return `<tr class="pes${c.ativo?'':' off'}" onclick="editarColab(${i})" title="Clique para editar">
+      <td><span class="nome">${esc(c.nomeExibicao||c.nome)}</span><span class="sub">${esc(c.cargo||(c.ativo?'Cargo não informado':'Desligado'))}</span></td>
+      <td>${tipo}</td><td>${adm}</td>
       <td class="n">${c.salario!=null?brl2(c.salario):'<span class="muted">—</span>'}</td>
-      <td class="n">${c.custo!=null?brl2(c.custo)+(c.custoEstimado?' <span class="muted" title="Média paga nos últimos 3 meses">*</span>':''):'<span class="muted">—</span>'}</td>
-      <td class="n" title="${c.ultimoMes?'Referente a '+c.ultimoMes:''}">${c.liquidoUltimoMes?brl2(c.liquidoUltimoMes):'—'}</td>
-      <td class="n"><button class="btn ghost" onclick="editarColab(${colD.lista.indexOf(c)})">Editar</button></td></tr>`).join(''):'<tr><td class="muted" colspan="8">Nenhum colaborador encontrado.</td></tr>')+
-    `<tr class="tot"><td>${lista.length} pessoas</td><td></td><td></td><td></td><td class="n">${brl2(soma(lista,'salario'))}</td><td class="n">${brl2(soma(lista,'custo'))}</td><td class="n">${brl2(soma(lista,'liquidoUltimoMes'))}</td><td></td></tr></tbody>`;
+      <td class="n">${c.custo!=null?brl2(c.custo):'<span class="muted">—</span>'}</td>
+      <td class="n">${c.liquidoUltimoMes?brl2(c.liquidoUltimoMes)+`<span class="sub">${mesBR(c.ultimoMes)}</span>`:'<span class="muted">—</span>'}</td></tr>`;
+  };
+  document.getElementById('tColab').innerHTML='<thead><tr><th>Colaborador</th><th>Tipo</th><th>Admissão</th><th class="n">Salário bruto</th><th class="n">Custo mensal</th><th class="n">Líquido pago</th></tr></thead><tbody>'+
+    (ordem.length?ordem.map(dep=>{const g=grupos[dep];
+      return `<tr class="grp"><td colspan="3"${dep==='Sem departamento'?' style="color:var(--neg)"':''}>${esc(dep)} <span class="muted">· ${g.length} ${g.length===1?'pessoa':'pessoas'}</span></td><td class="n">${brl2(soma(g,'salario'))}</td><td class="n">${brl2(soma(g,'custo'))}</td><td class="n">${brl2(soma(g,'liquidoUltimoMes'))}</td></tr>`+g.map(linha).join('');
+    }).join(''):'<tr><td class="muted" colspan="6">Nenhuma pessoa encontrada.</td></tr>')+
+    (lista.length?`<tr class="tot"><td colspan="3">Total</td><td class="n">${brl2(soma(lista,'salario'))}</td><td class="n">${brl2(soma(lista,'custo'))}</td><td class="n">${brl2(soma(lista,'liquidoUltimoMes'))}</td></tr>`:'')+'</tbody>';
+  const ign=[...(colD.ignorados||[]),...(colD.ocultos||[])];
+  document.getElementById('colIgnorados').textContent=ign.length?`Fora da lista por não serem pessoas (${ign.length}): ${ign.slice(0,12).join(', ')}${ign.length>12?'…':''}.`:'';
 }
-function colEncPadrao(){const t=document.getElementById('cfTipo').value;document.getElementById('cfEnc').placeholder='Padrão '+((colD?.encargosPadrao||{})[t]??0)+'%';}
+function colEncPadrao(){const t=document.getElementById('cfTipo').value;document.getElementById('cfEnc').placeholder='Padrão: '+((colD?.encargosPadrao||{})[t]??0)+'%';}
 function editarColab(i){
-  const c=i==null?{nome:'',cargo:'',tipo:'CLT',departamento:'',ativo:true}:colD.lista[i];
-  const f=id=>document.getElementById(id);
-  f('colFormTit').textContent=i==null?'Novo colaborador':'Editar '+c.nome;
-  f('cfNome').value=c.nome;f('cfNome').readOnly=i!=null&&c.noOmie;
+  const c=i==null?{nome:'',cargo:'',tipo:'CLT',departamento:'Sem departamento',origemDepartamento:'nenhuma',ativo:true,categorias:[]}:colD.lista[i];
+  colEdit=c;const f=id=>document.getElementById(id);
+  f('cfTitulo').textContent=i==null?'Adicionar pessoa':(c.nomeExibicao||c.nome);
+  f('cfInfo').textContent=c.noOmie?`No Omie: ${c.categorias.join(', ')}. Média líquida nos últimos 3 meses: ${brl2(c.liquidoMedia3)}.`:(i==null?'Use para quem não aparece nos pagamentos do Omie.':'Sem pagamentos encontrados no Omie.');
+  f('cfNome').value=c.nome;f('cfNome').readOnly=Boolean(c.noOmie);
+  const deps=[...new Set([...(colD?.departamentos||[]),c.departamento].filter(x=>x&&x!=='Sem departamento'))].sort();
+  const depOmie=c.departamentosOmie?.[0]?.nome;
+  f('cfDep').innerHTML=`<option value="">${depOmie?'Usar o do Omie ('+esc2(depOmie)+')':'Sem departamento'}</option>`+deps.map(d=>`<option${c.origemDepartamento==='manual'&&c.departamento===d?' selected':''}>${esc2(d)}</option>`).join('');
   f('cfCargo').value=c.cargo||'';f('cfTipo').value=c.tipo||'CLT';
-  f('cfDep').value=c.origemDepartamento==='manual'?c.departamento:'';f('cfDep').placeholder=c.departamentosOmie?.[0]?.nome?'Omie: '+c.departamentosOmie[0].nome:'Do Omie se vazio';
   f('cfSal').value=c.salario??'';f('cfAdm').value=c.admissao?c.admissao.slice(0,10):'';
-  f('cfEnc').value=c.cadastrado&&c.encargosPct!=null&&c.encargosPct!==(colD.encargosPadrao[c.tipo]??0)?c.encargosPct:'';
+  f('cfEnc').value=c.cadastrado&&c.encargosPct!==(colD.encargosPadrao[c.tipo]??0)?c.encargosPct:'';
   f('cfAtivo').value=c.ativo?'1':'0';colEncPadrao();
-  f('cfInfo').textContent=c.noOmie?`No Omie: ${c.categorias.join(', ')}. Média líquida paga nos últimos 3 meses: ${brl2(c.liquidoMedia3)}.`:'Pessoa sem pagamentos no Omie.';
-  f('colForm').style.display='';f('colForm').scrollIntoView({behavior:'smooth',block:'start'});
+  f('colModal').classList.add('open');document.body.style.overflow='hidden';
+}
+const esc2=s=>simEsc(s);
+function fecharColab(){document.getElementById('colModal').classList.remove('open');document.body.style.overflow='';}
+async function gravarColab(corpo){
+  const r=await fetch('/api/colaboradores',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(corpo)});const j=await r.json();
+  if(!r.ok)throw new Error(j.erro||'falha');
 }
 async function salvarColab(){
   const f=id=>document.getElementById(id).value;
-  const corpo={nome:f('cfNome'),cargo:f('cfCargo'),tipo:f('cfTipo'),departamento:f('cfDep'),salario:f('cfSal'),admissao:f('cfAdm'),encargos_pct:f('cfEnc'),ativo:f('cfAtivo')==='1'};
   try{
-    const r=await fetch('/api/colaboradores',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(corpo)});const j=await r.json();
-    if(!r.ok)throw new Error(j.erro||'falha');
-    document.getElementById('colForm').style.display='none';carregarColab();
-  }catch(e){alert('Não foi possível salvar: '+(/does not exist|42P01|schema cache/i.test(e.message)?'a tabela "colaboradores" ainda não existe no Supabase.':e.message));}
+    await gravarColab({nome:f('cfNome'),cargo:f('cfCargo'),tipo:f('cfTipo'),departamento:f('cfDep'),salario:f('cfSal'),admissao:f('cfAdm'),encargos_pct:f('cfEnc'),ativo:f('cfAtivo')==='1'});
+    fecharColab();carregarColab();
+  }catch(e){alert('Não foi possível salvar: '+e.message);}
 }
+async function removerColab(){
+  const nome=document.getElementById('cfNome').value;if(!nome)return fecharColab();
+  if(!confirm(`Tirar "${nome}" da lista de colaboradores?`))return;
+  try{await gravarColab({nome,tipo:'Não é colaborador',ativo:false});fecharColab();carregarColab();}catch(e){alert('Não foi possível salvar: '+e.message);}
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharColab();});
 </script>
 </body>
 </html>
