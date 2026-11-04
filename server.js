@@ -238,7 +238,7 @@ app.get('/', (req, res) => {
 });
 
 // ---------- Omie ----------
-async function omie(endpoint, call, param) {
+async function omie(endpoint, call, param, tentativa = 1) {
   const r = await fetch(`https://app.omie.com.br/api/v1/${endpoint}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -248,11 +248,18 @@ async function omie(endpoint, call, param) {
   if (j.faultstring) {
     // Omie devolve erro quando a lista está vazia — tratamos como vazio
     if (/não existem registros|nao existem registros/i.test(j.faultstring)) return null;
+    // Bloqueio temporário (chamada repetida ou limite): espera o tempo pedido e tenta de novo
+    const espera = String(j.faultstring).match(/aguarde\s+(\d+)\s+segundo/i);
+    if (tentativa <= 3 && (espera || /REDUNDANT|MISUSE|bloquead|limite/i.test(j.faultstring))) {
+      const seg = Math.min(Number(espera?.[1] || 10) + 2, 70);
+      console.warn(`[omie] ${call}: aguardando ${seg}s (tentativa ${tentativa})`);
+      await new Promise(res => setTimeout(res, seg * 1000));
+      return omie(endpoint, call, param, tentativa + 1);
+    }
     throw new Error(`Omie ${call}: ${j.faultstring}`);
   }
   return j;
 }
-
 async function listarTudo(endpoint, call, chave, extra = {}) {
   let pagina = 1, total = 1, itens = [];
   do {
@@ -885,10 +892,20 @@ async function montarDados() {
 }
 
 let cache = { at: 0, data: null };
+let buscando = null; // uma única busca no Omie por vez, compartilhada por todos os pedidos
 async function dados(force) {
   if (!force && cache.data && Date.now() - cache.at < CACHE_MIN * 60e3) return cache.data;
-  cache = { at: Date.now(), data: await montarDados() };
-  return cache.data;
+  if (!buscando) {
+    buscando = montarDados()
+      .then(data => { cache = { at: Date.now(), data }; return data; })
+      .finally(() => { buscando = null; });
+  }
+  try {
+    return await buscando;
+  } catch (e) {
+    if (cache.data) return cache.data; // se o Omie falhar, mostra os últimos dados bons
+    throw e;
+  }
 }
 
 // ---------- Insights estratégicos semanais (IA) ----------
