@@ -1570,4 +1570,4 @@ DADOS: ${contexto}`,
   } catch (e) { res.status(500).json({ resposta: 'Erro: ' + e.message }); }
 });
 
-app.listen(PORT, () => console.log(`Painel financeiro StartGi na porta ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`Painel financeiro StartGi na porta ${PORT}`));
