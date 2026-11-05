@@ -396,6 +396,14 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 .rec-mes tr.destaque td{font-weight:700}
 .rec-mes tr.mrr td{border-top:2px solid var(--line);color:var(--brand);font-weight:700}
 .rec-mes td.var{font-size:11px;color:var(--muted);padding-top:0}
+.exp-menu{position:relative}
+.exp-menu summary{list-style:none;display:inline-flex;align-items:center}
+.exp-menu summary::-webkit-details-marker{display:none}
+.exp-pop{position:absolute;right:0;top:calc(100% + 6px);z-index:30;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:8px;min-width:250px}
+.exp-pop p{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:8px 8px 4px}
+.exp-pop button{display:block;width:100%;text-align:left;border:0;background:none;padding:8px;border-radius:8px;font-weight:600;font-size:13px;color:var(--ink);cursor:pointer}
+.exp-pop button span{display:block;font-weight:400;font-size:11.5px;color:var(--muted)}
+.exp-pop button:hover{background:var(--brand-soft);color:var(--brand)}
 </style>
 </head>
 <body>
@@ -650,6 +658,17 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
           <label>Versão<select id="orcVersaoSel"></select></label>
           <button class="btn ghost" onclick="restaurarVersao()">Restaurar</button>
           <button class="btn ghost" onclick="carregarOrcamento()">Atualizar</button>
+          <details class="exp-menu" id="orcExport">
+            <summary class="btn primary">Exportar ▾</summary>
+            <div class="exp-pop">
+              <p>Excel</p>
+              <button onclick="exportarOrc('xlsx','sintetico')">Sintético <span>totais e indicadores</span></button>
+              <button onclick="exportarOrc('xlsx','analitico')">Analítico <span>todas as contas + premissas</span></button>
+              <p>PDF</p>
+              <button onclick="exportarOrc('pdf','sintetico')">Sintético <span>totais e indicadores</span></button>
+              <button onclick="exportarOrc('pdf','analitico')">Analítico <span>todas as contas + premissas</span></button>
+            </div>
+          </details>
         </div>
       </div>
       <div class="kpis" id="kpisOrcamento"></div>
@@ -2241,6 +2260,97 @@ function renderRecMensal(d){
     '</tbody>';
   document.getElementById('recMensalNota').textContent=meses.length+' meses · * mês atual parcial';
 }
+
+// ---------- Exportação do orçamento (Excel / PDF, analítico / sintético) ----------
+const libsExport={};
+function carregarLib(url){
+  if(!libsExport[url])libsExport[url]=new Promise((ok,erro)=>{const sc=document.createElement('script');sc.src=url;sc.onload=ok;sc.onerror=()=>erro(new Error('Não foi possível carregar '+url));document.head.appendChild(sc);});
+  return libsExport[url];
+}
+function linhasExport(nivel){
+  const ls=(orcD?.linhas||[]);
+  return nivel==='sintetico'?ls.filter(l=>l.tipo!=='linha'):ls;
+}
+const ehTotalOrc=l=>l.tipo!=='linha';
+const valorOrc=(l,v)=>l.percentual?(Number(v)||0)/100:Math.round(Number(v)||0);
+async function exportarOrc(fmt,nivel){
+  document.getElementById('orcExport').open=false;
+  if(!orcD||orcD.vazio||!orcD.linhas?.length)return alert('Ainda não há orçamento para exportar. Monte o orçamento no chat primeiro.');
+  const nomeNivel=nivel==='sintetico'?'Sintético':'Analítico';
+  const arq=`Orcamento-${orcD.ano}-${nivel==='sintetico'?'sintetico':'analitico'}${orcD.versao?'-v'+orcD.versao:''}`;
+  try{
+    if(fmt==='xlsx')await exportarOrcExcel(nivel,nomeNivel,arq);else await exportarOrcPDF(nivel,nomeNivel,arq);
+  }catch(e){alert('Falha ao exportar: '+e.message);}
+}
+async function exportarOrcExcel(nivel,nomeNivel,arq){
+  await carregarLib('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+  const meses=orcD.meses.map(nomeMes);
+  const cab=nivel==='analitico'?['Área','Conta',...meses,'Total']:['Indicador',...meses,'Total'];
+  const linhas=linhasExport(nivel);
+  const rows=[[`StartGi · Orçamento ${orcD.ano} · ${nomeNivel}`],[`Versão ${orcD.versao||'—'} · gerado em ${new Date().toLocaleString('pt-BR')}`],[],cab];
+  linhas.forEach(l=>{
+    const vals=[...l.valores.map(v=>valorOrc(l,v)),valorOrc(l,l.total)];
+    rows.push(nivel==='analitico'?[l.area,l.nome,...vals]:[l.nome,...vals]);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const c0=nivel==='analitico'?2:1;
+  linhas.forEach((l,i)=>{
+    const r=4+i;
+    for(let c=c0;c<c0+13;c++){const cell=ws[XLSX.utils.encode_cell({r,c})];if(cell)cell.z=l.percentual?'0.0%':(l.tipo==='headcount'?'0':'#,##0;[Red]-#,##0');}
+  });
+  ws['!cols']=(nivel==='analitico'?[{wch:22},{wch:38}]:[{wch:34}]).concat(Array(13).fill({wch:13}));
+  ws['!freeze']={xSplit:c0,ySplit:4};ws['!views']=[{state:'frozen',xSplit:c0,ySplit:4}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,nomeNivel);
+  if(nivel==='analitico'){
+    const pr=[['Premissa','Valor'],...(orcD.premissas||[]).map(p=>[p.nome,p.valor])];
+    if(orcD.cenario)pr.unshift(['Cenário',orcD.cenario],[]);
+    const wp=XLSX.utils.aoa_to_sheet(pr);wp['!cols']=[{wch:50},{wch:70}];
+    XLSX.utils.book_append_sheet(wb,wp,'Premissas');
+    if(orcD.pessoas?.length){
+      const ks=[...new Set(orcD.pessoas.flatMap(p=>Object.keys(p)))];
+      const wpe=XLSX.utils.aoa_to_sheet([ks,...orcD.pessoas.map(p=>ks.map(k=>Array.isArray(p[k])?p[k].join(', '):p[k]))]);
+      XLSX.utils.book_append_sheet(wb,wpe,'Pessoas');
+    }
+  }
+  XLSX.writeFile(wb,arq+'.xlsx');
+}
+async function exportarOrcPDF(nivel,nomeNivel,arq){
+  await carregarLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  await carregarLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+  const W=doc.internal.pageSize.getWidth();
+  const verde=[13,79,66];
+  const fmtN=(l,v)=>l.percentual?(Number(v)||0).toFixed(1).replace('.',',')+'%':l.tipo==='headcount'?String(Math.round(v||0)):(v<0?'-':'')+Math.abs(Math.round(v||0)).toLocaleString('pt-BR');
+  doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(...verde);
+  doc.text(`Orçamento ${orcD.ano} · ${nomeNivel}`,32,40);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(110);
+  doc.text(`StartGi Tecnologia · versão ${orcD.versao||'—'} · gerado em ${new Date().toLocaleString('pt-BR')} · valores em R$`,32,56);
+  const linhas=linhasExport(nivel);
+  const head=[[{content:nivel==='analitico'?'Conta':'Indicador',styles:{halign:'left'}},...orcD.meses.map(nomeMes),'Total']];
+  const body=[];let areaAtual=null;
+  linhas.forEach(l=>{
+    if(nivel==='analitico'&&l.tipo==='linha'&&l.area!==areaAtual){areaAtual=l.area;body.push([{content:l.area.toUpperCase(),colSpan:14,styles:{fillColor:[240,238,232],fontStyle:'bold',textColor:[70,86,79],fontSize:7}}]);}
+    if(ehTotalOrc(l))areaAtual=null;
+    body.push([l.nome,...l.valores.map(v=>fmtN(l,v)),fmtN(l,l.total)].map((c,i)=>({content:c,styles:{fontStyle:ehTotalOrc(l)?'bold':'normal',halign:i?'right':'left',textColor:(i&&typeof c==='string'&&c.startsWith('-'))?[193,74,52]:[20,35,31],fillColor:['ebitda','resultadoMes'].includes(l.tipo)?[225,239,233]:undefined}})));
+  });
+  doc.autoTable({head,body,startY:70,margin:{left:24,right:24},theme:'grid',
+    styles:{fontSize:nivel==='analitico'?6.6:7.6,cellPadding:3,lineColor:[229,225,214],lineWidth:.4},
+    headStyles:{fillColor:verde,textColor:255,fontStyle:'bold',halign:'right'},
+    columnStyles:{0:{cellWidth:nivel==='analitico'?150:140,halign:'left'}},
+    didDrawPage:()=>{doc.setFontSize(8);doc.setTextColor(150);doc.text('Página '+doc.internal.getNumberOfPages(),W-70,doc.internal.pageSize.getHeight()-14);}
+  });
+  if(nivel==='analitico'&&(orcD.premissas?.length||orcD.cenario)){
+    doc.addPage();
+    doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(...verde);doc.text('Premissas',32,40);
+    doc.autoTable({startY:54,margin:{left:24,right:24},theme:'grid',head:[['Premissa','Valor']],
+      body:[...(orcD.cenario?[['Cenário',orcD.cenario]]:[]),...(orcD.premissas||[]).map(p=>[p.nome,String(p.valor)])],
+      styles:{fontSize:8,cellPadding:4,lineColor:[229,225,214],lineWidth:.4},headStyles:{fillColor:verde,textColor:255},columnStyles:{0:{cellWidth:260,fontStyle:'bold'}}});
+  }
+  doc.save(arq+'.pdf');
+}
+document.addEventListener('click',e=>{const m=document.getElementById('orcExport');if(m&&m.open&&!m.contains(e.target))m.open=false;});
 </script>
 </body>
 </html>
