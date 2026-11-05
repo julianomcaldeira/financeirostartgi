@@ -575,9 +575,13 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
         <div>
           <p class="eyebrow">Receita realizada</p>
           <h2>Receita</h2>
-          <p class="muted" style="margin:6px 0 0">Visão de caixa: recebimentos pela data de pagamento; quando ausente, pelo vencimento.</p>
+          <p class="muted" style="margin:6px 0 0" id="recBaseTxt">Visão de caixa: recebimentos pela data de pagamento; quando ausente, pelo vencimento.</p>
         </div>
         <div class="cli-filters">
+          <label>Visão<select id="recModo" onchange="renderReceita(recD)">
+            <option value="caixa">Caixa (recebido)</option>
+            <option value="competencia">Competência (faturado)</option>
+          </select></label>
           <label>Período<select id="recPeriodo" onchange="renderReceita(recD)">
             <option value="12">Últimos 12 meses</option>
             <option value="6">Últimos 6 meses</option>
@@ -590,11 +594,11 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     </div>
     <div class="grid even" style="margin-top:18px">
       <div class="card">
-        <div class="card-head"><div><p class="eyebrow">Regime de caixa · recorrente x pontual</p><h2>Receita recebida mês a mês</h2></div><span class="muted" id="recSerieNota">Valor que entrou na conta, pela data do recebimento · mês atual parcial</span></div>
+        <div class="card-head"><div><p class="eyebrow" id="recSerieEyebrow">Regime de caixa · recorrente x pontual</p><h2 id="recSerieTit">Receita recebida mês a mês</h2></div><span class="muted" id="recSerieNota">Valor que entrou na conta, pela data do recebimento · mês atual parcial</span></div>
         <div class="chart-h"><canvas id="gRecorrente"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-head"><div><p class="eyebrow">Regime de caixa · produtos e serviços</p><h2>O que mais fatura</h2></div><span class="muted" id="recProdNota">12 meses</span></div>
+        <div class="card-head"><div><p class="eyebrow" id="recProdEyebrow">Regime de caixa · produtos e serviços</p><h2>O que mais fatura</h2></div><span class="muted" id="recProdNota">12 meses</span></div>
         <div class="chart-h"><canvas id="gProdutos"></canvas></div>
       </div>
     </div>
@@ -1446,6 +1450,9 @@ function renderInsights(d){
 
 function renderReceita(d){
   if(!d)return;
+  const modo=document.getElementById('recModo')?.value||'caixa',comp=modo==='competencia'&&d.competencia;
+  if(comp)d={...d,...d.competencia};
+  document.getElementById('recBaseTxt').textContent=comp?'Visão de competência: valor das notas emitidas, pelo mês de emissão, recebidas ou não.':'Visão de caixa: recebimentos pela data de pagamento; quando ausente, pelo vencimento.';
   const periodo=Number(document.getElementById('recPeriodo')?.value||12);
   const meses=(d.meses||[]).slice(-periodo);
   const recTotal=meses.reduce((a,m)=>a+Number(d.recorrentePorMes?.[m]||0),0);
@@ -1456,12 +1463,15 @@ function renderReceita(d){
     return {...p,valor,participacao:total?valor/total:0,mediaMensal:valor/periodo};
   }).filter(p=>p.valor>0).sort((a,b)=>b.valor-a.valor);
   const top=produtos[0];
-  document.getElementById('recSerieNota').textContent='Caixa: valor recebido pela data do recebimento · '+periodo+' meses · mês atual parcial';
-  document.getElementById('recProdNota').textContent='Caixa: valor recebido · '+periodo+' meses';
+  document.getElementById('recSerieEyebrow').textContent=(comp?'Regime de competência':'Regime de caixa')+' · recorrente x pontual';
+  document.getElementById('recSerieTit').textContent=comp?'Receita faturada mês a mês':'Receita recebida mês a mês';
+  document.getElementById('recProdEyebrow').textContent=(comp?'Regime de competência':'Regime de caixa')+' · produtos e serviços';
+  document.getElementById('recSerieNota').textContent=(comp?'Competência: valor faturado pelo mês de emissão':'Caixa: valor recebido pela data do recebimento')+' · '+periodo+' meses · mês atual parcial';
+  document.getElementById('recProdNota').textContent=(comp?'Competência: valor faturado':'Caixa: valor recebido')+' · '+periodo+' meses';
   document.getElementById('kpisReceita').innerHTML=
-    kpi('Recorrente no período',k$(recTotal),'Categorias de mensalidade recebidas')+
+    kpi('Recorrente no período',k$(recTotal),comp?'Categorias de mensalidade faturadas':'Categorias de mensalidade recebidas')+
     kpi('Média recorrente mensal',k$(recTotal/periodo),'Receita recorrente dividida por '+periodo+' meses')+
-    kpi('Participação recorrente',pct(total?recTotal/total:0),'Do total recebido no período','', ['Previsível','pos'])+
+    kpi('Participação recorrente',pct(total?recTotal/total:0),comp?'Do total faturado no período':'Do total recebido no período','', ['Previsível','pos'])+
     kpi('Receita pontual',k$(pontual),'Implantação, pesquisa, comissões e outros')+
     kpi('Produtos com receita',String(produtos.length),'Categorias de receita no Omie')+
     kpi('Maior produto',top?k$(top.valor):'—',top?top.nome+' · '+pct(top.participacao):'Sem dados no período');

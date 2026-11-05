@@ -1275,33 +1275,44 @@ function analiseReceita(d) {
   const meses = [];
   for (let i = 23; i >= 0; i--) meses.push(mesKey(new Date(hoje.getFullYear(), hoje.getMonth() - i, 1)));
   const dentro = new Set(meses);
-  const totalPorMes = Object.fromEntries(meses.map(m => [m, 0]));
-  const recorrentePorMes = Object.fromEntries(meses.map(m => [m, 0]));
-  const naoRecorrentePorMes = Object.fromEntries(meses.map(m => [m, 0]));
-  const produtos = new Map();
-  const valorDe = l => Number(l.valorPago) > 0 ? Number(l.valorPago) : Number(l.valor || 0);
-  for (const l of d.lancamentos || []) {
-    if (l.tipo !== 'receita') continue;
-    if (l.status !== 'RECEBIDO' && l.status !== 'LIQUIDADO' && !(Number(l.valorPago) > 0)) continue;
-    const data = l.pagamento || l.vencimento;
-    if (!data) continue;
-    const mes = String(data).slice(0, 7);
-    if (!dentro.has(mes)) continue;
-    const valor = valorDe(l);
-    const nome = l.categoria || 'Sem categoria';
-    const rec = /mensalidade/i.test(nome);
-    totalPorMes[mes] += valor;
-    if (rec) recorrentePorMes[mes] += valor; else naoRecorrentePorMes[mes] += valor;
-    if (!produtos.has(nome)) produtos.set(nome, { nome, total: 0, qtd: 0, meses: {}, recorrente: rec });
-    const item = produtos.get(nome);
-    item.total += valor; item.qtd++;
-    item.meses[mes] = (item.meses[mes] || 0) + valor;
-  }
+  // modo 'caixa': o que foi recebido, no mês do recebimento.
+  // modo 'competencia': o que foi faturado (valor da nota), no mês de emissão, recebido ou não.
+  const serie = modo => {
+    const totalPorMes = Object.fromEntries(meses.map(m => [m, 0]));
+    const recorrentePorMes = Object.fromEntries(meses.map(m => [m, 0]));
+    const naoRecorrentePorMes = Object.fromEntries(meses.map(m => [m, 0]));
+    const produtos = new Map();
+    for (const l of d.lancamentos || []) {
+      if (l.tipo !== 'receita') continue;
+      let data, valor;
+      if (modo === 'caixa') {
+        if (l.status !== 'RECEBIDO' && l.status !== 'LIQUIDADO' && !(Number(l.valorPago) > 0)) continue;
+        data = l.pagamento || l.vencimento;
+        valor = Number(l.valorPago) > 0 ? Number(l.valorPago) : Number(l.valor || 0);
+      } else {
+        data = l.competencia || l.emissao || l.vencimento;
+        valor = Number(l.valor || 0);
+      }
+      if (!data || !valor) continue;
+      const mes = String(data).slice(0, 7);
+      if (!dentro.has(mes)) continue;
+      const nome = l.categoria || 'Sem categoria';
+      const rec = /mensalidade/i.test(nome);
+      totalPorMes[mes] += valor;
+      if (rec) recorrentePorMes[mes] += valor; else naoRecorrentePorMes[mes] += valor;
+      if (!produtos.has(nome)) produtos.set(nome, { nome, total: 0, qtd: 0, meses: {}, recorrente: rec });
+      const item = produtos.get(nome);
+      item.total += valor; item.qtd++;
+      item.meses[mes] = (item.meses[mes] || 0) + valor;
+    }
+    return { totalPorMes, recorrentePorMes, naoRecorrentePorMes, produtos: [...produtos.values()].sort((a, b) => b.total - a.total) };
+  };
+  const caixa = serie('caixa');
   return {
     base: 'Data de pagamento; quando ausente, vencimento.',
     atualizadoEm: d.atualizadoEm,
-    meses, totalPorMes, recorrentePorMes, naoRecorrentePorMes,
-    produtos: [...produtos.values()].sort((a, b) => b.total - a.total),
+    meses, ...caixa,
+    competencia: { base: 'Data de emissão da nota; valor faturado, recebido ou não.', ...serie('competencia') },
     contratos: d.contratos,
   };
 }
