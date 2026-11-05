@@ -1466,16 +1466,30 @@ function renderReceita(d){
     kpi('Produtos com receita',String(produtos.length),'Categorias de receita no Omie')+
     kpi('Maior produto',top?k$(top.valor):'—',top?top.nome+' · '+pct(top.participacao):'Sem dados no período');
 
+  // Escreve o total de cada barra (soma das séries empilhadas) no topo ou no fim da barra.
+  const rotuloTotal={id:'rotuloTotal',afterDatasetsDraw(ch){
+    const {ctx}=ch,horiz=ch.options.indexAxis==='y',metas=ch.data.datasets.map((_,i)=>ch.getDatasetMeta(i)).filter(m=>!m.hidden);
+    if(!metas.length)return;
+    ctx.save();ctx.font='600 11px Inter, sans-serif';ctx.fillStyle=css('--ink2');
+    ch.data.labels.forEach((_,i)=>{
+      const tot=metas.reduce((a,m)=>a+(Number(ch.data.datasets[m.index].data[i])||0),0);
+      if(!tot)return;
+      const bars=metas.map(m=>m.data[i]).filter(Boolean);
+      if(horiz){const x=Math.max(...bars.map(b=>b.x));ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(k$(tot),x+6,bars[0].y);}
+      else{const y=Math.min(...bars.map(b=>b.y));ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(k$(tot),bars[0].x,y-4);}
+    });
+    ctx.restore();
+  }};
   charts.rec&&charts.rec.destroy();
   charts.rec=new Chart(document.getElementById('gRecorrente'),{type:'bar',data:{labels:meses.map(nomeMes),datasets:[
     {label:'Recorrente',data:meses.map(m=>d.recorrentePorMes?.[m]||0),backgroundColor:css('--brand'),borderRadius:4,stack:'r'},
     {label:'Pontual',data:meses.map(m=>d.naoRecorrentePorMes?.[m]||0),backgroundColor:css('--sand'),borderRadius:4,stack:'r'}]},
-    options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:x=>k$(x)},grid:{color:'#f0eee6'}}}}});
+    plugins:[rotuloTotal],options:{maintainAspectRatio:false,layout:{padding:{top:20}},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:x=>k$(x)},grid:{color:'#f0eee6'}}}}});
 
   const top8=produtos.slice(0,8);
   charts.prod&&charts.prod.destroy();
   charts.prod=new Chart(document.getElementById('gProdutos'),{type:'bar',data:{labels:top8.map(p=>p.nome),datasets:[{data:top8.map(p=>p.valor),backgroundColor:top8.map(p=>p.recorrente?css('--brand'):css('--sand')),borderRadius:4}]},
-    options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>brl(c.raw)}}},scales:{x:{ticks:{callback:x=>k$(x)},grid:{color:'#f0eee6'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}});
+    plugins:[rotuloTotal],options:{indexAxis:'y',maintainAspectRatio:false,layout:{padding:{right:64}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>brl(c.raw)}}},scales:{x:{ticks:{callback:x=>k$(x)},grid:{color:'#f0eee6'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}});
 
   charts.mix&&charts.mix.destroy();
   charts.mix=new Chart(document.getElementById('gMix'),{type:'doughnut',data:{labels:['Recorrente','Pontual'],datasets:[{data:[recTotal,pontual],backgroundColor:[css('--brand'),css('--sand')],borderWidth:0}]},options:{cutout:'66%',maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:c=>c.label+': '+brl(c.raw)}}}}});
