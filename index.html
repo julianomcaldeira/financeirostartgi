@@ -590,11 +590,11 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     </div>
     <div class="grid even" style="margin-top:18px">
       <div class="card">
-        <div class="card-head"><div><p class="eyebrow">Recorrente x pontual</p><h2>Receita mês a mês</h2></div><span class="muted" id="recSerieNota">12 meses · mês atual parcial</span></div>
+        <div class="card-head"><div><p class="eyebrow">Regime de caixa · recorrente x pontual</p><h2>Receita recebida mês a mês</h2></div><span class="muted" id="recSerieNota">Valor que entrou na conta, pela data do recebimento · mês atual parcial</span></div>
         <div class="chart-h"><canvas id="gRecorrente"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-head"><div><p class="eyebrow">Produtos e serviços</p><h2>O que mais fatura</h2></div><span class="muted" id="recProdNota">12 meses</span></div>
+        <div class="card-head"><div><p class="eyebrow">Regime de caixa · produtos e serviços</p><h2>O que mais fatura</h2></div><span class="muted" id="recProdNota">12 meses</span></div>
         <div class="chart-h"><canvas id="gProdutos"></canvas></div>
       </div>
     </div>
@@ -1456,8 +1456,8 @@ function renderReceita(d){
     return {...p,valor,participacao:total?valor/total:0,mediaMensal:valor/periodo};
   }).filter(p=>p.valor>0).sort((a,b)=>b.valor-a.valor);
   const top=produtos[0];
-  document.getElementById('recSerieNota').textContent=periodo+' meses · mês atual parcial';
-  document.getElementById('recProdNota').textContent=periodo+' meses';
+  document.getElementById('recSerieNota').textContent='Caixa: valor recebido pela data do recebimento · '+periodo+' meses · mês atual parcial';
+  document.getElementById('recProdNota').textContent='Caixa: valor recebido · '+periodo+' meses';
   document.getElementById('kpisReceita').innerHTML=
     kpi('Recorrente no período',k$(recTotal),'Categorias de mensalidade recebidas')+
     kpi('Média recorrente mensal',k$(recTotal/periodo),'Receita recorrente dividida por '+periodo+' meses')+
