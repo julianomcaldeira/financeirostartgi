@@ -389,6 +389,13 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 .col-acoes{display:flex;gap:10px;margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
 .col-remover{color:var(--neg)}
 @media(max-width:640px){.col-form{grid-template-columns:1fr}}
+.rec-mes{min-width:1100px}
+.rec-mes{min-width:1300px}
+.rec-mes th,.rec-mes td{padding-left:18px!important;padding-right:0;white-space:nowrap}
+.rec-mes th:first-child,.rec-mes td:first-child{position:sticky;left:0;background:#fff;z-index:1;padding-left:0!important;padding-right:12px}
+.rec-mes tr.destaque td{font-weight:700}
+.rec-mes tr.mrr td{border-top:2px solid var(--line);color:var(--brand);font-weight:700}
+.rec-mes td.var{font-size:11px;color:var(--muted);padding-top:0}
 </style>
 </head>
 <body>
@@ -591,6 +598,11 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
         </div>
       </div>
       <div class="kpis" id="kpisReceita" style="margin-bottom:0"></div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="card-head"><div><p class="eyebrow">Regime de competência · mês a mês</p><h2>Faturamento e MRR</h2></div><span class="muted" id="recMensalNota"></span></div>
+      <div class="table-scroll" style="max-height:none"><table class="lst rec-mes" id="tRecMensal"></table></div>
+      <p class="muted" style="margin-top:10px;font-size:12px">Faturamento = valor das notas emitidas no mês, recebidas ou não. Recorrente = categorias de mensalidade; avulso = todo o resto (implantação, projetos, consultoria). MRR = soma do valor mensal dos contratos vigentes no mês, pelo cadastro de contratos do Omie.</p>
     </div>
     <div class="grid even" style="margin-top:18px">
       <div class="card">
@@ -1450,6 +1462,7 @@ function renderInsights(d){
 
 function renderReceita(d){
   if(!d)return;
+  renderRecMensal(d);
   const modo=document.getElementById('recModo')?.value||'caixa',comp=modo==='competencia'&&d.competencia;
   if(comp)d={...d,...d.competencia};
   document.getElementById('recBaseTxt').textContent=comp?'Visão de competência: valor das notas emitidas, pelo mês de emissão, recebidas ou não.':'Visão de caixa: recebimentos pela data de pagamento; quando ausente, pelo vencimento.';
@@ -2205,6 +2218,29 @@ async function removerColab(){
   try{await gravarColab({nome,tipo:'Não é colaborador',ativo:false});fecharColab();carregarColab();}catch(e){alert('Não foi possível salvar: '+e.message);}
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharColab();});
+
+function renderRecMensal(d){
+  const el=document.getElementById('tRecMensal');if(!el)return;
+  const periodo=Number(document.getElementById('recPeriodo')?.value||12);
+  const meses=(d.meses||[]).slice(-Math.max(periodo,12));
+  const c=d.competencia||{},mrr=d.contratos?.mrrPorMes||{};
+  const linhas=[
+    ['Faturamento bruto',m=>c.totalPorMes?.[m]||0,'destaque'],
+    ['Faturamento avulso',m=>c.naoRecorrentePorMes?.[m]||0,''],
+    ['Faturamento recorrente',m=>c.recorrentePorMes?.[m]||0,''],
+    ['MRR',m=>mrr[m]?.mrr||0,'mrr'],
+  ];
+  const hojeM=new Date().toISOString().slice(0,7);
+  const fmt=v=>v?k$(v):'<span class="muted">—</span>';
+  el.innerHTML='<thead><tr><th>Indicador</th>'+meses.map(m=>`<th class="n">${nomeMes(m)}${m===hojeM?'*':''}</th>`).join('')+'<th class="n">Total</th></tr></thead><tbody>'+
+    linhas.map(([nome,f,cls])=>{
+      const vals=meses.map(f),tot=cls==='mrr'?null:vals.reduce((a,b)=>a+b,0);
+      return `<tr class="${cls}"><td>${nome}</td>${vals.map(v=>`<td class="n">${fmt(v)}</td>`).join('')}<td class="n">${tot==null?'<span class="muted" title="MRR não se soma">—</span>':fmt(tot)}</td></tr>`;
+    }).join('')+
+    `<tr><td class="var">MRR: variação no mês</td>${meses.map((m,i)=>{const a=mrr[meses[i-1]]?.mrr,b=mrr[m]?.mrr;if(!i||!a)return'<td class="var n"></td>';const v=b/a-1;return `<td class="var n" style="color:${v>0?'var(--pos)':v<0?'var(--neg)':''}">${v>0?'+':''}${(v*100).toFixed(1)}%</td>`}).join('')}<td class="var"></td></tr>`+
+    '</tbody>';
+  document.getElementById('recMensalNota').textContent=meses.length+' meses · * mês atual parcial';
+}
 </script>
 </body>
 </html>

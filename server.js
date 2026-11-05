@@ -841,6 +841,25 @@ async function montarDados() {
   const recAnterior = serieRecorrente[serieRecorrente.length - 2]?.recorrente || 0;
   const ctrAtivos = contratosOmie.filter(c => (c.cabecalho || {}).cCodSit === '10');
   const mrrContratado = soma(ctrAtivos.map(c => Number((c.cabecalho || {}).nValTotMes || 0)));
+  // MRR mês a mês: soma do valor mensal dos contratos vigentes em cada mês (início ≤ fim do mês e fim ≥ início do mês).
+  // Contrato ativo hoje conta até o mês atual mesmo com vigência vencida (renovação automática).
+  const mrrPorMes = {};
+  {
+    const hojeM = new Date();
+    for (let i = 23; i >= 0; i--) {
+      const ini = new Date(hojeM.getFullYear(), hojeM.getMonth() - i, 1), fim = new Date(hojeM.getFullYear(), hojeM.getMonth() - i + 1, 0);
+      let v = 0, n = 0;
+      for (const c of contratosOmie) {
+        const cab = c.cabecalho || {};
+        const vi = dt(cab.dVigInicial), vf = cab.cCodSit === '10' ? null : dt(cab.dVigFinal);
+        if (!vi || vi > fim) continue;
+        if (vf && vf < ini) continue;
+        if (cab.cCodSit !== '10' && !vf) continue; // encerrado sem data: não dá para saber até quando valeu
+        v += Number(cab.nValTotMes || 0); n++;
+      }
+      mrrPorMes[mesKey(ini)] = { mrr: v, contratos: n };
+    }
+  }
   const top1 = clientesRank[0] ? clientesRank[0].valor / receita12 : 0;
   const top3 = soma(clientesRank.slice(0, 3).map(c => c.valor)) / (receita12 || 1);
 
@@ -882,7 +901,7 @@ async function montarDados() {
     rescisoes,
     lancamentos,
     produtosReceita: produtosReceita.slice(0, 12),
-    contratos: { total: contratosOmie.length, ativos: ctrAtivos.length, mrr: mrrContratado, arr: mrrContratado * 12 },
+    contratos: { total: contratosOmie.length, ativos: ctrAtivos.length, mrr: mrrContratado, arr: mrrContratado * 12, mrrPorMes },
     recorrente: {
       receita12: receitaRecorrente12,
       participacao: receitaRecorrente12 / (receita12 || 1),
