@@ -44,6 +44,19 @@ function caixaAplicadoContexto() {
   return v;
 }
 
+function erroIA(status, j) {
+  const msg = j.error?.message || j.message || 'falha na chamada';
+  if (status === 429) {
+    const m = msg.match(/resets at (\S+?Z)/);
+    const quando = m ? new Date(m[1]).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
+    return /weekly|week/i.test(msg)
+      ? `a IA atingiu o limite semanal de uso do plano contratado (Command Code).${quando ? ` Ela volta a funcionar em ${quando}.` : ''} Para usar antes disso, é preciso aumentar o plano.`
+      : 'a IA recebeu pedidos demais em pouco tempo. Tente de novo em um minuto.';
+  }
+  if (status === 401 || status === 403) return 'a chave da IA foi recusada. Confira a variável COMMAND_IA no Render.';
+  return `IA ${status}: ${msg}`;
+}
+
 async function chamarIA(system, mensagens, maxTokens = 4096, modelo = AI_MODEL, timeoutMs = 120000) {
   const r = await fetch(`${AI_BASE}/messages`, {
     method: 'POST',
@@ -54,7 +67,7 @@ async function chamarIA(system, mensagens, maxTokens = 4096, modelo = AI_MODEL, 
   const bruto = await r.text();
   let j;
   try { j = JSON.parse(bruto); } catch { throw new Error(`IA ${r.status} respondeu HTML/texto em vez de JSON: ${bruto.slice(0, 180)}`); }
-  if (!r.ok) throw new Error(`IA ${r.status}: ${j.error?.message || j.message || 'falha na chamada'}`);
+  if (!r.ok) throw new Error(erroIA(r.status, j));
   const texto = j.content?.filter?.(b => b.type === 'text' || b.text)?.map?.(b => b.text).filter(Boolean).join('\n') || j.choices?.[0]?.message?.content || j.output_text || '';
   if (!texto) {
     const tipos = Array.isArray(j.content) ? j.content.map(b => b.type || 'sem-tipo').join(',') : typeof j.content;
@@ -73,7 +86,7 @@ async function chamarIAOpenAI(system, mensagens, maxTokens = 4096, modelo = INSI
   const bruto = await r.text();
   let j;
   try { j = JSON.parse(bruto); } catch { throw new Error(`IA ${r.status} respondeu HTML/texto em vez de JSON: ${bruto.slice(0, 180)}`); }
-  if (!r.ok) throw new Error(`IA ${r.status}: ${j.error?.message || j.message || 'falha na chamada'}`);
+  if (!r.ok) throw new Error(erroIA(r.status, j));
   const msg = j.choices?.[0]?.message || {};
   const texto = typeof msg.content === 'string' ? msg.content : Array.isArray(msg.content) ? msg.content.map(b => b.text || b.content || '').join('\n') : (j.output_text || '');
   if (!texto) throw new Error(`IA sem texto (finish: ${j.choices?.[0]?.finish_reason || '—'}; tokens: ${j.usage?.completion_tokens ?? '—'})`);
