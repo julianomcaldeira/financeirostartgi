@@ -2169,11 +2169,11 @@ function renderColab(){
   const ativos=colD.lista.filter(c=>c.ativo);
   const lista=colD.lista.filter(c=>(!q||(c.nome+' '+c.cargo).toLowerCase().includes(q))&&(sit==='todos'||(sit==='ativos'?c.ativo:!c.ativo)));
   const semDep=ativos.filter(c=>c.departamento==='Sem departamento').length;
-  const semSal=ativos.filter(c=>c.salario==null&&c.tipo!=='PJ').length;
-  const custoAberto=ativos.some(c=>c.custo==null);
+  const semSal=ativos.filter(c=>c.salarioEstimado).length;
+  const custoAberto=semSal>0;
   document.getElementById('kpisColab').innerHTML=
     kpi('Pessoas ativas',String(ativos.length),`${ativos.filter(c=>c.tipo==='CLT').length} CLT · ${ativos.filter(c=>c.tipo==='PJ').length} PJ · ${ativos.filter(c=>!['CLT','PJ'].includes(c.tipo)).length} outros`)+
-    kpi('Custo mensal',brl2(soma(ativos,'custo')),custoAberto?'Parcial: falta salário de '+semSal:'Salário + encargos e benefícios','',custoAberto?['Incompleto','warn']:'')+
+    kpi('Custo mensal',brl2(soma(ativos,'custo')),custoAberto?semSal+' com salário estimado pelo líquido do Omie':'Salário + encargos e benefícios','',custoAberto?['Estimado','warn']:'')+
     kpi('Líquido pago',brl2(soma(ativos,'liquidoUltimoMes')),'Último mês fechado, no Omie')+
     kpi('Sem departamento',String(semDep),semDep?'Clique na pessoa para definir':'Todos com departamento',semDep?'neg':'');
   const avisos=[];
@@ -2190,8 +2190,8 @@ function renderColab(){
     return `<tr class="pes${c.ativo?'':' off'}" onclick="editarColab(${i})" title="Clique para editar">
       <td><span class="nome">${esc(c.nomeExibicao||c.nome)}</span><span class="sub">${esc(c.cargo||(c.ativo?'Cargo não informado':'Desligado'))}</span></td>
       <td>${tipo}</td><td>${adm}</td>
-      <td class="n">${c.salario!=null?brl2(c.salario):'<span class="muted">—</span>'}</td>
-      <td class="n">${c.custo!=null?brl2(c.custo):'<span class="muted">—</span>'}</td>
+      <td class="n">${c.salario!=null?(c.salarioEstimado?`<span title="Estimado a partir do líquido pago (média 3 meses). Clique para cadastrar o valor certo.">~${brl2(c.salario)}</span><span class="sub">estimado</span>`:brl2(c.salario)):'<span class="muted">—</span>'}</td>
+      <td class="n">${c.custo!=null?(c.custoEstimado?'~':'')+brl2(c.custo)+(c.custoEstimado?`<span class="sub">+${c.encargosPct}% encargos</span>`:''):'<span class="muted">—</span>'}</td>
       <td class="n">${c.liquidoUltimoMes?brl2(c.liquidoUltimoMes)+`<span class="sub">${mesBR(c.ultimoMes)}</span>`:'<span class="muted">—</span>'}</td></tr>`;
   };
   document.getElementById('tColab').innerHTML='<thead><tr><th>Colaborador</th><th>Tipo</th><th>Admissão</th><th class="n">Salário bruto</th><th class="n">Custo mensal</th><th class="n">Líquido pago</th></tr></thead><tbody>'+
