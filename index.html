@@ -2223,9 +2223,10 @@ function editarColab(i){
   f('cfTitulo').textContent=i==null?'Adicionar pessoa':(c.nomeExibicao||c.nome);
   f('cfInfo').textContent=c.noOmie?`No Omie: ${c.categorias.join(', ')}. Média líquida nos últimos 3 meses: ${brl2(c.liquidoMedia3)}.`:(i==null?'Use para quem não aparece nos pagamentos do Omie.':'Sem pagamentos encontrados no Omie.');
   f('cfNome').value=c.nome;f('cfNome').readOnly=Boolean(c.noOmie);
-  const deps=[...new Set([...(colD?.departamentos||[]),c.departamento].filter(x=>x&&x!=='Sem departamento'))].sort();
+  const deps=[...new Set(['Administrativo',...(colD?.departamentos||[]),...(colD?.lista||[]).map(x=>x.departamento),c.departamento].filter(x=>x&&x!=='Sem departamento'))].sort();
   const depOmie=c.departamentosOmie?.[0]?.nome;
-  f('cfDep').innerHTML=`<option value="">${depOmie?'Usar o do Omie ('+esc2(depOmie)+')':'Sem departamento'}</option>`+deps.map(d=>`<option${c.origemDepartamento==='manual'&&c.departamento===d?' selected':''}>${esc2(d)}</option>`).join('');
+  f('cfDep').innerHTML=`<option value="">${depOmie?'Usar o do Omie ('+esc2(depOmie)+')':'Sem departamento'}</option>`+deps.map(d=>`<option${c.origemDepartamento==='manual'&&c.departamento===d?' selected':''}>${esc2(d)}</option>`).join('')+'<option value="__novo">+ Novo departamento…</option>';
+  f('cfDep').onchange=e=>{if(e.target.value!=='__novo')return;const n=(prompt('Nome do novo departamento:')||'').trim();if(!n){e.target.value='';return}const o=new Option(n,n,true,true);e.target.add(o,e.target.options.length-1)};
   f('cfCargo').value=c.cargo||'';f('cfTipo').value=c.tipo||'CLT';
   f('cfSal').value=c.salario??'';f('cfAdm').value=c.admissao?c.admissao.slice(0,10):'';
   f('cfEnc').value=c.cadastrado&&c.encargosPct!==(colD.encargosPadrao[c.tipo]??0)?c.encargosPct:'';
