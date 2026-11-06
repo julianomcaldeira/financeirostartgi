@@ -1530,6 +1530,27 @@ app.get('/api/colaboradores/diagnostico', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+// Diagnóstico: procura no Omie onde ficam o cadastro de funcionários e o salário.
+app.get('/api/colaboradores/omie-cadastro', async (req, res) => {
+  const nome = String(req.query.nome || '').trim();
+  const tentativas = [
+    ['geral/funcionarios/', 'ListarFuncionarios', { pagina: 1, registros_por_pagina: 50 }],
+    ['rh/funcionarios/', 'ListarFuncionarios', { pagina: 1, registros_por_pagina: 50 }],
+    ['geral/colaboradores/', 'ListarColaboradores', { pagina: 1, registros_por_pagina: 50 }],
+    ['geral/vendedores/', 'ListarVendedores', { pagina: 1, registros_por_pagina: 50 }],
+    ['geral/clientes/', 'ListarClientes', { pagina: 1, registros_por_pagina: 50, apenas_importado_api: 'N', ...(nome ? { clientesFiltro: { nome_fantasia: nome } } : {}) }],
+  ];
+  const out = [];
+  for (const [ep, call, param] of tentativas) {
+    try {
+      const j = await omie(ep, call, param);
+      const lista = j && (Object.values(j).find(v => Array.isArray(v)) || []);
+      out.push({ endpoint: ep, call, ok: true, total: j?.total_de_registros ?? lista?.length ?? 0, exemplos: (lista || []).slice(0, 3) });
+    } catch (e) { out.push({ endpoint: ep, call, ok: false, erro: e.message }); }
+  }
+  res.json(out);
+});
+
 app.post('/api/colaboradores', async (req, res) => {
   try { res.json({ ok: true, colaborador: await colab.salvarCadastro(req.body || {}) }); }
   catch (e) { res.status(400).json({ erro: e.message }); }
