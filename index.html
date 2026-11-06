@@ -168,6 +168,16 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 #tOrcamentoPV tr.tot td{font-weight:700;background:#fcfbf7;border-top:1px solid var(--ink)}
 #tOrcamentoPV .sub{display:block;font-size:9px;color:var(--muted);font-weight:500;letter-spacing:0;text-transform:none}
 
+.orc-split{display:grid;grid-template-columns:minmax(340px,5fr) 7fr;gap:18px;margin-top:18px;align-items:start}
+.orc-split #orcChatCard{position:sticky;top:16px;display:flex;flex-direction:column;max-height:calc(100vh - 32px)}
+.orc-split .orc-chat{max-height:none;flex:1;min-height:200px}
+.orc-split .orc-inp{flex-direction:column}
+.orc-split .orc-inp .btn{align-self:flex-end}
+.orc-dir{min-width:0}
+#orcTabWrap{max-height:calc(100vh - 180px)}
+#tOrcamentoLinhas tr.mudou td{background:#fff6d6 !important;transition:background 1.5s}
+#tOrcamentoLinhas tr.mudou td:first-child{box-shadow:inset 3px 0 0 var(--warn),1px 0 0 var(--line)}
+@media(max-width:1100px){.orc-split{grid-template-columns:1fr}.orc-split #orcChatCard{position:static;max-height:none}.orc-split .orc-chat{max-height:420px}}
 .orc-chat{display:flex;flex-direction:column;gap:10px;max-height:460px;overflow:auto;margin-bottom:12px;padding-right:4px}
 .orc-chat:empty{display:none}
 .orc-chat .msg{max-width:92%}
@@ -674,12 +684,13 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
       <div class="kpis" id="kpisOrcamento"></div>
       <p class="muted" id="orcPeriodoNota" style="margin-top:10px"></p>
     </div>
-    <div class="card" style="margin-top:18px" id="orcChatCard">
+    <div class="orc-split">
+    <div class="card" id="orcChatCard">
       <div class="card-head">
         <div>
           <p class="eyebrow">Monte com a IA</p>
-          <h2>Converse para montar e ajustar o orçamento</h2>
-          <p class="muted" style="margin:6px 0 0">A IA usa os números do Omie dos últimos 12 meses e as suas premissas. Cada ajuste vira uma nova versão.</p>
+          <h2>Ajuste o orçamento</h2>
+          <p class="muted" style="margin:6px 0 0">Escreva o ajuste aqui. O plano ao lado se atualiza e destaca o que mudou.</p>
         </div>
         <span class="orc-status" id="orcStatus">Verificando conexão…</span>
       </div>
@@ -690,6 +701,21 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
         <button class="btn primary" id="orcEnviar" onclick="enviarOrcChat()">Enviar</button>
       </div>
       <p class="muted" style="margin:8px 0 0;font-size:12px">Cmd/Ctrl + Enter envia. Montar o orçamento inteiro pode levar até 2 minutos.</p>
+    </div>
+    <div class="orc-dir">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">Plano detalhado</p>
+          <h2>Orçado por área e linha</h2>
+          <p class="muted" style="margin:6px 0 0" id="orcTabelaNota">Valores com o sinal do plano: despesas e impostos aparecem negativos.</p>
+        </div>
+        <span class="muted" id="orcTabelaPeriodo"></span>
+      </div>
+      <div class="table-scroll" id="orcTabWrap"><table class="lst" id="tOrcamentoLinhas"></table></div>
+      <p class="muted" id="orcCatNota" style="margin-top:10px"></p>
+    </div>
+    </div>
     </div>
     <div class="card" style="margin-top:18px">
       <div class="card-head"><div><p class="eyebrow">Visão mensal</p><h2>Receita, despesa e EBITDA</h2></div><span class="muted" id="orcChartNota"></span></div>
@@ -706,18 +732,6 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
       </div>
       <div class="table-scroll"><table class="lst" id="tOrcamentoPV"></table></div>
       <p class="muted" id="orcPVLegenda" style="margin-top:10px">A variação mostra o desvio do realizado contra o orçado. Em despesas, ficar acima do plano é desfavorável.</p>
-    </div>
-    <div class="card" style="margin-top:18px">
-      <div class="card-head">
-        <div>
-          <p class="eyebrow">Plano detalhado</p>
-          <h2>Orçado por área e linha</h2>
-          <p class="muted" style="margin:6px 0 0" id="orcTabelaNota">Valores com o sinal do plano: despesas e impostos aparecem negativos.</p>
-        </div>
-        <span class="muted" id="orcTabelaPeriodo"></span>
-      </div>
-      <div class="table-scroll" style="max-height:620px"><table class="lst" id="tOrcamentoLinhas"></table></div>
-      <p class="muted" id="orcCatNota" style="margin-top:10px"></p>
     </div>
     <div class="card" style="margin-top:18px" id="orcPremissasCard">
       <details class="orc-det">
@@ -1700,7 +1714,7 @@ async function carregarClientesReceita(){
   }
 }
 
-let orcHist=[],orcEnviando=false;
+let orcHist=[],orcEnviando=false,orcMudou=new Set();
 const ORC_SUGESTOES=['Monte o primeiro orçamento a partir do Omie','Quais premissas você precisa de mim?','Mostre onde estão as maiores despesas','Qual o caixa no fim do ano neste plano?'];
 
 function orcMsg(papel,texto,extra=''){
@@ -1751,7 +1765,7 @@ async function enviarOrcChat(){
     if(!r.ok)throw new Error(j.erro||'Falha ao falar com a IA.');
     c.remove();orcMsg('assistant',j.resposta,j.alterou?orcAlteracoesHTML(j):'');
     orcHist.push({role:'user',content:q},{role:'assistant',content:j.resposta});orcHist=orcHist.slice(-12);
-    if(j.alterou){orcD=null;await carregarOrcamento()}
+    if(j.alterou){orcMudou=new Set((j.alteracoes||[]).map(a=>a.area+'·'+a.nome));orcD=null;await carregarOrcamento();const m=document.querySelector('#tOrcamentoLinhas tr.mudou');m&&m.scrollIntoView({block:'center',behavior:'smooth'})}
   }catch(e){c.remove();orcMsg('assistant','Não consegui concluir: '+e.message)}
   finally{orcEnviando=false;btn.disabled=false;btn.textContent='Enviar'}
 }
@@ -1788,7 +1802,7 @@ async function carregarOrcamento(){
     if(j.vazio){
       orcD={ano:j.ano,vazio:true};
       document.getElementById('orcAno').textContent=j.ano;
-      kpis.innerHTML=kpi('Sem orçamento','—','Use o chat abaixo para a IA montar o primeiro');
+      kpis.innerHTML=kpi('Sem orçamento','—','Use o chat ao lado para a IA montar o primeiro');
       document.getElementById('orcNota').textContent=j.erro;
       ['tOrcamentoLinhas','tOrcamentoPV'].forEach(id=>document.getElementById(id).innerHTML='');
       document.getElementById('orcPeriodoNota').textContent='';
@@ -1940,7 +1954,7 @@ function renderOrcamento(){
     if(l.tipo==='headcount')return v=>Number(v||0).toLocaleString('pt-BR');
     return l.percentual?(v=>pct(v)):(v=>brl2(v));
   };
-  const clsTotal=l=>['receitaBruta','receitaLiquida','lucroBruto','despesasOperacionais','ebitda','resultadoMes','totalArea'].includes(l.tipo)?' class="orc-total"':'';
+  const clsTotal=l=>{const c=[];if(['receitaBruta','receitaLiquida','lucroBruto','despesasOperacionais','ebitda','resultadoMes','totalArea'].includes(l.tipo))c.push('orc-total');if(orcMudou.has(l.area+'·'+l.nome))c.push('mudou');return c.length?` class="${c.join(' ')}"`:''};
   let html='';
   if(temReal){
     html='<thead><tr><th>Área / linha</th><th class="n">Orçado</th><th class="n">Realizado</th><th class="n">Variação R$</th><th class="n">Variação %</th><th>Status</th></tr></thead><tbody>';
