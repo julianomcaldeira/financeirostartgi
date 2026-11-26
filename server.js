@@ -644,6 +644,28 @@ async function listarNFSe() {
   }).filter(n => n.data && !n.cancelada);
 }
 
+// Competência de um título: campo de competência do Omie quando existe;
+// folha e encargos pertencem ao mês anterior ao vencimento (pagos no mês seguinte ao trabalhado);
+// demais: data de emissão do documento (nota do fornecedor).
+const FOLHA = /sal[aá]rio|pr[oó][\s-]?labore|folha|fgts|\binss\b|irrf|ir sobre sal|gps|f[eé]rias|13[ºo°]|d[eé]cimo|rescis|vale[- ]?(transporte|refei|alimenta)|\bvt\b|\bvr\b|plano de sa[uú]de|benef[ií]cio/i;
+function parseCompetencia(v) {
+  if (!v) return null;
+  const m = String(v).match(/^(\d{2})\/(\d{4})$/) || String(v).match(/^(\d{4})-(\d{2})$/);
+  if (m) return m[1].length === 4 ? new Date(Number(m[1]), Number(m[2]) - 1, 1) : new Date(Number(m[2]), Number(m[1]) - 1, 1);
+  return dt(v);
+}
+function competenciaTitulo(t, tipo) {
+  const explicita = parseCompetencia(acharCampo(t, /compet/i));
+  if (explicita) return explicita;
+  if (tipo === 'P') {
+    const cat = nomeCatGlobal[t.codigo_categoria] || '';
+    const venc = dt(t.data_vencimento);
+    if (venc && FOLHA.test(`${cat} ${t.descricao || ''}`)) return new Date(venc.getFullYear(), venc.getMonth() - 1, 1);
+  }
+  return dt(t.data_emissao) || dt(t.data_registro) || dt(t.data_entrada) || dt(t.data_vencimento);
+}
+let nomeCatGlobal = {};
+
 // ---------- Cálculo dos indicadores ----------
 async function montarDados() {
   const [receber, pagar, clientes, categorias, contas, contratosOmie, baixasCR, baixasCP] = await Promise.all([
@@ -663,6 +685,7 @@ async function montarDados() {
 
   const nomeCli = Object.fromEntries(clientes.map(c => [c.codigo_cliente, c.nome_fantasia || c.razao_social]));
   const nomeCat = Object.fromEntries(categorias.map(c => [c.codigo, c.descricao]));
+  nomeCatGlobal = nomeCat;
   const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
 
   const baixasDe = t => {
@@ -698,7 +721,7 @@ async function montarDados() {
       venc: dt(t.data_vencimento),
       pagamento,
       emissao: dt(t.data_emissao) || dt(t.data_previsao) || dt(t.data_registro) || dt(t.data_vencimento),
-      competencia: dt(t.data_emissao) || dt(t.data_registro),
+      competencia: competenciaTitulo(t, tipo),
       nf: String(t.numero_documento_fiscal || '').replace(/\D/g, '').replace(/^0+/, ''),
       cliente: String(t.codigo_cliente_fornecedor ?? ''),
       os: String(t.nCodOS || t.codigo_os || ''),
@@ -764,7 +787,8 @@ async function montarDados() {
     return { mes: m, receita, despesa, resultado: receita - despesa, margem: receita ? (receita - despesa) / receita : null };
   });
   // Competência: tudo que foi emitido no mês, pago ou não
-  const somaCompNoMes = (lista, m) => soma(lista.filter(t => t.emissao && mesKey(t.emissao) === m).map(t => t.valor));
+  const cmp = t => t.competencia || t.emissao;
+  const somaCompNoMes = (lista, m) => soma(lista.filter(t => cmp(t) && mesKey(cmp(t)) === m).map(t => t.valor));
   const notasAvulsas = fonteCompetencia.notasSemTituloLista || [];
   const compMensal = meses24.map(m => {
     const receita = somaCompNoMes(R, m) + soma(notasAvulsas.filter(n => mesKey(n.data) === m).map(n => n.valor)), despesa = somaCompNoMes(P, m);
@@ -779,14 +803,14 @@ async function montarDados() {
   // Panorama do ano: YTD e mesmo período do ano anterior
   const mesesYTD = hoje.getMonth() + 1;
   const panoramaAno = (ano, meses) => {
-    const noPeriodo = lista => lista.filter(t => quitado(t) && t.venc.getFullYear() === ano && t.venc.getMonth() < meses);
+    const noPeriodo = lista => lista.filter(t => quitado(t) && (t.pagamento || t.venc).getFullYear() === ano && (t.pagamento || t.venc).getMonth() < meses);
     const receita = soma(noPeriodo(R).map(t => t.valor));
     const despesa = soma(noPeriodo(P).map(t => t.valor));
     return { ano, meses, receita, despesa, resultado: receita - despesa, margem: receita ? (receita - despesa) / receita : null, mediaReceita: receita / meses, mediaDespesa: despesa / meses };
   };
   const ano = { atual: panoramaAno(hoje.getFullYear(), mesesYTD), anterior: panoramaAno(hoje.getFullYear() - 1, mesesYTD) };
   const panoramaComp = (ano, meses) => {
-    const noPeriodo = lista => lista.filter(t => t.emissao && t.emissao.getFullYear() === ano && t.emissao.getMonth() < meses);
+    const noPeriodo = lista => lista.filter(t => cmp(t) && cmp(t).getFullYear() === ano && cmp(t).getMonth() < meses);
     const receita = soma(noPeriodo(R).map(t => t.valor));
     const despesa = soma(noPeriodo(P).map(t => t.valor));
     return { ano, meses, receita, despesa, resultado: receita - despesa, margem: receita ? (receita - despesa) / receita : null };
