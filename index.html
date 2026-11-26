@@ -168,6 +168,28 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 #tOrcamentoPV tr.tot td{font-weight:700;background:#fcfbf7;border-top:1px solid var(--ink)}
 #tOrcamentoPV .sub{display:block;font-size:9px;color:var(--muted);font-weight:500;letter-spacing:0;text-transform:none}
 
+.cu-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-top:18px}
+.cu-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 18px 14px;display:flex;flex-direction:column;gap:10px;cursor:pointer;transition:.15s;position:relative}
+.cu-card:hover{border-color:var(--brand2);box-shadow:0 4px 18px rgba(0,0,0,.05)}
+.cu-card.off{opacity:.55}
+.cu-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.cu-tipo{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.cu-card h3{margin:2px 0 0;font-size:16px;line-height:1.3}
+.cu-desc{font-size:13px;color:var(--ink2);line-height:1.5;margin:0}
+.cu-acao{font-size:12.5px;background:#fcfbf7;border-left:3px solid var(--brand2);padding:8px 10px;border-radius:6px;margin:0}
+.cu-num{display:flex;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px;font-size:12px;color:var(--muted)}
+.cu-num b{display:block;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
+.cu-num b.pos{color:var(--pos)}
+.cu-meta{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--muted);flex-wrap:wrap}
+.cu-st{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;background:#f0eee8;color:var(--ink2)}
+.cu-st.Nova{background:var(--brand-soft);color:var(--brand)}.cu-st.Em-análise{background:var(--warn-soft);color:var(--warn)}.cu-st.Em-execução{background:#e6eefc;color:#2f5bb7}.cu-st.Capturada{background:var(--pos-soft);color:var(--pos)}.cu-st.Descartada{background:#f0eee8;color:var(--muted)}
+.cu-novo{position:absolute;top:-8px;right:14px;background:var(--neg);color:#fff;font-size:10px;font-weight:800;letter-spacing:.06em;padding:2px 8px;border-radius:999px}
+.cu-spark{height:26px;display:flex;align-items:flex-end;gap:3px}
+.cu-spark i{flex:1;background:var(--brand-soft);border-radius:2px 2px 0 0;min-height:2px}
+.cu-spark i.r{background:var(--brand2)}
+.cu-aviso{margin-top:12px;font-size:13px;background:var(--warn-soft);color:var(--ink2);border-radius:10px;padding:12px 14px}
+.cu-aviso pre{white-space:pre-wrap;font-size:11.5px;background:#fff;padding:10px;border-radius:8px;margin:8px 0 0;max-height:220px;overflow:auto}
+.col-form textarea{border:1px solid var(--line);border-radius:10px;padding:9px 11px;font:13px Inter;resize:vertical}
 .orc-split{display:grid;grid-template-columns:minmax(340px,5fr) 7fr;gap:18px;margin-top:18px;align-items:start}
 .orc-split #orcChatCard{position:sticky;top:16px;display:flex;flex-direction:column;max-height:calc(100vh - 32px)}
 .orc-split .orc-chat{max-height:none;flex:1;min-height:200px}
@@ -435,6 +457,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     <button data-view="clientes-receita"><span class="dot"></span>Receita por cliente</button>
     <button data-view="clientes"><span class="dot"></span>Despesas</button>
     <button data-view="colaboradores"><span class="dot"></span>Colaboradores</button>
+    <button data-view="custos"><span class="dot"></span>Redução de custos</button>
     <button data-view="cfo"><span class="dot"></span>CFO de plantão</button>
     <button data-nav="contexto" onclick="navClickContexto()"><span class="dot"></span>Contexto</button>
   </nav>
@@ -951,6 +974,50 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
     </div>
   </div>
 
+  <!-- REDUÇÃO DE CUSTOS -->
+  <section class="view" data-view="custos">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">Organismo vivo</p>
+          <h2>Redução de custos</h2>
+          <p class="muted" style="margin:6px 0 0">A cada atualização do Omie, o painel varre as despesas pagas dos últimos 6 meses e aponta onde cortar. Você define dono e status; quando a ação entra em execução, o painel mede a economia real mês a mês.</p>
+        </div>
+        <div class="cli-filters">
+          <label>Status<select id="cuStatus" onchange="renderCustos()"><option value="abertas">Em aberto</option><option value="todas">Todas</option></select></label>
+          <label>Tipo<select id="cuTipo" onchange="renderCustos()"><option value="">Todos</option></select></label>
+          <button class="btn ghost" onclick="carregarCustos()">Atualizar</button>
+          <button class="btn primary" onclick="editarCusto(null)">Adicionar ideia</button>
+        </div>
+      </div>
+      <div class="kpis" id="kpisCustos"></div>
+      <div id="cuAviso" class="cu-aviso" style="display:none"></div>
+    </div>
+    <div class="cu-board" id="cuBoard"></div>
+    <p class="muted" style="margin:14px 2px 0;font-size:12px">Base: despesas pagas (caixa) dos 6 últimos meses fechados, comparando os 3 mais recentes com os 3 anteriores. Folha e impostos ficam fora das regras de fornecedor. O potencial total não conta duas vezes o mesmo fornecedor.</p>
+  </section>
+
+  <div class="ins-modal" id="cuModal" role="dialog" aria-modal="true" onclick="if(event.target===this)fecharCusto()">
+    <div class="ins-modal-box" style="width:min(640px,100%)">
+      <button class="ins-close" onclick="fecharCusto()" aria-label="Fechar">×</button>
+      <div class="ins-modal-head"><p class="eyebrow" id="cuTipoTxt">Oportunidade</p><h2 id="cuTitulo">Nova ideia</h2><p class="lead" id="cuInfo"></p></div>
+      <div class="col-form">
+        <label class="full" id="cuTitWrap">Título<input id="cuTit" placeholder="Ex.: Renegociar aluguel do escritório"></label>
+        <label>Status<select id="cuSt"></select></label>
+        <label>Responsável<input id="cuResp" placeholder="Quem toca"></label>
+        <label>Prazo<input id="cuPrazo" type="date"></label>
+        <label>Economia estimada (R$/mês)<input id="cuEco" type="number" step="0.01" min="0"></label>
+        <label class="full">Notas e próximos passos<textarea id="cuNota" rows="4"></textarea></label>
+      </div>
+      <div class="col-acoes">
+        <button class="btn ghost col-remover" onclick="descartarCusto()">Descartar</button>
+        <span style="flex:1"></span>
+        <button class="btn ghost" onclick="fecharCusto()">Cancelar</button>
+        <button class="btn primary" onclick="salvarCusto()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- LANÇAMENTOS -->
   <section class="view" data-view="lancamentos">
     <div class="card">
@@ -1034,6 +1101,7 @@ const TITLES={
   'clientes-receita':['Receita por cliente','Quanto cada cliente pagou, receita do mês e produto'],
   clientes:['Despesas','Composição, tendência e fornecedores'],
   colaboradores:['Colaboradores','Cadastro, departamento, salário e custo de cada pessoa'],
+  custos:['Redução de custos','Oportunidades detectadas no Omie, acompanhadas até virar economia'],
   cfo:['CFO de plantão','Conversa com o seu diretor financeiro']
 };
 let charts={},hist=[],atrasadosCache=[],autoTimer=null,ultimoD=null,simD=null,simEstado=null,simMsgTimer=null,lancPaginaAtual=1,lancTotalPaginas=1,lancBuscaTimerId=null,insightsIAState={data:null,loading:false,erro:null},orcD=null,orcLoading=false,despD=null,despLoading=false,recD=null,recLoading=false;
@@ -1058,6 +1126,7 @@ function go(view){
   if(view==='clientes-receita')setTimeout(()=>carregarClientesReceita(),60);
   if(view==='receita')setTimeout(()=>recD?renderReceita(recD):carregarReceita(),60);
   if(view==='colaboradores')setTimeout(()=>colD?renderColab():carregarColab(),60);
+  if(view==='custos')setTimeout(carregarCustos,60);
   if(view==='clientes')setTimeout(()=>despD?renderDespesas(despD):carregarDespesas(),60);
   if(view==='orcamento')setTimeout(()=>orcD&&!orcD.vazio?renderOrcamento():carregarOrcamento(),60);
 }
@@ -2277,6 +2346,68 @@ function renderRecMensal(d){
   const fc=d.fonteCompetencia;document.getElementById('recMensalNota').title=fc?(fc.nfse?`Competência pela data da NFS-e: ${fc.nfse} notas, ${fc.titulosComNota} títulos ligados à nota, ${fc.titulosSemNota} títulos sem nota (usam a emissão do título), ${fc.notasSemTitulo} notas sem título.`:'NFS-e indisponível: usando a emissão do título. '+(fc.erro||'')):'';
   document.getElementById('recMensalNota').textContent=(fc&&!fc.nfse?'⚠ sem NFS-e · ':'')+(meses.length-futuros.length)+' meses'+(futuros.length?' + '+futuros.length+' à frente (já lançado no Omie, fora do total)':'')+' · * mês atual parcial';
 }
+
+// ---------- Redução de custos ----------
+let cuD=null,cuEdit=null;
+async function carregarCustos(){
+  document.getElementById('cuBoard').innerHTML='<div class="card muted">Varrendo as despesas do Omie…</div>';
+  try{const r=await fetch('/api/custos');const j=await r.json();if(!r.ok)throw new Error(j.erro||'falha');cuD=j;renderCustos();}
+  catch(e){document.getElementById('cuBoard').innerHTML=`<div class="card neg">Erro: ${simEsc(e.message)}</div>`;}
+}
+function renderCustos(){
+  if(!cuD)return;const esc=simEsc,R=cuD.resumo||{};
+  const tipos=[...new Set(cuD.lista.map(o=>o.tipo))].sort();const selT=document.getElementById('cuTipo'),tAtual=selT.value;
+  selT.innerHTML='<option value="">Todos</option>'+tipos.map(t=>`<option${t===tAtual?' selected':''}>${esc(t)}</option>`).join('');
+  document.getElementById('kpisCustos').innerHTML=
+    kpi('Potencial de economia',brl2(R.potencialMensal)+'<span style="font-size:13px;color:var(--muted)">/mês</span>',`${k$(R.potencialMensal*12)} por ano, sem contar duas vezes o mesmo fornecedor`,'pos')+
+    kpi('Economia capturada',brl2(R.capturadaMensal)+'<span style="font-size:13px;color:var(--muted)">/mês</span>','Queda medida no gasto desde o início da ação','',R.capturadaMensal>0?['Real','pos']:'')+
+    kpi('Novas',String(R.novas),'Detectadas e ainda sem dono',R.novas?'neg':'')+
+    kpi('Em andamento',String(R.emAndamento),'Em análise ou em execução');
+  const av=document.getElementById('cuAviso');const avs=[];
+  if(cuD.erroOmie)avs.push('Omie indisponível agora: '+esc(cuD.erroOmie));
+  if(cuD.erroBanco==='TABELA_AUSENTE')avs.push('<b>Falta criar a tabela de acompanhamento no Supabase.</b> As oportunidades já aparecem, mas status, dono e economia só são salvos depois disso. Rode este SQL no Supabase (SQL Editor):<pre>'+esc(cuD.sqlTabela)+'</pre>');
+  else if(cuD.erroBanco)avs.push('Banco: '+esc(cuD.erroBanco));
+  av.innerHTML=avs.join('<br>');av.style.display=avs.length?'':'none';
+  const fs=document.getElementById('cuStatus').value,ft=selT.value;
+  const ordem={'Em execução':0,'Em análise':1,'Nova':2,'Capturada':3,'Descartada':4};
+  const lista=cuD.lista.filter(o=>(fs==='todas'||!['Capturada','Descartada'].includes(o.status))&&(!ft||o.tipo===ft))
+    .sort((a,b)=>ordem[a.status]-ordem[b.status]||b.economiaAnual-a.economiaAnual);
+  const semana=Date.now()-7*864e5;
+  document.getElementById('cuBoard').innerHTML=lista.length?lista.map(o=>{
+    const i=cuD.lista.indexOf(o);
+    const mx=Math.max(...(o.serie||[1]),1);
+    const spark=o.serie?`<div class="cu-spark" title="Gasto pago nos últimos 6 meses">${o.serie.map((v,j)=>`<i class="${j>=3?'r':''}" style="height:${Math.max(2,v/mx*26)}px" title="${esc((R.meses||[])[j]||'')}: ${brl2(v)}"></i>`).join('')}</div>`:'';
+    const real=o.economiaRealizada!=null&&['Em execução','Capturada'].includes(o.status)?`<span>Economia real<b class="${o.economiaRealizada>0?'pos':''}">${brl2(o.economiaRealizada)}/mês</b></span>`:'';
+    const nova=o.status==='Nova'&&o.ativa&&o.detectadaEm&&+new Date(o.detectadaEm)>semana?'<span class="cu-novo">NOVA</span>':'';
+    return `<div class="cu-card${o.ativa||o.manual?'':' off'}" onclick="editarCusto(${i})">${nova}
+      <div class="cu-top"><div><div class="cu-tipo">${esc(o.tipo)}</div><h3>${esc(o.titulo)}</h3></div><span class="cu-st ${esc(o.status.replace(' ','-'))}">${esc(o.status)}</span></div>
+      ${o.descricao?`<p class="cu-desc">${esc(o.descricao)}</p>`:''}${o.acao?`<p class="cu-acao"><b>Ação:</b> ${esc(o.acao)}</p>`:''}${spark}
+      <div class="cu-num"><span>Economia estimada<b>${brl2(o.economiaMensal)}/mês</b></span><span>No ano<b>${k$(o.economiaAnual)}</b></span>${o.gastoAtualMensal!=null?`<span>Gasto atual<b>${brl2(o.gastoAtualMensal)}/mês</b></span>`:''}${real}</div>
+      <div class="cu-meta"><span>${o.responsavel?'Dono: '+esc(o.responsavel):'Sem dono'}${o.prazo?' · até '+dataBR(o.prazo):''}</span><span>${o.ativa?'Confiança '+esc(o.confianca):o.manual?'Ideia do time':'Não aparece mais nos dados'}</span></div>
+    </div>`;}).join(''):'<div class="card muted">Nenhuma oportunidade com esse filtro.'+(fs==='abertas'?' Veja "Todas" para as capturadas e descartadas.':'')+'</div>';
+}
+function editarCusto(i){
+  const o=i==null?{id:'',titulo:'',tipo:'Ideia do time',status:'Nova',manual:true}:cuD.lista[i];cuEdit=o;
+  const f=id=>document.getElementById(id);
+  f('cuTipoTxt').textContent=o.tipo;f('cuTitulo').textContent=i==null?'Nova ideia de redução':o.titulo;
+  f('cuInfo').textContent=i==null?'Para cortes que o Omie não mostra: aluguel, contratos, processos.':(o.descricao||'');
+  f('cuTitWrap').style.display=i==null||o.manual?'':'none';f('cuTit').value=o.titulo||'';
+  f('cuSt').innerHTML=(cuD?.status||['Nova','Em análise','Em execução','Capturada','Descartada']).map(s=>`<option${s===o.status?' selected':''}>${s}</option>`).join('');
+  f('cuResp').value=o.responsavel||'';f('cuPrazo').value=o.prazo?String(o.prazo).slice(0,10):'';
+  f('cuEco').value=o.economiaMensal?Math.round(o.economiaMensal*100)/100:'';f('cuNota').value=o.nota||'';
+  f('cuModal').classList.add('open');
+}
+function fecharCusto(){document.getElementById('cuModal').classList.remove('open');cuEdit=null}
+async function gravarCusto(extra){
+  const f=id=>document.getElementById(id).value,o=cuEdit;
+  const corpo={id:o.id,titulo:o.manual||!o.id?f('cuTit'):o.titulo,tipo:o.tipo,escopo:o.escopo??null,status:f('cuSt'),responsavel:f('cuResp'),prazo:f('cuPrazo')||null,economia_estimada:f('cuEco'),nota:f('cuNota'),...extra};
+  if(!corpo.titulo)throw new Error('Dê um título para a ideia.');
+  const r=await fetch('/api/custos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(corpo)});const j=await r.json();
+  if(!r.ok)throw new Error(/TABELA|does not exist|schema cache|PGRST205/i.test(j.erro||'')?'falta criar a tabela custos_oportunidades no Supabase (o SQL está no topo da tela).':j.erro||'falha');
+}
+async function salvarCusto(){try{await gravarCusto({});fecharCusto();carregarCustos()}catch(e){alert('Não foi possível salvar: '+e.message)}}
+async function descartarCusto(){if(!confirm('Descartar esta oportunidade? Ela some da lista em aberto (dá para ver em "Todas").'))return;try{await gravarCusto({status:'Descartada'});fecharCusto();carregarCustos()}catch(e){alert('Não foi possível salvar: '+e.message)}}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('cuModal')?.classList.contains('open'))fecharCusto()});
 
 // ---------- Exportação do orçamento (Excel / PDF, analítico / sintético) ----------
 const libsExport={};

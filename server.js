@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const orcIA = require('./lib/orcamento-ia');
 const colab = require('./lib/colaboradores');
+const custos = require('./lib/custos');
 
 const { OMIE_APP_KEY, OMIE_APP_SECRET, PAINEL_SENHA } = process.env;
 const PORT = process.env.PORT || 3000;
@@ -1683,6 +1684,20 @@ app.get('/api/colaboradores/omie-cadastro', async (req, res) => {
     } catch (e) { out.push({ endpoint: ep, call, ok: false, erro: e.message }); }
   }
   res.json(out);
+});
+
+// Redução de custos: oportunidades detectadas no Omie + acompanhamento no Supabase.
+app.get('/api/custos', async (req, res) => {
+  let d = null, erroOmie = null;
+  try { d = await dados(); } catch (e) { erroOmie = e.message; }
+  try { res.json({ ...(await custos.listar(d)), erroOmie, sqlTabela: custos.SQL_TABELA }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+app.post('/api/custos', async (req, res) => {
+  let d = null;
+  try { d = await dados(); } catch {}
+  try { res.json({ ok: true, item: await custos.salvar(req.body || {}, d) }); }
+  catch (e) { res.status(400).json({ erro: e.message }); }
 });
 
 app.post('/api/colaboradores', async (req, res) => {
