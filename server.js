@@ -661,6 +661,7 @@ async function montarDados() {
       pagamento,
       emissao: dt(t.data_emissao) || dt(t.data_previsao) || dt(t.data_registro) || dt(t.data_vencimento),
       competencia: dt(t.data_emissao) || dt(t.data_registro),
+      datasOmie: { emissao: t.data_emissao || null, registro: t.data_registro || null, previsao: t.data_previsao || null, vencimento: t.data_vencimento || null, inclusao: t.info?.dInc || null, parcela: t.numero_parcela || null, nf: t.numero_documento_fiscal || null, origem: t.id_origem || t.cOrigem || null, os: t.nCodOS || null, contrato: t.nCodCtr || t.codigo_contrato || null },
       status,
       categoria: nomeCat[t.codigo_categoria] || t.codigo_categoria || 'Sem categoria',
       parceiro: nomeCli[t.codigo_cliente_fornecedor] || 'Não identificado',
@@ -691,6 +692,7 @@ async function montarDados() {
     baixas: (t.baixas || []).map(b => ({ data: iso(b.data), valor: b.valor })),
     emissao: iso(t.emissao),
     competencia: iso(t.competencia),
+    datasOmie: t.tipo === 'R' ? t.datasOmie : undefined,
     vencimento: iso(t.venc),
     pagamento: iso(t.pagamento),
     departamentos: t.departamentos,
@@ -1529,6 +1531,31 @@ app.get('/api/colaboradores', async (req, res) => {
 });
 
 // Diagnóstico: mostra exatamente o que o Omie manda de departamento nos pagamentos de uma pessoa.
+// Diagnóstico da receita por competência: títulos de um cliente com todas as datas do Omie, e as NFS-e do período.
+app.get('/api/receita/diagnostico', async (req, res) => {
+  try {
+    const d = await dados();
+    const q = String(req.query.cliente || '').trim().toLowerCase();
+    const meses = String(req.query.meses || '').split(',').filter(Boolean);
+    const itens = (d.lancamentos || []).filter(l => l.tipo === 'receita' && (!q || `${l.parceiro} ${l.descricao}`.toLowerCase().includes(q)))
+      .filter(l => !meses.length || meses.some(m => [l.competencia, l.vencimento, l.pagamento].some(x => String(x || '').startsWith(m))))
+      .map(l => ({ parceiro: l.parceiro, categoria: l.categoria, valor: l.valor, status: l.status, competenciaUsada: l.competencia, vencimento: l.vencimento, pagamento: l.pagamento, documento: l.documento, datasOmie: l.datasOmie, descricao: l.descricao }))
+      .sort((a, b) => String(a.vencimento).localeCompare(String(b.vencimento)));
+    const somaPor = campo => itens.reduce((a, l) => { const m = String(l[campo] || '').slice(0, 7); if (m) a[m] = (a[m] || 0) + l.valor; return a; }, {});
+    let nfse = null;
+    if (req.query.nfse !== '0' && meses.length) {
+      const [ai, mi] = meses[0].split('-'); const [af, mf] = meses[meses.length - 1].split('-');
+      const fim = new Date(Number(af), Number(mf), 0).getDate();
+      try {
+        const j = await omie('servicos/nfse/', 'ListarNFSes', { nPagina: 1, nRegPorPagina: 100, dEmiInicial: `01/${mi}/${ai}`, dEmiFinal: `${fim}/${mf}/${af}` });
+        const lista = j && (Object.values(j).find(v => Array.isArray(v)) || []);
+        nfse = { total: j?.nTotRegistros ?? lista.length, exemplos: lista.filter(n => !q || JSON.stringify(n).toLowerCase().includes(q)).slice(0, 30) };
+      } catch (e) { nfse = { erro: e.message }; }
+    }
+    res.json({ cliente: q, quantidade: itens.length, totalPorCompetencia: somaPor('competenciaUsada'), totalPorVencimento: somaPor('vencimento'), itens, nfse });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 app.get('/api/colaboradores/diagnostico', async (req, res) => {
   try {
     const d = await dados();
