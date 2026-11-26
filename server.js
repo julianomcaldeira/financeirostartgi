@@ -861,7 +861,7 @@ async function montarDados() {
   const mrrPorMes = {};
   {
     const hojeM = new Date();
-    for (let i = 23; i >= 0; i--) {
+    for (let i = 23; i >= hojeM.getMonth() - 11; i--) { // até dezembro do ano corrente
       const ini = new Date(hojeM.getFullYear(), hojeM.getMonth() - i, 1), fim = new Date(hojeM.getFullYear(), hojeM.getMonth() - i + 1, 0);
       let v = 0, n = 0;
       for (const c of contratosOmie) {
@@ -1308,13 +1308,17 @@ function analiseReceita(d) {
   const hoje = new Date();
   const meses = [];
   for (let i = 23; i >= 0; i--) meses.push(mesKey(new Date(hoje.getFullYear(), hoje.getMonth() - i, 1)));
-  const dentro = new Set(meses);
+  // Meses à frente até dezembro: competência já lançada (títulos emitidos com data futura).
+  const mesesFuturos = [];
+  for (let m = hoje.getMonth() + 1; m <= 11; m++) mesesFuturos.push(mesKey(new Date(hoje.getFullYear(), m, 1)));
+  const dentro = new Set([...meses, ...mesesFuturos]);
   // modo 'caixa': o que foi recebido, no mês do recebimento.
   // modo 'competencia': o que foi faturado (valor da nota), no mês de emissão, recebido ou não.
   const serie = modo => {
-    const totalPorMes = Object.fromEntries(meses.map(m => [m, 0]));
-    const recorrentePorMes = Object.fromEntries(meses.map(m => [m, 0]));
-    const naoRecorrentePorMes = Object.fromEntries(meses.map(m => [m, 0]));
+    const todos = modo === 'caixa' ? meses : [...meses, ...mesesFuturos];
+    const totalPorMes = Object.fromEntries(todos.map(m => [m, 0]));
+    const recorrentePorMes = Object.fromEntries(todos.map(m => [m, 0]));
+    const naoRecorrentePorMes = Object.fromEntries(todos.map(m => [m, 0]));
     const produtos = new Map();
     for (const l of d.lancamentos || []) {
       if (l.tipo !== 'receita') continue;
@@ -1329,7 +1333,7 @@ function analiseReceita(d) {
       }
       if (!data || !valor) continue;
       const mes = String(data).slice(0, 7);
-      if (!dentro.has(mes)) continue;
+      if (!(mes in totalPorMes)) continue;
       const nome = l.categoria || 'Sem categoria';
       const rec = /mensalidade/i.test(nome);
       totalPorMes[mes] += valor;
@@ -1346,7 +1350,7 @@ function analiseReceita(d) {
     base: 'Data de pagamento; quando ausente, vencimento.',
     atualizadoEm: d.atualizadoEm,
     meses, ...caixa,
-    competencia: { base: 'Data de emissão da nota; valor faturado, recebido ou não.', ...serie('competencia') },
+    competencia: { base: 'Data de emissão da nota; valor faturado, recebido ou não.', mesesFuturos, ...serie('competencia') },
     contratos: d.contratos,
   };
 }

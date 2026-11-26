@@ -2256,8 +2256,9 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharColab();});
 function renderRecMensal(d){
   const el=document.getElementById('tRecMensal');if(!el)return;
   const periodo=Number(document.getElementById('recPeriodo')?.value||12);
-  const meses=(d.meses||[]).slice(-Math.max(periodo,12));
   const c=d.competencia||{},mrr=d.contratos?.mrrPorMes||{};
+  const futuros=c.mesesFuturos||[];
+  const meses=[...(d.meses||[]).slice(-Math.max(periodo,12)),...futuros];
   const linhas=[
     ['Faturamento bruto',m=>c.totalPorMes?.[m]||0,'destaque'],
     ['Faturamento avulso',m=>c.naoRecorrentePorMes?.[m]||0,''],
@@ -2266,14 +2267,14 @@ function renderRecMensal(d){
   ];
   const hojeM=new Date().toISOString().slice(0,7);
   const fmt=v=>v?k$(v):'<span class="muted">—</span>';
-  el.innerHTML='<thead><tr><th>Indicador</th>'+meses.map(m=>`<th class="n">${nomeMes(m)}${m===hojeM?'*':''}</th>`).join('')+'<th class="n">Total</th></tr></thead><tbody>'+
+  el.innerHTML='<thead><tr><th>Indicador</th>'+meses.map(m=>`<th class="n"${futuros.includes(m)?' style="color:var(--muted)" title="Mês futuro: só o que já está lançado no Omie"':''}>${nomeMes(m)}${m===hojeM?'*':futuros.includes(m)?' (prev.)':''}</th>`).join('')+'<th class="n">Total</th></tr></thead><tbody>'+
     linhas.map(([nome,f,cls])=>{
-      const vals=meses.map(f),tot=cls==='mrr'?null:vals.reduce((a,b)=>a+b,0);
+      const vals=meses.map(f),tot=cls==='mrr'?null:vals.filter((v,i)=>!futuros.includes(meses[i])).reduce((a,b)=>a+b,0);
       return `<tr class="${cls}"><td>${nome}</td>${vals.map(v=>`<td class="n">${fmt(v)}</td>`).join('')}<td class="n">${tot==null?'<span class="muted" title="MRR não se soma">—</span>':fmt(tot)}</td></tr>`;
     }).join('')+
     `<tr><td class="var">MRR: variação no mês</td>${meses.map((m,i)=>{const a=mrr[meses[i-1]]?.mrr,b=mrr[m]?.mrr;if(!i||!a)return'<td class="var n"></td>';const v=b/a-1;return `<td class="var n" style="color:${v>0?'var(--pos)':v<0?'var(--neg)':''}">${v>0?'+':''}${(v*100).toFixed(1)}%</td>`}).join('')}<td class="var"></td></tr>`+
     '</tbody>';
-  document.getElementById('recMensalNota').textContent=meses.length+' meses · * mês atual parcial';
+  document.getElementById('recMensalNota').textContent=(meses.length-futuros.length)+' meses'+(futuros.length?' + '+futuros.length+' à frente (já lançado no Omie, fora do total)':'')+' · * mês atual parcial';
 }
 
 // ---------- Exportação do orçamento (Excel / PDF, analítico / sintético) ----------
