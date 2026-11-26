@@ -182,7 +182,7 @@ table.lst tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-botto
 .cu-num b.pos{color:var(--pos)}
 .cu-meta{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--muted);flex-wrap:wrap}
 .cu-st{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;background:#f0eee8;color:var(--ink2)}
-.cu-st.Nova{background:var(--brand-soft);color:var(--brand)}.cu-st.Em-análise{background:var(--warn-soft);color:var(--warn)}.cu-st.Em-execução{background:#e6eefc;color:#2f5bb7}.cu-st.Capturada{background:var(--pos-soft);color:var(--pos)}.cu-st.Descartada{background:#f0eee8;color:var(--muted)}
+.cu-st.Nova{background:var(--brand-soft);color:var(--brand)}.cu-st.Em-análise{background:var(--warn-soft);color:var(--warn)}.cu-st.Em-execução{background:#e6eefc;color:#2f5bb7}.cu-st.Concluída{background:var(--pos-soft);color:var(--pos)}.cu-st.Descartada{background:#f0eee8;color:var(--muted)}
 .cu-novo{position:absolute;top:-8px;right:14px;background:var(--neg);color:#fff;font-size:10px;font-weight:800;letter-spacing:.06em;padding:2px 8px;border-radius:999px}
 .cu-spark{height:26px;display:flex;align-items:flex-end;gap:3px}
 .cu-spark i{flex:1;background:var(--brand-soft);border-radius:2px 2px 0 0;min-height:2px}
@@ -2368,22 +2368,22 @@ function renderCustos(){
   if(cuD.erroBanco)avs.push('Não consegui ler o acompanhamento no banco: '+esc(cuD.erroBanco));
   av.innerHTML=avs.join('<br>');av.style.display=avs.length?'':'none';
   const fs=document.getElementById('cuStatus').value,ft=selT.value;
-  const ordem={'Em execução':0,'Em análise':1,'Nova':2,'Capturada':3,'Descartada':4};
-  const lista=cuD.lista.filter(o=>(fs==='todas'||!['Capturada','Descartada'].includes(o.status))&&(!ft||o.tipo===ft))
+  const ordem={'Em execução':0,'Em análise':1,'Nova':2,'Concluída':3,'Descartada':4};
+  const lista=cuD.lista.filter(o=>(fs==='todas'||!['Concluída','Descartada'].includes(o.status))&&(!ft||o.tipo===ft))
     .sort((a,b)=>ordem[a.status]-ordem[b.status]||b.economiaAnual-a.economiaAnual);
   const semana=Date.now()-7*864e5;
   document.getElementById('cuBoard').innerHTML=lista.length?lista.map(o=>{
     const i=cuD.lista.indexOf(o);
     const mx=Math.max(...(o.serie||[1]),1);
     const spark=o.serie?`<div class="cu-spark" title="Gasto pago nos últimos 6 meses">${o.serie.map((v,j)=>`<i class="${j>=3?'r':''}" style="height:${Math.max(2,v/mx*26)}px" title="${esc((R.meses||[])[j]||'')}: ${brl2(v)}"></i>`).join('')}</div>`:'';
-    const real=o.economiaRealizada!=null&&['Em execução','Capturada'].includes(o.status)?`<span>Economia real<b class="${o.economiaRealizada>0?'pos':''}">${brl2(o.economiaRealizada)}/mês</b></span>`:'';
+    const real=o.economiaRealizada!=null&&['Em execução','Concluída'].includes(o.status)?`<span>Economia real<b class="${o.economiaRealizada>0?'pos':''}">${brl2(o.economiaRealizada)}/mês</b></span>`:'';
     const nova=o.status==='Nova'&&o.ativa&&o.detectadaEm&&+new Date(o.detectadaEm)>semana?'<span class="cu-novo">NOVA</span>':'';
     return `<div class="cu-card${o.ativa||o.manual?'':' off'}" onclick="editarCusto(${i})">${nova}
       <div class="cu-top"><div><div class="cu-tipo">${esc(o.tipo)}</div><h3>${esc(o.titulo)}</h3></div><span class="cu-st ${esc(o.status.replace(' ','-'))}">${esc(o.status)}</span></div>
       ${o.descricao?`<p class="cu-desc">${esc(o.descricao)}</p>`:''}${o.acao?`<p class="cu-acao"><b>Ação:</b> ${esc(o.acao)}</p>`:''}${spark}
       <div class="cu-num"><span>Economia estimada<b>${brl2(o.economiaMensal)}/mês</b></span><span>No ano<b>${k$(o.economiaAnual)}</b></span>${o.gastoAtualMensal!=null?`<span>Gasto atual<b>${brl2(o.gastoAtualMensal)}/mês</b></span>`:''}${real}</div>
       <div class="cu-meta"><span>${o.responsavel?'Dono: '+esc(o.responsavel):'Sem dono'}${o.prazo?' · até '+dataBR(o.prazo):''}</span><span>${o.ativa?'Confiança '+esc(o.confianca):o.manual?'Ideia do time':'Não aparece mais nos dados'}</span></div>
-    </div>`;}).join(''):'<div class="card muted">Nenhuma oportunidade com esse filtro.'+(fs==='abertas'?' Veja "Todas" para as capturadas e descartadas.':'')+'</div>';
+    </div>`;}).join(''):'<div class="card muted">Nenhuma oportunidade com esse filtro.'+(fs==='abertas'?' Veja "Todas" para as concluídas e descartadas.':'')+'</div>';
 }
 function editarCusto(i){
   const o=i==null?{id:'',titulo:'',tipo:'Ideia do time',status:'Nova',manual:true}:cuD.lista[i];cuEdit=o;
@@ -2391,7 +2391,7 @@ function editarCusto(i){
   f('cuTipoTxt').textContent=o.tipo;f('cuTitulo').textContent=i==null?'Nova ideia de redução':o.titulo;
   f('cuInfo').textContent=i==null?'Para cortes que o Omie não mostra: aluguel, contratos, processos.':(o.descricao||'');
   f('cuTitWrap').style.display=i==null||o.manual?'':'none';f('cuTit').value=o.titulo||'';
-  f('cuSt').innerHTML=(cuD?.status||['Nova','Em análise','Em execução','Capturada','Descartada']).map(s=>`<option${s===o.status?' selected':''}>${s}</option>`).join('');
+  f('cuSt').innerHTML=(cuD?.status||['Nova','Em análise','Em execução','Concluída','Descartada']).map(s=>`<option value="${s}"${s===o.status?' selected':''}>${({'Nova':'Nova (ainda sem ação)','Em análise':'Em análise','Em execução':'Em execução (ação em andamento)','Concluída':'Concluída (ação feita)','Descartada':'Descartada'})[s]||s}</option>`).join('');
   f('cuResp').value=o.responsavel||'';f('cuPrazo').value=o.prazo?String(o.prazo).slice(0,10):'';
   f('cuEco').value=o.economiaMensal?Math.round(o.economiaMensal*100)/100:'';f('cuNota').value=o.nota||'';
   f('cuModal').classList.add('open');
