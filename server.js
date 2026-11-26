@@ -608,6 +608,42 @@ function montarInsights(d) {
   };
 }
 
+// Notas fiscais de serviço (NFS-e) emitidas: base da competência da receita.
+// Leitura tolerante: o formato do retorno do Omie varia entre versões da API.
+function acharCampo(obj, re, prof = 0) {
+  if (!obj || typeof obj !== 'object' || prof > 4) return undefined;
+  for (const [k, v] of Object.entries(obj)) if (re.test(k) && v !== '' && v != null && typeof v !== 'object') return v;
+  for (const v of Object.values(obj)) if (v && typeof v === 'object') { const r = acharCampo(v, re, prof + 1); if (r !== undefined) return r; }
+  return undefined;
+}
+async function listarNFSe() {
+  const hoje = new Date();
+  const ini = new Date(hoje.getFullYear() - 2, hoje.getMonth(), 1);
+  const f = d => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  const fim = new Date(hoje.getFullYear(), 11, 31);
+  let pagina = 1, total = 1, itens = [];
+  do {
+    const j = await omie('servicos/nfse/', 'ListarNFSes', { nPagina: pagina, nRegPorPagina: 100, dEmiInicial: f(ini), dEmiFinal: f(fim) });
+    if (!j) break;
+    const lista = Object.values(j).find(v => Array.isArray(v)) || [];
+    itens = itens.concat(lista);
+    total = j.nTotPaginas || j.total_de_paginas || 1;
+    pagina++;
+    await new Promise(r => setTimeout(r, 350));
+  } while (pagina <= total);
+  return itens.map(n => {
+    const status = String(acharCampo(n, /^c?status|situacao/i) || '');
+    return {
+      numero: String(acharCampo(n, /num(ero)?.?nfse|^nNumero$|numero_nf|^nNF$/i) ?? '').replace(/\D/g, '').replace(/^0+/, ''),
+      data: dt(acharCampo(n, /data.?emiss|dEmi|cDataEmissao|dt.?emiss/i)),
+      valor: Number(acharCampo(n, /nValorNFSe|valor.?total|nValorTotal|nValTotal|valor_?servic|nValorServicos|nValServ/i) || 0),
+      cliente: String(acharCampo(n, /n?Cod(igo)?.?Cli|codigo_cliente/i) ?? ''),
+      os: String(acharCampo(n, /n?Cod(igo)?.?OS$|nCodigoOS|codigo_os/i) ?? ''),
+      cancelada: /cancel/i.test(status) || /cancel/i.test(JSON.stringify(n.Cancelamento || n.cancelamento || '')) && !!acharCampo(n.Cancelamento || n.cancelamento || {}, /data/i),
+    };
+  }).filter(n => n.data && !n.cancelada);
+}
+
 // ---------- Cálculo dos indicadores ----------
 async function montarDados() {
   const [receber, pagar, clientes, categorias, contas, contratosOmie, baixasCR, baixasCP] = await Promise.all([
@@ -621,6 +657,8 @@ async function montarDados() {
     listarBaixas('CP').catch(() => ({})),
   ]);
   const departamentos = await listarDepartamentos().catch(e => { console.warn('[omie] departamentos:', e.message); return []; });
+  let nfse = [], erroNFSe = null;
+  try { nfse = await listarNFSe(); } catch (e) { erroNFSe = e.message; console.warn('[omie] NFS-e:', e.message); }
   const nomeDep = Object.fromEntries(departamentos.map(x => [String(x.codigo), x.descricao]));
 
   const nomeCli = Object.fromEntries(clientes.map(c => [c.codigo_cliente, c.nome_fantasia || c.razao_social]));
@@ -661,6 +699,9 @@ async function montarDados() {
       pagamento,
       emissao: dt(t.data_emissao) || dt(t.data_previsao) || dt(t.data_registro) || dt(t.data_vencimento),
       competencia: dt(t.data_emissao) || dt(t.data_registro),
+      nf: String(t.numero_documento_fiscal || '').replace(/\D/g, '').replace(/^0+/, ''),
+      cliente: String(t.codigo_cliente_fornecedor ?? ''),
+      os: String(t.nCodOS || t.codigo_os || ''),
       datasOmie: { emissao: t.data_emissao || null, registro: t.data_registro || null, previsao: t.data_previsao || null, vencimento: t.data_vencimento || null, inclusao: t.info?.dInc || null, parcela: t.numero_parcela || null, nf: t.numero_documento_fiscal || null, origem: t.id_origem || t.cOrigem || null, os: t.nCodOS || null, contrato: t.nCodCtr || t.codigo_contrato || null },
       status,
       categoria: nomeCat[t.codigo_categoria] || t.codigo_categoria || 'Sem categoria',
@@ -674,7 +715,21 @@ async function montarDados() {
         .filter(x => x.nome),
     };
   };
-  const R = receber.map(t => norm(t, 'R', baixasCR)).filter(t => t.status !== 'CANCELADO' && t.venc);
+  let R = receber.map(t => norm(t, 'R', baixasCR)).filter(t => t.status !== 'CANCELADO' && t.venc);
+  // Competência da receita = data de emissão da nota fiscal. Liga cada título à sua NFS-e (número + cliente, ou OS).
+  const fonteCompetencia = { nfse: nfse.length, titulosComNota: 0, titulosSemNota: 0, notasSemTitulo: 0, erro: erroNFSe };
+  if (nfse.length) {
+    const porNum = new Map(), porOS = new Map();
+    for (const n of nfse) { if (n.numero) porNum.set(n.numero + '|' + n.cliente, n), porNum.set(n.numero, porNum.get(n.numero) || n); if (n.os && n.os !== '0') porOS.set(n.os, n); }
+    const usadas = new Set();
+    for (const t of R) {
+      const n = (t.nf && (porNum.get(t.nf + '|' + t.cliente) || porNum.get(t.nf))) || (t.os && t.os !== '0' && porOS.get(t.os));
+      if (n) { t.competencia = n.data; t.emissao = n.data; t.notaFiscal = n.numero; usadas.add(n); fonteCompetencia.titulosComNota++; }
+      else fonteCompetencia.titulosSemNota++;
+    }
+    fonteCompetencia.notasSemTitulo = nfse.filter(n => !usadas.has(n)).length;
+    fonteCompetencia.notasSemTituloLista = nfse.filter(n => !usadas.has(n));
+  }
   const P = pagar.map(t => norm(t, 'P', baixasCP)).filter(t => t.status !== 'CANCELADO' && t.venc);
   const quitado = t => t.status === 'RECEBIDO' || t.status === 'PAGO' || t.status === 'LIQUIDADO';
   const aberto = t => !quitado(t);
@@ -692,6 +747,7 @@ async function montarDados() {
     baixas: (t.baixas || []).map(b => ({ data: iso(b.data), valor: b.valor })),
     emissao: iso(t.emissao),
     competencia: iso(t.competencia),
+    notaFiscal: t.notaFiscal || null,
     datasOmie: t.tipo === 'R' ? t.datasOmie : undefined,
     vencimento: iso(t.venc),
     pagamento: iso(t.pagamento),
@@ -702,15 +758,16 @@ async function montarDados() {
   // Série mensal (24 meses) — 12 para o painel, 24 para o CFO
   const meses24 = [];
   for (let i = 23; i >= 0; i--) meses24.push(mesKey(new Date(hoje.getFullYear(), hoje.getMonth() - i, 1)));
-  const somaNoMes = (lista, m) => soma(lista.filter(t => quitado(t) && mesKey(t.venc) === m).map(t => t.valor));
+  const somaNoMes = (lista, m) => soma(lista.filter(t => (quitado(t) || t.valorPago > 0) && mesKey(t.pagamento || t.venc) === m).map(t => t.valorPago || t.valor));
   const serieMensal = meses24.map(m => {
     const receita = somaNoMes(R, m), despesa = somaNoMes(P, m);
     return { mes: m, receita, despesa, resultado: receita - despesa, margem: receita ? (receita - despesa) / receita : null };
   });
   // Competência: tudo que foi emitido no mês, pago ou não
   const somaCompNoMes = (lista, m) => soma(lista.filter(t => t.emissao && mesKey(t.emissao) === m).map(t => t.valor));
+  const notasAvulsas = fonteCompetencia.notasSemTituloLista || [];
   const compMensal = meses24.map(m => {
-    const receita = somaCompNoMes(R, m), despesa = somaCompNoMes(P, m);
+    const receita = somaCompNoMes(R, m) + soma(notasAvulsas.filter(n => mesKey(n.data) === m).map(n => n.valor)), despesa = somaCompNoMes(P, m);
     return { mes: m, receita, despesa, resultado: receita - despesa, margem: receita ? (receita - despesa) / receita : null };
   });
   const ult12 = serieMensal.slice(-12);
@@ -928,7 +985,7 @@ async function montarDados() {
       serie: serieRecorrente,
       produtos: recProdutos.slice(0, 8),
     },
-    competencia, regimes,
+    competencia, regimes, fonteCompetencia,
     atrasados: atrasadoR.slice().sort((a, b) => b.valor - a.valor).slice(0, 10).map(t => ({ cliente: t.parceiro, valor: t.valor, venc: t.venc.toLocaleDateString('pt-BR'), dias: diasDe(t) })),
     atrasadosTodos: atrasadoR.slice().sort((a, b) => b.valor - a.valor).map(t => ({ cliente: t.parceiro, categoria: t.categoria, valor: t.valor, venc: t.venc.toLocaleDateString('pt-BR'), dias: diasDe(t) })),
     atrasadosResumo: (() => {
@@ -1343,6 +1400,14 @@ function analiseReceita(d) {
       item.total += valor; item.qtd++;
       item.meses[mes] = (item.meses[mes] || 0) + valor;
     }
+    if (modo === 'competencia') for (const n of d.fonteCompetencia?.notasSemTituloLista || []) {
+      const mes = String(n.data instanceof Date ? n.data.toISOString() : n.data).slice(0, 7);
+      if (!(mes in totalPorMes) || !n.valor) continue;
+      totalPorMes[mes] += n.valor; naoRecorrentePorMes[mes] += n.valor;
+      const nome = 'Nota emitida sem título no contas a receber';
+      if (!produtos.has(nome)) produtos.set(nome, { nome, total: 0, qtd: 0, meses: {}, recorrente: false });
+      const item = produtos.get(nome); item.total += n.valor; item.qtd++; item.meses[mes] = (item.meses[mes] || 0) + n.valor;
+    }
     return { totalPorMes, recorrentePorMes, naoRecorrentePorMes, produtos: [...produtos.values()].sort((a, b) => b.total - a.total) };
   };
   const caixa = serie('caixa');
@@ -1350,7 +1415,8 @@ function analiseReceita(d) {
     base: 'Data de pagamento; quando ausente, vencimento.',
     atualizadoEm: d.atualizadoEm,
     meses, ...caixa,
-    competencia: { base: 'Data de emissão da nota; valor faturado, recebido ou não.', mesesFuturos, ...serie('competencia') },
+    fonteCompetencia: d.fonteCompetencia ? { ...d.fonteCompetencia, notasSemTituloLista: undefined } : null,
+    competencia: { base: d.fonteCompetencia?.nfse ? 'Data de emissão da nota fiscal (NFS-e); valor faturado, recebido ou não.' : 'Data de emissão do título (NFS-e indisponível); valor faturado, recebido ou não.', mesesFuturos, ...serie('competencia') },
     contratos: d.contratos,
   };
 }

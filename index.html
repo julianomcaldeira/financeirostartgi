@@ -2274,7 +2274,8 @@ function renderRecMensal(d){
     }).join('')+
     `<tr><td class="var">MRR: variação no mês</td>${meses.map((m,i)=>{const a=mrr[meses[i-1]]?.mrr,b=mrr[m]?.mrr;if(!i||!a)return'<td class="var n"></td>';const v=b/a-1;return `<td class="var n" style="color:${v>0?'var(--pos)':v<0?'var(--neg)':''}">${v>0?'+':''}${(v*100).toFixed(1)}%</td>`}).join('')}<td class="var"></td></tr>`+
     '</tbody>';
-  document.getElementById('recMensalNota').textContent=(meses.length-futuros.length)+' meses'+(futuros.length?' + '+futuros.length+' à frente (já lançado no Omie, fora do total)':'')+' · * mês atual parcial';
+  const fc=d.fonteCompetencia;document.getElementById('recMensalNota').title=fc?(fc.nfse?`Competência pela data da NFS-e: ${fc.nfse} notas, ${fc.titulosComNota} títulos ligados à nota, ${fc.titulosSemNota} títulos sem nota (usam a emissão do título), ${fc.notasSemTitulo} notas sem título.`:'NFS-e indisponível: usando a emissão do título. '+(fc.erro||'')):'';
+  document.getElementById('recMensalNota').textContent=(fc&&!fc.nfse?'⚠ sem NFS-e · ':'')+(meses.length-futuros.length)+' meses'+(futuros.length?' + '+futuros.length+' à frente (já lançado no Omie, fora do total)':'')+' · * mês atual parcial';
 }
 
 // ---------- Exportação do orçamento (Excel / PDF, analítico / sintético) ----------
