@@ -1690,7 +1690,7 @@ app.get('/api/colaboradores/omie-cadastro', async (req, res) => {
 app.get('/api/custos', async (req, res) => {
   let d = null, erroOmie = null;
   try { d = await dados(); } catch (e) { erroOmie = e.message; }
-  try { res.json({ ...(await custos.listar(d)), erroOmie, sqlTabela: custos.SQL_TABELA }); }
+  try { res.json({ ...(await custos.listar(d)), erroOmie }); }
   catch (e) { res.status(500).json({ erro: e.message }); }
 });
 app.post('/api/custos', async (req, res) => {

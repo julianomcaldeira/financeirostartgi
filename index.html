@@ -2365,8 +2365,7 @@ function renderCustos(){
     kpi('Em andamento',String(R.emAndamento),'Em análise ou em execução');
   const av=document.getElementById('cuAviso');const avs=[];
   if(cuD.erroOmie)avs.push('Omie indisponível agora: '+esc(cuD.erroOmie));
-  if(cuD.erroBanco==='TABELA_AUSENTE')avs.push('<b>Falta criar a tabela de acompanhamento no Supabase.</b> As oportunidades já aparecem, mas status, dono e economia só são salvos depois disso. Rode este SQL no Supabase (SQL Editor):<pre>'+esc(cuD.sqlTabela)+'</pre>');
-  else if(cuD.erroBanco)avs.push('Banco: '+esc(cuD.erroBanco));
+  if(cuD.erroBanco)avs.push('Não consegui ler o acompanhamento no banco: '+esc(cuD.erroBanco));
   av.innerHTML=avs.join('<br>');av.style.display=avs.length?'':'none';
   const fs=document.getElementById('cuStatus').value,ft=selT.value;
   const ordem={'Em execução':0,'Em análise':1,'Nova':2,'Capturada':3,'Descartada':4};
@@ -2403,7 +2402,7 @@ async function gravarCusto(extra){
   const corpo={id:o.id,titulo:o.manual||!o.id?f('cuTit'):o.titulo,tipo:o.tipo,escopo:o.escopo??null,status:f('cuSt'),responsavel:f('cuResp'),prazo:f('cuPrazo')||null,economia_estimada:f('cuEco'),nota:f('cuNota'),...extra};
   if(!corpo.titulo)throw new Error('Dê um título para a ideia.');
   const r=await fetch('/api/custos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(corpo)});const j=await r.json();
-  if(!r.ok)throw new Error(/TABELA|does not exist|schema cache|PGRST205/i.test(j.erro||'')?'falta criar a tabela custos_oportunidades no Supabase (o SQL está no topo da tela).':j.erro||'falha');
+  if(!r.ok)throw new Error(j.erro||'falha');
 }
 async function salvarCusto(){try{await gravarCusto({});fecharCusto();carregarCustos()}catch(e){alert('Não foi possível salvar: '+e.message)}}
 async function descartarCusto(){if(!confirm('Descartar esta oportunidade? Ela some da lista em aberto (dá para ver em "Todas").'))return;try{await gravarCusto({status:'Descartada'});fecharCusto();carregarCustos()}catch(e){alert('Não foi possível salvar: '+e.message)}}
